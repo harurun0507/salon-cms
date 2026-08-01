@@ -194,7 +194,7 @@
                                     <div>
                                         <p>{{ $menu->name }}</p>
                                         @if($menu->description)
-                                            <p class="mt-1 text-xs text-salon-muted">{{ $menu->description }}</p>
+                                            <p class="mt-1 text-xs text-salon-muted whitespace-pre-line">{{ $menu->description }}</p>
                                         @endif
                                     </div>
                                     <p class="shrink-0 font-medium">¥{{ number_format($menu->price) }}</p>

@@ -80,12 +80,10 @@ class AdminActionButtonsTest extends TestCase
 
         $menusHtml = $this->actingAs($user)->get(route('admin.menus.index'))->assertOk()->getContent();
         $this->assertStringContainsString('btn-admin-create', $menusHtml);
-        $this->assertStringContainsString('btn-admin-edit', $menusHtml);
-        $this->assertStringContainsString('btn-admin-delete', $menusHtml);
-        $this->assertStringContainsString('data-open-detail', $menusHtml);
-        $this->assertStringContainsString('btn-admin-edit', $menusHtml);
-        $this->assertStringContainsString('>編集</span>', $menusHtml);
-        $this->assertStringNotContainsString('>詳細編集</span>', $menusHtml);
+        $this->assertStringContainsString('data-admin-delete-trigger', $menusHtml);
+        $this->assertStringContainsString('data-delete-form="delete-menu-', $menusHtml);
+        $this->assertStringNotContainsString('data-open-detail', $menusHtml);
+        $this->assertStringNotContainsString('id="menu-detail-modal"', $menusHtml);
 
         $settingsHtml = $this->actingAs($user)->get(route('admin.settings.edit'))->assertOk()->getContent();
         $this->assertStringContainsString('btn-admin-delete', $settingsHtml);

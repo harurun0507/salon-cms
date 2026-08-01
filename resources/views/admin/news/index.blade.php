@@ -4,34 +4,34 @@
 
 @section('content')
     <div class="mb-6 flex justify-between">
-        <p class="text-sm text-gray-500">お知らせの一覧・登録・編集・削除</p>
+        <p class="text-sm text-admin-muted">お知らせの一覧・登録・編集・削除</p>
         <x-admin.create-button type="button" data-open-news-create>新規登録</x-admin.create-button>
     </div>
 
-    <div class="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <table class="min-w-full divide-y divide-gray-200 text-sm">
-            <thead class="bg-gray-50">
+    <div class="admin-table-wrap">
+        <table class="admin-table">
+            <thead>
                 <tr>
-                    <th class="px-4 py-3 text-left">タイトル</th>
-                    <th class="px-4 py-3 text-left">公開日</th>
-                    <th class="px-4 py-3 text-left">状態</th>
-                    <th class="px-4 py-3 text-right">操作</th>
+                    <th>タイトル</th>
+                    <th>公開日</th>
+                    <th>状態</th>
+                    <th class="text-right">操作</th>
                 </tr>
             </thead>
-            <tbody id="news-table-body" class="divide-y divide-gray-100">
+            <tbody id="news-table-body">
                 @forelse($newsList as $news)
                     <tr
                         data-news-row="{{ $news->id }}"
                         data-published-at="{{ $news->published_at?->format('Y-m-d\TH:i') ?? '' }}"
                     >
-                        <td class="news-title px-4 py-3">{{ $news->title }}</td>
-                        <td class="news-published-at px-4 py-3">{{ $news->published_at?->format('Y/m/d') ?? '-' }}</td>
-                        <td class="px-4 py-3">
-                            <span class="news-status rounded-full px-2 py-1 text-xs {{ $news->is_published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
+                        <td class="news-title">{{ $news->title }}</td>
+                        <td class="news-published-at">{{ $news->published_at?->format('Y/m/d') ?? '-' }}</td>
+                        <td>
+                            <span class="news-status rounded-full px-2 py-1 text-xs {{ $news->is_published ? 'bg-admin-selected text-admin-accent-dark' : 'bg-admin-hover text-admin-muted' }}">
                                 {{ $news->is_published ? '公開' : '非公開' }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="text-right">
                             <x-admin.action-group>
                                 <x-admin.edit-button
                                     type="button"
@@ -46,7 +46,17 @@
                         </td>
                     </tr>
                 @empty
-                    <tr id="news-empty-row"><td colspan="4" class="px-4 py-8 text-center text-gray-500">お知らせがありません。</td></tr>
+                    <tr id="news-empty-row">
+                        <td colspan="4" class="!p-0 hover:!bg-transparent">
+                            <x-admin.empty-state
+                                variant="leaf"
+                                title="お知らせがありません。"
+                                description="新しいお知らせを登録してみましょう。"
+                            >
+                                <x-admin.create-button type="button" data-open-news-create>新規登録</x-admin.create-button>
+                            </x-admin.empty-state>
+                        </td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>
@@ -58,7 +68,7 @@
             <td class="news-title px-4 py-3"></td>
             <td class="news-published-at px-4 py-3"></td>
             <td class="px-4 py-3">
-                <span class="news-status rounded-full px-2 py-1 text-xs bg-gray-100 text-gray-600"></span>
+                <span class="news-status rounded-full px-2 py-1 text-xs bg-admin-hover text-admin-muted"></span>
             </td>
             <td class="px-4 py-3 text-right">
                 <div class="admin-action-group">
@@ -109,12 +119,12 @@
         aria-labelledby="news-create-modal-title"
         hidden
     >
-        <div class="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-lg" data-news-create-modal-panel>
-            <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
-                <h2 id="news-create-modal-title" class="text-lg font-semibold text-gray-900">お知らせ登録</h2>
+        <div class="admin-modal-panel flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-admin-border/50 bg-admin-card" data-news-create-modal-panel>
+                <div class="flex shrink-0 items-center justify-between border-b border-admin-border px-6 py-4">
+                <h2 id="news-create-modal-title" class="text-lg font-semibold text-admin-text">お知らせ登録</h2>
                 <button
                     type="button"
-                    class="rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-salon-button/40"
+                    class="rounded-md p-1 text-admin-muted hover:bg-admin-hover hover:text-admin-text focus:outline-none focus:ring-2 focus:ring-admin-accent/40"
                     aria-label="閉じる"
                     data-close-news-create
                 >
@@ -157,12 +167,12 @@
                     </div>
                 </div>
 
-                <div class="flex shrink-0 justify-end gap-3 border-t border-gray-200 px-6 py-4">
+                <div class="flex shrink-0 justify-end gap-3 border-t border-admin-border px-6 py-4">
                     <button type="button" class="admin-btn-secondary" data-close-news-create>キャンセル</button>
                     <button
                         type="submit"
                         id="news-create-submit"
-                        class="inline-flex items-center rounded-md bg-salon-button px-4 py-2 text-sm font-medium text-white hover:bg-[#4f5d44] disabled:cursor-not-allowed disabled:opacity-60"
+                        class="admin-btn"
                     >登録する</button>
                 </div>
             </form>
@@ -178,13 +188,13 @@
         aria-labelledby="news-edit-modal-title"
         hidden
     >
-        <div class="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-lg" data-news-modal-panel>
-            <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
-                <h2 id="news-edit-modal-title" class="text-lg font-semibold text-gray-900">お知らせ編集</h2>
+        <div class="admin-modal-panel flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-admin-border/50 bg-admin-card" data-news-modal-panel>
+            <div class="flex shrink-0 items-center justify-between border-b border-admin-border px-6 py-4">
+                <h2 id="news-edit-modal-title" class="text-lg font-semibold text-admin-text">お知らせ編集</h2>
                 <button
                     type="button"
                     id="news-edit-modal-close"
-                    class="rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-salon-button/40"
+                    class="rounded-md p-1 text-admin-muted hover:bg-admin-hover hover:text-admin-text focus:outline-none focus:ring-2 focus:ring-admin-accent/40"
                     aria-label="閉じる"
                     data-close-news-edit
                 >
@@ -223,12 +233,12 @@
                     </div>
                 </div>
 
-                <div class="flex shrink-0 justify-end gap-3 border-t border-gray-200 px-6 py-4">
+                <div class="flex shrink-0 justify-end gap-3 border-t border-admin-border px-6 py-4">
                     <button type="button" class="admin-btn-secondary" data-close-news-edit>キャンセル</button>
                     <button
                         type="submit"
                         id="news-edit-submit"
-                        class="inline-flex items-center rounded-md bg-salon-button px-4 py-2 text-sm font-medium text-white hover:bg-[#4f5d44] disabled:cursor-not-allowed disabled:opacity-60"
+                        class="admin-btn"
                     >更新する</button>
                 </div>
             </form>
@@ -354,7 +364,7 @@
                 if (statusEl) {
                     statusEl.textContent = news.is_published ? '公開' : '非公開';
                     statusEl.className = 'news-status rounded-full px-2 py-1 text-xs ' +
-                        (news.is_published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600');
+                        (news.is_published ? 'bg-admin-selected text-admin-accent-dark' : 'bg-admin-hover text-admin-muted');
                 }
             }
 
@@ -623,7 +633,7 @@
                 if (statusEl) {
                     statusEl.textContent = news.is_published ? '公開' : '非公開';
                     statusEl.className = 'news-status rounded-full px-2 py-1 text-xs ' +
-                        (news.is_published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600');
+                        (news.is_published ? 'bg-admin-selected text-admin-accent-dark' : 'bg-admin-hover text-admin-muted');
                 }
 
                 const editBtn = node.querySelector('[data-open-news-edit]');

@@ -6,6 +6,7 @@ use App\Models\Menu;
 use App\Models\MenuCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class MenuController extends AdminController
@@ -29,26 +30,124 @@ class MenuController extends AdminController
             'menus.*.sort_order' => ['nullable', 'integer', 'min:0'],
             'menus.*.is_published' => ['nullable', 'in:0,1'],
             'menus.*.description' => ['nullable', 'string'],
+            'menus.*.category_id' => ['nullable'],
+            'selected_category_id' => ['nullable'],
         ]);
 
-        foreach ($validated['categories'] ?? [] as $id => $data) {
-            MenuCategory::query()->whereKey($id)->update([
-                'name' => $data['name'],
-                'sort_order' => $data['sort_order'] ?? 0,
-            ]);
+        $categoryPayload = $validated['categories'] ?? [];
+        $menuPayload = $validated['menus'] ?? [];
+
+        foreach ($menuPayload as $key => $data) {
+            if (! preg_match('/^new_menu_\d+$/', (string) $key)) {
+                continue;
+            }
+
+            $categoryRef = $data['category_id'] ?? null;
+            if ($categoryRef === null || $categoryRef === '') {
+                return back()
+                    ->withErrors(["menus.{$key}.category_id" => 'カテゴリを指定してください。'])
+                    ->withInput();
+            }
+
+            if (preg_match('/^new_\d+$/', (string) $categoryRef)) {
+                if (! array_key_exists((string) $categoryRef, $categoryPayload)) {
+                    return back()
+                        ->withErrors(["menus.{$key}.category_id" => 'カテゴリを指定してください。'])
+                        ->withInput();
+                }
+            } elseif (! MenuCategory::query()->whereKey($categoryRef)->exists()) {
+                return back()
+                    ->withErrors(["menus.{$key}.category_id" => '選択されたカテゴリは無効です。'])
+                    ->withInput();
+            }
         }
 
-        foreach ($validated['menus'] ?? [] as $id => $data) {
-            Menu::query()->whereKey($id)->update([
-                'name' => $data['name'],
-                'price' => $data['price'],
-                'sort_order' => $data['sort_order'] ?? 0,
-                'is_published' => ($data['is_published'] ?? '0') === '1',
-                'description' => $data['description'] ?? null,
-            ]);
+        $newCategoryMap = [];
+        $lastCreatedId = null;
+
+        DB::transaction(function () use ($categoryPayload, $menuPayload, &$newCategoryMap, &$lastCreatedId) {
+            foreach ($categoryPayload as $key => $data) {
+                if (preg_match('/^new_\d+$/', (string) $key)) {
+                    continue;
+                }
+
+                MenuCategory::query()->whereKey($key)->update([
+                    'name' => $data['name'],
+                    'sort_order' => $data['sort_order'] ?? 0,
+                ]);
+            }
+
+            foreach ($categoryPayload as $key => $data) {
+                if (! preg_match('/^new_\d+$/', (string) $key)) {
+                    continue;
+                }
+
+                $cat = MenuCategory::query()->create([
+                    'name' => $data['name'],
+                    'sort_order' => $data['sort_order'] ?? 0,
+                ]);
+                $newCategoryMap[(string) $key] = (int) $cat->id;
+                $lastCreatedId = (int) $cat->id;
+            }
+
+            foreach ($menuPayload as $id => $data) {
+                if (preg_match('/^new_menu_\d+$/', (string) $id)) {
+                    continue;
+                }
+
+                Menu::query()->whereKey($id)->update([
+                    'name' => $data['name'],
+                    'price' => $data['price'],
+                    'sort_order' => $data['sort_order'] ?? 0,
+                    'is_published' => ($data['is_published'] ?? '0') === '1',
+                    'description' => $data['description'] ?? null,
+                ]);
+            }
+
+            foreach ($menuPayload as $id => $data) {
+                if (! preg_match('/^new_menu_\d+$/', (string) $id)) {
+                    continue;
+                }
+
+                $categoryRef = (string) ($data['category_id'] ?? '');
+                if (preg_match('/^new_\d+$/', $categoryRef)) {
+                    $resolvedCategoryId = $newCategoryMap[$categoryRef];
+                } else {
+                    $resolvedCategoryId = (int) $categoryRef;
+                }
+
+                Menu::query()->create([
+                    'menu_category_id' => $resolvedCategoryId,
+                    'name' => $data['name'],
+                    'price' => $data['price'],
+                    'sort_order' => $data['sort_order'] ?? 0,
+                    'is_published' => ($data['is_published'] ?? '0') === '1',
+                    'description' => $data['description'] ?? null,
+                ]);
+            }
+        });
+
+        $validIds = MenuCategory::query()->orderBy('sort_order')->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $selectedCategoryId = null;
+        $requested = $request->input('selected_category_id');
+
+        if ($requested !== null && $requested !== '' && preg_match('/^new_\d+$/', (string) $requested) && isset($newCategoryMap[(string) $requested])) {
+            $selectedCategoryId = $newCategoryMap[(string) $requested];
+        } elseif ($lastCreatedId !== null) {
+            $selectedCategoryId = (int) $lastCreatedId;
+        } elseif ($requested !== null && $requested !== '' && in_array((int) $requested, $validIds, true)) {
+            $selectedCategoryId = (int) $requested;
+        } elseif ($validIds !== []) {
+            $selectedCategoryId = $validIds[0];
         }
 
-        return redirect()->route('admin.menus.index')->with('success', 'メニュー情報を一括保存しました。');
+        $redirect = redirect()->route('admin.menus.index')->with('success', 'メニュー情報を一括保存しました。');
+
+        if ($selectedCategoryId !== null) {
+            $redirect->with('selected_category_id', $selectedCategoryId);
+        }
+
+        return $redirect;
     }
 
     public function createCategory(): View
@@ -63,12 +162,15 @@ class MenuController extends AdminController
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        MenuCategory::create([
+        $category = MenuCategory::create([
             'name' => $validated['name'],
             'sort_order' => $validated['sort_order'] ?? 0,
         ]);
 
-        return redirect()->route('admin.menus.index')->with('success', 'カテゴリを登録しました。');
+        return redirect()
+            ->route('admin.menus.index')
+            ->with('success', 'カテゴリを登録しました。')
+            ->with('selected_category_id', $category->id);
     }
 
     public function editCategory(MenuCategory $category): View
@@ -121,7 +223,10 @@ class MenuController extends AdminController
             'is_published' => $request->boolean('is_published', true),
         ]);
 
-        return redirect()->route('admin.menus.index')->with('success', 'メニューを登録しました。');
+        return redirect()
+            ->route('admin.menus.index')
+            ->with('success', 'メニューを登録しました。')
+            ->with('selected_category_id', $category->id);
     }
 
     public function edit(Menu $menu): View

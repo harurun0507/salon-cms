@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="mb-6 flex justify-between">
-        <p class="text-sm text-gray-500">画像のアップロード・表示順・公開設定</p>
+        <p class="text-sm text-admin-muted">画像のアップロード・表示順・公開設定</p>
         <x-admin.create-button type="button" data-open-gallery-create>画像を追加</x-admin.create-button>
     </div>
 
@@ -13,7 +13,7 @@
             <div class="admin-card" data-gallery-card="{{ $gallery->id }}" data-sort-order="{{ $gallery->sort_order }}">
                 <img src="{{ asset('storage/'.$gallery->image_path) }}" alt="" class="gallery-image mb-3 aspect-[4/3] w-full rounded object-cover">
                 <p class="gallery-caption text-sm">{{ $gallery->caption ?: '（キャプションなし）' }}</p>
-                <p class="gallery-meta mt-1 text-xs text-gray-500">表示順: {{ $gallery->sort_order }} / {{ $gallery->is_published ? '公開' : '非公開' }}</p>
+                <p class="gallery-meta mt-1 text-xs text-admin-muted">表示順: {{ $gallery->sort_order }} / {{ $gallery->is_published ? '公開' : '非公開' }}</p>
                 <div class="mt-4">
                     <x-admin.action-group class="justify-start">
                         <x-admin.edit-button
@@ -29,7 +29,15 @@
                 </div>
             </div>
         @empty
-            <p id="gallery-empty-message" class="text-gray-500">ギャラリー画像がありません。</p>
+            <div id="gallery-empty-message" class="col-span-full">
+                <x-admin.empty-state
+                    variant="photo"
+                    title="ギャラリー画像がありません。"
+                    description="最初の画像を追加してみましょう。"
+                >
+                    <x-admin.create-button type="button" data-open-gallery-create>画像を追加</x-admin.create-button>
+                </x-admin.empty-state>
+            </div>
         @endforelse
     </div>
     <div class="mt-4">{{ $galleries->links() }}</div>
@@ -38,7 +46,7 @@
         <div class="admin-card" data-gallery-card="" data-sort-order="0">
             <img src="" alt="" class="gallery-image mb-3 aspect-[4/3] w-full rounded object-cover">
             <p class="gallery-caption text-sm"></p>
-            <p class="gallery-meta mt-1 text-xs text-gray-500"></p>
+            <p class="gallery-meta mt-1 text-xs text-admin-muted"></p>
             <div class="mt-4">
                 <div class="admin-action-group justify-start">
                     <button type="button" class="btn-admin-edit" data-open-gallery-edit data-gallery-id="">
@@ -88,7 +96,7 @@
         aria-labelledby="gallery-create-modal-title"
         hidden
     >
-        <div class="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-lg bg-white shadow-lg" data-gallery-create-modal-panel>
+        <div class="admin-modal-panel flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-admin-border/50 bg-admin-card" data-gallery-create-modal-panel>
             <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
                 <h2 id="gallery-create-modal-title" class="text-lg font-semibold text-gray-900">ギャラリー登録</h2>
                 <button
@@ -166,7 +174,7 @@
         aria-labelledby="gallery-edit-modal-title"
         hidden
     >
-        <div class="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-lg bg-white shadow-lg" data-gallery-modal-panel>
+        <div class="admin-modal-panel flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-admin-border/50 bg-admin-card" data-gallery-modal-panel>
             <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
                 <h2 id="gallery-edit-modal-title" class="text-lg font-semibold text-gray-900">ギャラリー編集</h2>
                 <button

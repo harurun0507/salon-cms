@@ -4,37 +4,37 @@
 
 @section('content')
     <div class="mb-6 flex justify-between">
-        <p class="text-sm text-gray-500">スタッフ情報の管理</p>
+        <p class="text-sm text-admin-muted">スタッフ情報の管理</p>
         <x-admin.create-button type="button" data-open-staff-create>スタッフ追加</x-admin.create-button>
     </div>
 
-    <div class="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <table class="min-w-full divide-y divide-gray-200 text-sm">
-            <thead class="bg-gray-50">
+    <div class="admin-table-wrap">
+        <table class="admin-table">
+            <thead>
                 <tr>
-                    <th class="px-4 py-3 text-left">写真</th>
-                    <th class="px-4 py-3 text-left">名前</th>
-                    <th class="px-4 py-3 text-left">役職</th>
-                    <th class="px-4 py-3 text-left">表示順</th>
-                    <th class="px-4 py-3 text-left">状態</th>
-                    <th class="px-4 py-3 text-right">操作</th>
+                    <th>写真</th>
+                    <th>名前</th>
+                    <th>役職</th>
+                    <th>表示順</th>
+                    <th>状態</th>
+                    <th class="text-right">操作</th>
                 </tr>
             </thead>
-            <tbody id="staff-table-body" class="divide-y divide-gray-100">
+            <tbody id="staff-table-body">
                 @forelse($staffMembers as $member)
                     <tr data-staff-row="{{ $member->id }}" data-sort-order="{{ $member->sort_order }}">
-                        <td class="px-4 py-3">
+                        <td>
                             <div class="staff-photo-cell h-12 w-12">
                                 @if($member->photo_path)
                                     <img src="{{ asset('storage/'.$member->photo_path) }}" alt="" class="staff-photo h-12 w-12 rounded-full object-cover">
                                 @endif
                             </div>
                         </td>
-                        <td class="staff-name px-4 py-3">{{ $member->name }}</td>
-                        <td class="staff-role px-4 py-3">{{ $member->role }}</td>
-                        <td class="staff-sort-order px-4 py-3">{{ $member->sort_order }}</td>
-                        <td class="staff-status px-4 py-3">{{ $member->is_published ? '公開' : '非公開' }}</td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="staff-name">{{ $member->name }}</td>
+                        <td class="staff-role">{{ $member->role }}</td>
+                        <td class="staff-sort-order">{{ $member->sort_order }}</td>
+                        <td class="staff-status">{{ $member->is_published ? '公開' : '非公開' }}</td>
+                        <td class="text-right">
                             <x-admin.action-group>
                                 <x-admin.edit-button
                                     type="button"
@@ -49,7 +49,17 @@
                         </td>
                     </tr>
                 @empty
-                    <tr id="staff-empty-row"><td colspan="6" class="px-4 py-8 text-center text-gray-500">スタッフが登録されていません。</td></tr>
+                    <tr id="staff-empty-row">
+                        <td colspan="6" class="!p-0 hover:!bg-transparent">
+                            <x-admin.empty-state
+                                variant="users"
+                                title="スタッフが登録されていません。"
+                                description="スタッフ情報を追加してみましょう。"
+                            >
+                                <x-admin.create-button type="button" data-open-staff-create>スタッフ追加</x-admin.create-button>
+                            </x-admin.empty-state>
+                        </td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>
@@ -57,14 +67,14 @@
 
     <template id="staff-row-template">
         <tr data-staff-row="" data-sort-order="0">
-            <td class="px-4 py-3">
+            <td>
                 <div class="staff-photo-cell h-12 w-12"></div>
             </td>
-            <td class="staff-name px-4 py-3"></td>
-            <td class="staff-role px-4 py-3"></td>
-            <td class="staff-sort-order px-4 py-3"></td>
-            <td class="staff-status px-4 py-3"></td>
-            <td class="px-4 py-3 text-right">
+            <td class="staff-name"></td>
+            <td class="staff-role"></td>
+            <td class="staff-sort-order"></td>
+            <td class="staff-status"></td>
+            <td class="text-right">
                 <div class="admin-action-group">
                     <button type="button" class="btn-admin-edit" data-open-staff-edit data-staff-id="">
                         <svg class="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M2.695 14.763l-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343Z"/></svg>
@@ -115,7 +125,7 @@
         aria-labelledby="staff-create-modal-title"
         hidden
     >
-        <div class="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-lg bg-white shadow-lg" data-staff-create-modal-panel>
+        <div class="admin-modal-panel flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-admin-border/50 bg-admin-card" data-staff-create-modal-panel>
             <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
                 <h2 id="staff-create-modal-title" class="text-lg font-semibold text-gray-900">スタッフ追加</h2>
                 <button
@@ -212,7 +222,7 @@
         aria-labelledby="staff-edit-modal-title"
         hidden
     >
-        <div class="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-lg bg-white shadow-lg" data-staff-modal-panel>
+        <div class="admin-modal-panel flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-admin-border/50 bg-admin-card" data-staff-modal-panel>
             <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
                 <h2 id="staff-edit-modal-title" class="text-lg font-semibold text-gray-900">スタッフ編集</h2>
                 <button

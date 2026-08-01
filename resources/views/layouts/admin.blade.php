@@ -4,7 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', '管理画面') - Salon CMS</title>
+    <title>@yield('title', '管理画面') - Sun ＆ Me</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600&family=Noto+Serif+JP:wght@500;600&display=swap" rel="stylesheet">
     @if (file_exists(public_path('build/manifest.json')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @else
@@ -13,6 +16,10 @@
             tailwind.config = {
                 theme: {
                     extend: {
+                        fontFamily: {
+                            sans: ['"Noto Sans JP"', 'Hiragino Sans', 'Yu Gothic', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                            serif: ['"Noto Serif JP"', 'Hiragino Mincho ProN', 'ui-serif', 'Georgia', 'serif'],
+                        },
                         colors: {
                             'salon-bg': '#FAF7F1',
                             'salon-text': '#3A332E',
@@ -20,6 +27,19 @@
                             'salon-button': '#5F6F52',
                             'salon-line': '#E3DDD2',
                             'salon-muted': '#6B635C',
+                            'admin-bg': '#F7F5F0',
+                            'admin-sidebar': '#F6F2EA',
+                            'admin-card': '#FFFFFF',
+                            'admin-text': '#3D3833',
+                            'admin-muted': '#736D65',
+                            'admin-accent': '#697A55',
+                            'admin-accent-dark': '#556344',
+                            'admin-selected': '#E5EADD',
+                            'admin-hover': '#EEF1E8',
+                            'admin-border': '#E5E0D7',
+                            'admin-icon': '#8A847A',
+                            'admin-danger': '#C45C5C',
+                            'admin-danger-dark': '#A84848',
                         }
                     }
                 }
@@ -27,71 +47,591 @@
         </script>
         <style type="text/tailwindcss">
             @layer components {
-                .admin-card { @apply rounded-lg border border-gray-200 bg-white p-6 shadow-sm; }
-                .admin-input { @apply w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500; }
-                .admin-label { @apply mb-1 block text-sm font-medium text-gray-700; }
-                .admin-btn { @apply inline-flex items-center rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800; }
-                .admin-btn-secondary { @apply inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50; }
-                .admin-btn-danger { @apply inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700; }
+                .admin-card { @apply rounded-xl border border-admin-border/40 bg-admin-card p-6 shadow-[0_2px_10px_rgba(0,0,0,0.04)]; }
+                .admin-modal-panel { @apply shadow-[0_2px_10px_rgba(0,0,0,0.04)]; }
+                .admin-input { @apply w-full rounded-lg border border-admin-border bg-admin-card px-3 py-2.5 text-sm text-admin-text placeholder:text-admin-muted/70 focus:border-admin-accent focus:outline-none focus:ring-1 focus:ring-admin-accent/40; }
+                .admin-label { @apply mb-1.5 block text-sm font-medium text-admin-text; }
+                .admin-btn { @apply inline-flex items-center justify-center rounded-lg bg-admin-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-admin-accent-dark focus:outline-none focus:ring-2 focus:ring-admin-accent/40 focus:ring-offset-1 focus:ring-offset-admin-bg disabled:cursor-not-allowed disabled:opacity-60; }
+                .admin-btn-secondary { @apply inline-flex items-center justify-center rounded-lg border border-admin-border bg-admin-card px-4 py-2 text-sm font-medium text-admin-text transition hover:bg-admin-hover focus:outline-none focus:ring-2 focus:ring-admin-accent/30 focus:ring-offset-1 focus:ring-offset-admin-bg; }
+                .admin-btn-danger { @apply inline-flex items-center justify-center rounded-lg bg-admin-danger px-4 py-2 text-sm font-medium text-white transition hover:bg-admin-danger-dark focus:outline-none focus:ring-2 focus:ring-admin-danger/40 focus:ring-offset-1; }
                 .admin-action-group { @apply flex flex-wrap items-center justify-end gap-2; }
-                .btn-admin-create { @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-salon-button px-4 text-sm font-medium text-white shadow-sm transition duration-150 hover:-translate-y-0.5 hover:bg-[#4f5d44] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-salon-button/40 focus:ring-offset-1 disabled:pointer-events-none disabled:opacity-50; }
-                .btn-admin-edit { @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-salon-button bg-white px-3 text-sm font-medium text-salon-button shadow-sm transition duration-150 hover:-translate-y-0.5 hover:bg-salon-button hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-salon-button/40 focus:ring-offset-1; }
-                .btn-admin-delete { @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-500 bg-white px-3 text-sm font-medium text-red-600 shadow-sm transition duration-150 hover:-translate-y-0.5 hover:border-red-600 hover:bg-red-600 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-400/50 focus:ring-offset-1; }
+                .btn-admin-create { @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-admin-accent px-4 text-sm font-medium text-white shadow-[0_2px_10px_rgba(0,0,0,0.04)] transition duration-150 hover:-translate-y-0.5 hover:bg-admin-accent-dark hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-admin-accent/40 focus:ring-offset-1 focus:ring-offset-admin-bg disabled:pointer-events-none disabled:opacity-50; }
+                .btn-admin-edit { @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-admin-accent/70 bg-admin-card px-3 text-sm font-medium text-admin-accent shadow-[0_2px_10px_rgba(0,0,0,0.04)] transition duration-150 hover:-translate-y-0.5 hover:bg-admin-accent hover:text-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-admin-accent/40 focus:ring-offset-1 focus:ring-offset-admin-bg; }
+                .btn-admin-delete { @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-admin-danger/70 bg-admin-card px-3 text-sm font-medium text-admin-danger shadow-[0_2px_10px_rgba(0,0,0,0.04)] transition duration-150 hover:-translate-y-0.5 hover:border-admin-danger-dark hover:bg-admin-danger hover:text-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-admin-danger/40 focus:ring-offset-1 focus:ring-offset-admin-bg; }
+                .admin-nav-link { @apply flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-admin-text/90 transition-colors duration-150 hover:bg-admin-hover hover:text-admin-text; }
+                .admin-nav-link svg { @apply text-admin-icon; }
+                .admin-nav-link:hover svg { @apply text-admin-accent; }
+                .admin-nav-link-active { @apply bg-admin-selected font-medium text-admin-accent-dark hover:bg-admin-selected hover:text-admin-accent-dark; }
+                .admin-nav-link-active svg { @apply text-admin-accent-dark; }
+                .admin-table-wrap { @apply overflow-hidden rounded-xl border border-admin-border/40 bg-admin-card shadow-[0_2px_10px_rgba(0,0,0,0.04)]; }
+                .admin-table { @apply min-w-full divide-y divide-admin-border/40 text-sm text-admin-text; }
+                .admin-table thead { @apply bg-admin-sidebar/80; }
+                .admin-table th { @apply px-5 py-3.5 text-left text-xs font-medium tracking-wide text-admin-muted; }
+                .admin-table tbody { @apply divide-y divide-admin-border/30; }
+                .admin-table tbody tr { @apply transition-colors duration-100 hover:bg-admin-hover/60; }
+                .admin-table td { @apply px-5 py-3.5 align-middle; }
+                .admin-empty-state { @apply flex flex-col items-center justify-center px-4 py-12 text-center; }
+                .admin-empty-state-icon { @apply mb-5 inline-flex h-24 w-24 items-center justify-center rounded-full bg-[#EEF1E8] text-[#B8B09F]; }
+                .admin-empty-state-title { @apply text-base font-medium text-admin-text; }
+                .admin-empty-state-desc { @apply mt-2 text-sm text-admin-muted; }
+                .admin-empty-state-actions { @apply mt-6; }
+                .admin-page-title { @apply font-serif text-xl font-medium tracking-wide text-admin-text md:text-2xl; }
+                .admin-page-title-icon { @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E8EDE3] text-admin-accent; }
+                .admin-brand-title { @apply font-serif text-lg font-medium tracking-wide text-admin-text; }
             }
+        </style>
+        {{-- Fallback when Vite build is missing: keep published checkbox styled --}}
+        <style>
+            .menu-published-control { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; min-height: 2.5rem; }
+            .menu-published-checkbox {
+                appearance: none; -webkit-appearance: none; -moz-appearance: none;
+                position: relative; width: 18px; height: 18px; flex-shrink: 0; margin: 0;
+                border-radius: 4px; border: 1px solid #E5E0D7; background-color: #fff;
+                cursor: pointer; accent-color: transparent;
+            }
+            .menu-published-checkbox::after {
+                content: ''; position: absolute; inset: 0; opacity: 0;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 6.2L4.8 8.5L9.5 3.5' stroke='%23ffffff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+                background-position: center; background-repeat: no-repeat; background-size: 12px 12px;
+            }
+            .menu-published-checkbox:hover { background-color: #EEF1E8; border-color: #D8D2C7; }
+            .menu-published-checkbox:focus,
+            .menu-published-checkbox:focus-visible { outline: none; border-color: #697A55; box-shadow: 0 0 0 3px rgba(105, 122, 85, 0.25); }
+            .menu-published-checkbox:checked { background-color: #697A55; border-color: #697A55; }
+            .menu-published-checkbox:checked::after { opacity: 1; }
+            .menu-published-checkbox:checked:hover { background-color: #556344; border-color: #556344; }
+            .menu-published-label { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.75rem; font-weight: 500; line-height: 1; white-space: nowrap; }
+            .menu-published-dot { display: inline-block; width: 6px; height: 6px; flex-shrink: 0; border-radius: 9999px; }
+            .menu-published-label.is-published { color: #5F7351; }
+            .menu-published-label.is-published .menu-published-dot { background-color: #8FA57B; }
+            .menu-published-label.is-unpublished { color: #77736D; }
+            .menu-published-label.is-unpublished .menu-published-dot { background-color: #B8B5AF; }
         </style>
     @endif
 </head>
-<body class="bg-gray-100 font-sans text-gray-900">
+<body class="bg-admin-bg font-sans text-admin-text antialiased">
     <div class="flex min-h-screen">
-        <aside class="hidden w-64 shrink-0 bg-[#5F6B5A] text-[#F7F4EE] md:block">
-            <div class="border-b border-white/12 px-6 py-5">
-                <p class="text-lg font-semibold text-[#F7F4EE]">Salon CMS</p>
-                <p class="text-xs text-[#F7F4EE]/70">管理画面</p>
+        <aside class="relative sticky top-0 hidden h-screen w-64 shrink-0 overflow-hidden border-r border-[#E5E0D7] bg-[#F6F2EA] text-admin-text md:flex md:flex-col">
+            <div class="relative z-10 flex items-center gap-3 px-6 py-5">
+                    <div
+                        class="pointer-events-none shrink-0 text-[#A79D87]"
+                        aria-hidden="true"
+                    >
+                        <svg
+                            viewBox="0 0 72 112"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-14 w-9 opacity-70"
+                        >
+                            <!-- 主茎 -->
+                            <path
+                                d="M37 104
+                                   C36 88 36 71 37 54
+                                   C38 37 39 21 40 8"
+                                stroke="currentColor"
+                                stroke-width="1.65"
+                                stroke-linecap="round"
+                            />
+
+                            <!-- 左上の葉 -->
+                            <path
+                                d="M39.5 22
+                                   C31 19 25 13 23 6
+                                   C31 7 37 12 39.5 22Z"
+                                stroke="currentColor"
+                                stroke-width="1.4"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="M38.5 21
+                                   C33 16 29 12 24 8"
+                                stroke="currentColor"
+                                stroke-width="1"
+                                stroke-linecap="round"
+                                opacity=".75"
+                            />
+
+                            <!-- 右上の葉 -->
+                            <path
+                                d="M38.5 34
+                                   C47 30 53 24 55 17
+                                   C47 18 41 24 38.5 34Z"
+                                stroke="currentColor"
+                                stroke-width="1.4"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="M39.5 33
+                                   C45 28 49 24 54 19"
+                                stroke="currentColor"
+                                stroke-width="1"
+                                stroke-linecap="round"
+                                opacity=".75"
+                            />
+
+                            <!-- 左中の葉 -->
+                            <path
+                                d="M37.5 47
+                                   C28 44 22 38 20 31
+                                   C29 32 35 38 37.5 47Z"
+                                stroke="currentColor"
+                                stroke-width="1.4"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="M36.5 46
+                                   C31 41 26 37 21 33"
+                                stroke="currentColor"
+                                stroke-width="1"
+                                stroke-linecap="round"
+                                opacity=".75"
+                            />
+
+                            <!-- 右中の葉 -->
+                            <path
+                                d="M37 60
+                                   C46 56 52 50 54 43
+                                   C46 44 40 50 37 60Z"
+                                stroke="currentColor"
+                                stroke-width="1.4"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="M38 59
+                                   C43 54 48 50 53 45"
+                                stroke="currentColor"
+                                stroke-width="1"
+                                stroke-linecap="round"
+                                opacity=".75"
+                            />
+
+                            <!-- 左下の葉 -->
+                            <path
+                                d="M36.5 73
+                                   C27 70 21 64 19 57
+                                   C28 58 34 64 36.5 73Z"
+                                stroke="currentColor"
+                                stroke-width="1.4"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="M35.5 72
+                                   C30 67 25 63 20 59"
+                                stroke="currentColor"
+                                stroke-width="1"
+                                stroke-linecap="round"
+                                opacity=".75"
+                            />
+
+                            <!-- 右下の葉 -->
+                            <path
+                                d="M36 86
+                                   C45 82 51 76 53 69
+                                   C45 70 39 76 36 86Z"
+                                stroke="currentColor"
+                                stroke-width="1.4"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="M37 85
+                                   C42 80 47 76 52 71"
+                                stroke="currentColor"
+                                stroke-width="1"
+                                stroke-linecap="round"
+                                opacity=".75"
+                            />
+                        </svg>
+                    </div>
+
+                <div>
+                    <div class="font-serif text-xl text-[#3D3833]">Sun ＆ Me</div>
+                    <div class="mt-0.5 text-xs text-[#736D65]">管理画面</div>
+                </div>
             </div>
-            <nav class="space-y-1 p-4 text-sm text-[#F7F4EE]">
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5 rounded px-3 py-2 text-[#F7F4EE]/90 transition-colors duration-150 hover:bg-[#6F7C64] hover:text-[#F7F4EE] {{ request()->routeIs('admin.dashboard') ? 'bg-[#7D8F73] text-[#F7F4EE]' : '' }}">
+            <nav class="relative z-10 space-y-1 p-4 text-sm">
+
+                <a href="{{ route('admin.dashboard') }}" class="admin-nav-link {{ request()->routeIs('admin.dashboard') ? 'admin-nav-link-active' : '' }}">
                     <x-admin.nav-icon name="dashboard" />
                     <span>ダッシュボード</span>
                 </a>
-                <a href="{{ route('admin.news.index') }}" class="flex items-center gap-2.5 rounded px-3 py-2 text-[#F7F4EE]/90 transition-colors duration-150 hover:bg-[#6F7C64] hover:text-[#F7F4EE] {{ request()->routeIs('admin.news.*') ? 'bg-[#7D8F73] text-[#F7F4EE]' : '' }}">
+                <a href="{{ route('admin.news.index') }}" class="admin-nav-link {{ request()->routeIs('admin.news.*') ? 'admin-nav-link-active' : '' }}">
                     <x-admin.nav-icon name="news" />
                     <span>お知らせ</span>
                 </a>
-                <a href="{{ route('admin.galleries.index') }}" class="flex items-center gap-2.5 rounded px-3 py-2 text-[#F7F4EE]/90 transition-colors duration-150 hover:bg-[#6F7C64] hover:text-[#F7F4EE] {{ request()->routeIs('admin.galleries.*') ? 'bg-[#7D8F73] text-[#F7F4EE]' : '' }}">
+                <a href="{{ route('admin.galleries.index') }}" class="admin-nav-link {{ request()->routeIs('admin.galleries.*') ? 'admin-nav-link-active' : '' }}">
                     <x-admin.nav-icon name="gallery" />
                     <span>ギャラリー</span>
                 </a>
-                <a href="{{ route('admin.menus.index') }}" class="flex items-center gap-2.5 rounded px-3 py-2 text-[#F7F4EE]/90 transition-colors duration-150 hover:bg-[#6F7C64] hover:text-[#F7F4EE] {{ request()->routeIs('admin.menus.*') ? 'bg-[#7D8F73] text-[#F7F4EE]' : '' }}">
+                <a href="{{ route('admin.menus.index') }}" class="admin-nav-link {{ request()->routeIs('admin.menus.*') ? 'admin-nav-link-active' : '' }}">
                     <x-admin.nav-icon name="menus" />
                     <span>メニュー・料金</span>
                 </a>
-                <a href="{{ route('admin.staff.index') }}" class="flex items-center gap-2.5 rounded px-3 py-2 text-[#F7F4EE]/90 transition-colors duration-150 hover:bg-[#6F7C64] hover:text-[#F7F4EE] {{ request()->routeIs('admin.staff.*') ? 'bg-[#7D8F73] text-[#F7F4EE]' : '' }}">
+                <a href="{{ route('admin.staff.index') }}" class="admin-nav-link {{ request()->routeIs('admin.staff.*') ? 'admin-nav-link-active' : '' }}">
                     <x-admin.nav-icon name="staff" />
                     <span>スタッフ</span>
                 </a>
-                <a href="{{ route('admin.settings.edit') }}" class="flex items-center gap-2.5 rounded px-3 py-2 text-[#F7F4EE]/90 transition-colors duration-150 hover:bg-[#6F7C64] hover:text-[#F7F4EE] {{ request()->routeIs('admin.settings.*') ? 'bg-[#7D8F73] text-[#F7F4EE]' : '' }}">
+                <a href="{{ route('admin.settings.edit') }}" class="admin-nav-link {{ request()->routeIs('admin.settings.*') ? 'admin-nav-link-active' : '' }}">
                     <x-admin.nav-icon name="settings" />
                     <span>店舗情報</span>
                 </a>
-                <a href="{{ route('home') }}" target="_blank" class="flex items-center gap-2.5 rounded px-3 py-2 text-[#F7F4EE]/90 transition-colors duration-150 hover:bg-[#6F7C64] hover:text-[#F7F4EE]">
+                <a href="{{ route('home') }}" target="_blank" class="admin-nav-link">
                     <x-admin.nav-icon name="external" />
                     <span>公開サイトを見る</span>
                 </a>
             </nav>
+            <div
+                class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[330px] overflow-hidden text-[#B8AE98]"
+                aria-hidden="true"
+            >
+                <!-- 背景の有機的なベージュ形状 -->
+                <svg
+                    viewBox="0 0 280 330"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="absolute inset-0 h-full w-full"
+                    preserveAspectRatio="none"
+                >
+                    <path
+                        d="M0 330V245
+                           C38 215 74 212 108 225
+                           C147 240 174 227 205 242
+                           C239 259 261 292 280 330H0Z"
+                        fill="#C4BCA9"
+                        opacity=".13"
+                    />
+                    <path
+                        d="M0 330V276
+                           C45 249 92 253 127 270
+                           C167 290 219 279 280 330H0Z"
+                        fill="#D9D2C5"
+                        opacity=".2"
+                    />
+                </svg>
+
+                <!-- 枝葉本体 -->
+                <svg
+                    viewBox="0 0 280 330"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="absolute bottom-0 left-0 h-[315px] w-[245px] opacity-60"
+                >
+                    <!-- 主枝 -->
+                    <path
+                        d="M18 314
+                           C53 283 74 249 91 218
+                           C110 183 124 150 143 112
+                           C158 82 171 53 190 22"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                    />
+
+                    <!-- 左下枝 -->
+                    <path
+                        d="M57 273
+                           C41 261 30 249 23 234"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linecap="round"
+                    />
+
+                    <!-- 右下枝 -->
+                    <path
+                        d="M73 251
+                           C92 247 108 239 121 226"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linecap="round"
+                    />
+
+                    <!-- 左中枝 -->
+                    <path
+                        d="M101 199
+                           C81 191 67 179 57 163"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linecap="round"
+                    />
+
+                    <!-- 右中枝 -->
+                    <path
+                        d="M119 166
+                           C139 159 154 149 166 134"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linecap="round"
+                    />
+
+                    <!-- 上部左枝 -->
+                    <path
+                        d="M146 106
+                           C130 97 118 85 111 71"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linecap="round"
+                    />
+
+                    <!-- 上部右枝 -->
+                    <path
+                        d="M164 68
+                           C181 61 194 50 203 37"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linecap="round"
+                    />
+
+                    <!-- 葉1 -->
+                    <path
+                        d="M23 234
+                           C11 232 5 223 4 213
+                           C15 216 22 223 23 234Z"
+                        stroke="currentColor"
+                        stroke-width="1.45"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M22 233L6 215"
+                        stroke="currentColor"
+                        stroke-width=".9"
+                        stroke-linecap="round"
+                        opacity=".7"
+                    />
+
+                    <!-- 葉2 -->
+                    <path
+                        d="M48 266
+                           C34 266 25 258 21 246
+                           C34 248 44 255 48 266Z"
+                        stroke="currentColor"
+                        stroke-width="1.45"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M47 265L23 248"
+                        stroke="currentColor"
+                        stroke-width=".9"
+                        stroke-linecap="round"
+                        opacity=".7"
+                    />
+
+                    <!-- 葉3 -->
+                    <path
+                        d="M77 248
+                           C83 235 94 229 106 230
+                           C100 241 90 247 77 248Z"
+                        stroke="currentColor"
+                        stroke-width="1.45"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M79 247L104 231"
+                        stroke="currentColor"
+                        stroke-width=".9"
+                        stroke-linecap="round"
+                        opacity=".7"
+                    />
+
+                    <!-- 葉4 -->
+                    <path
+                        d="M121 226
+                           C129 214 140 210 151 212
+                           C144 222 134 227 121 226Z"
+                        stroke="currentColor"
+                        stroke-width="1.45"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M123 225L149 213"
+                        stroke="currentColor"
+                        stroke-width=".9"
+                        stroke-linecap="round"
+                        opacity=".7"
+                    />
+
+                    <!-- 葉5 -->
+                    <path
+                        d="M90 215
+                           C76 211 68 201 67 190
+                           C79 194 87 203 90 215Z"
+                        stroke="currentColor"
+                        stroke-width="1.45"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M89 213L69 192"
+                        stroke="currentColor"
+                        stroke-width=".9"
+                        stroke-linecap="round"
+                        opacity=".7"
+                    />
+
+                    <!-- 葉6 -->
+                    <path
+                        d="M57 163
+                           C44 160 36 151 34 140
+                           C46 143 54 152 57 163Z"
+                        stroke="currentColor"
+                        stroke-width="1.45"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M56 161L36 142"
+                        stroke="currentColor"
+                        stroke-width=".9"
+                        stroke-linecap="round"
+                        opacity=".7"
+                    />
+
+                    <!-- 葉7 -->
+                    <path
+                        d="M106 186
+                           C112 173 122 167 134 168
+                           C128 179 118 185 106 186Z"
+                        stroke="currentColor"
+                        stroke-width="1.45"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M108 184L132 169"
+                        stroke="currentColor"
+                        stroke-width=".9"
+                        stroke-linecap="round"
+                        opacity=".7"
+                    />
+
+                    <!-- 葉8 -->
+                    <path
+                        d="M166 134
+                           C174 122 185 118 197 120
+                           C190 130 179 135 166 134Z"
+                        stroke="currentColor"
+                        stroke-width="1.45"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M168 133L195 121"
+                        stroke="currentColor"
+                        stroke-width=".9"
+                        stroke-linecap="round"
+                        opacity=".7"
+                    />
+
+                    <!-- 葉9 -->
+                    <path
+                        d="M128 142
+                           C116 137 109 127 109 116
+                           C121 120 128 130 128 142Z"
+                        stroke="currentColor"
+                        stroke-width="1.45"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M127 140L111 118"
+                        stroke="currentColor"
+                        stroke-width=".9"
+                        stroke-linecap="round"
+                        opacity=".7"
+                    />
+
+                    <!-- 葉10 -->
+                    <path
+                        d="M111 71
+                           C100 66 94 56 94 46
+                           C105 50 111 60 111 71Z"
+                        stroke="currentColor"
+                        stroke-width="1.45"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M110 69L96 48"
+                        stroke="currentColor"
+                        stroke-width=".9"
+                        stroke-linecap="round"
+                        opacity=".7"
+                    />
+
+                    <!-- 葉11 -->
+                    <path
+                        d="M155 86
+                           C162 74 172 69 183 70
+                           C177 81 167 86 155 86Z"
+                        stroke="currentColor"
+                        stroke-width="1.45"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M157 84L181 71"
+                        stroke="currentColor"
+                        stroke-width=".9"
+                        stroke-linecap="round"
+                        opacity=".7"
+                    />
+
+                    <!-- 葉12 -->
+                    <path
+                        d="M190 22
+                           C193 10 202 3 213 2
+                           C209 13 201 20 190 22Z"
+                        stroke="currentColor"
+                        stroke-width="1.45"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M192 20L211 4"
+                        stroke="currentColor"
+                        stroke-width=".9"
+                        stroke-linecap="round"
+                        opacity=".7"
+                    />
+
+                    <!-- 葉13 -->
+                    <path
+                        d="M203 37
+                           C214 31 224 31 233 36
+                           C224 43 214 43 203 37Z"
+                        stroke="currentColor"
+                        stroke-width="1.45"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M205 37L231 36"
+                        stroke="currentColor"
+                        stroke-width=".9"
+                        stroke-linecap="round"
+                        opacity=".7"
+                    />
+                </svg>
+            </div>
         </aside>
 
         <div class="flex min-w-0 flex-1 flex-col">
-            <header class="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-4 md:px-8">
-                <h1 class="text-lg font-semibold">@yield('heading', '管理画面')</h1>
+            <header class="sticky top-0 z-20 flex items-center justify-between border-b border-admin-border/60 bg-admin-card/95 px-4 py-4 backdrop-blur-sm md:px-8">
+                <h1 class="admin-page-title flex items-center gap-3">
+                    <span class="admin-page-title-icon hidden sm:inline-flex" aria-hidden="true">
+                        <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 21c-4.5-2.5-7.5-6.2-7.5-10.2C4.5 6.2 7.8 3 12 3c4.2 0 7.5 3.2 7.5 7.8 0 4-3 7.7-7.5 10.2Z" />
+                            <path d="M12 21V9" />
+                            <path d="M12 12c1.8-.8 3.2-2.2 4-4" />
+                            <path d="M12 15c-1.5-.6-2.7-1.7-3.5-3" />
+                        </svg>
+                    </span>
+                    @yield('heading', '管理画面')
+                </h1>
                 <form method="POST" action="{{ route('admin.logout') }}">
                     @csrf
                     <button type="submit" class="admin-btn-secondary">ログアウト</button>
                 </form>
             </header>
 
-            <main class="flex-1 p-4 md:p-8">
+            <main class="flex-1 bg-admin-bg p-4 md:p-8">
                 @if($errors->any())
-                    <div class="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    <div class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                         <ul class="list-disc pl-5">
                             @foreach($errors->all() as $error)
                                 <li>{{ $error }}</li>
@@ -124,9 +664,9 @@
             align-items: flex-start;
             gap: 0.75rem;
             border-radius: 0.75rem;
-            background: #FAF7F1;
-            box-shadow: 0 10px 30px rgba(58, 51, 46, 0.12);
-            border: 1px solid #E3DDD2;
+            background: #FFFFFF;
+            box-shadow: 0 8px 24px rgba(61, 56, 51, 0.1);
+            border: 1px solid #E5E0D7;
             overflow: hidden;
             opacity: 0;
             transform: translateY(0.75rem);
@@ -144,11 +684,11 @@
         }
 
         .admin-toast-item--success {
-            background: #FAF7F1;
+            background: #FFFFFF;
         }
 
         .admin-toast-item--error {
-            background: #fff;
+            background: #FFFFFF;
         }
 
         .admin-toast-accent {
@@ -158,7 +698,7 @@
         }
 
         .admin-toast-item--success .admin-toast-accent {
-            background: #5F6F52;
+            background: #697A55;
         }
 
         .admin-toast-item--error .admin-toast-accent {
@@ -177,7 +717,7 @@
         }
 
         .admin-toast-item--success .admin-toast-icon {
-            color: #5F6F52;
+            color: #697A55;
         }
 
         .admin-toast-item--error .admin-toast-icon {
@@ -194,7 +734,7 @@
             margin: 0;
             font-size: 0.875rem;
             line-height: 1.5;
-            color: #3A332E;
+            color: #3D3833;
         }
 
         .admin-toast-item--error .admin-toast-text {
@@ -206,15 +746,15 @@
             border: 0;
             background: transparent;
             border-radius: 0.375rem;
-            color: #6B635C;
+            color: #736D65;
             cursor: pointer;
             padding: 0.35rem;
             line-height: 0;
         }
 
         .admin-toast-close:hover {
-            background: rgba(58, 51, 46, 0.06);
-            color: #3A332E;
+            background: rgba(61, 56, 51, 0.06);
+            color: #3D3833;
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -405,23 +945,23 @@
         aria-labelledby="admin-confirm-modal-title"
         hidden
     >
-        <div class="w-full max-w-md rounded-xl border border-[#E3DDD2] bg-[#FFFcf7] p-6 shadow-lg" data-admin-confirm-panel>
+        <div class="admin-modal-panel w-full max-w-md rounded-xl border border-admin-border/50 bg-admin-card p-6" data-admin-confirm-panel>
             <div class="mb-4 flex items-start justify-between gap-3">
                 <div class="flex items-start gap-3">
-                    <span class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E8EDE3] text-[#5F6F52]" aria-hidden="true">
+                    <span class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-admin-selected text-admin-accent" aria-hidden="true">
                         <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/>
                         </svg>
                     </span>
                     <div>
-                        <h2 id="admin-confirm-modal-title" class="text-lg font-semibold text-gray-900">確認</h2>
-                        <p id="admin-confirm-modal-message" class="mt-2 whitespace-pre-line text-sm text-gray-700"></p>
-                        <p id="admin-confirm-modal-note" class="mt-2 hidden text-sm text-gray-500"></p>
+                        <h2 id="admin-confirm-modal-title" class="text-lg font-semibold text-admin-text">確認</h2>
+                        <p id="admin-confirm-modal-message" class="mt-2 whitespace-pre-line text-sm text-admin-text/90"></p>
+                        <p id="admin-confirm-modal-note" class="mt-2 hidden text-sm text-admin-muted"></p>
                     </div>
                 </div>
                 <button
                     type="button"
-                    class="rounded-md p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-salon-button/40"
+                    class="rounded-md p-1 text-admin-muted transition hover:bg-admin-hover hover:text-admin-text focus:outline-none focus:ring-2 focus:ring-admin-accent/40"
                     aria-label="閉じる"
                     data-admin-confirm-cancel
                 >
@@ -434,13 +974,13 @@
             <div class="mt-6 flex justify-end gap-3">
                 <button
                     type="button"
-                    class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-salon-button/30"
+                    class="admin-btn-secondary"
                     data-admin-confirm-cancel
                 >キャンセル</button>
                 <button
                     type="button"
                     id="admin-confirm-submit"
-                    class="inline-flex items-center rounded-lg bg-salon-button px-4 py-2 text-sm font-medium text-white transition hover:bg-[#4f5d44] focus:outline-none focus:ring-2 focus:ring-salon-button/40 disabled:cursor-not-allowed disabled:opacity-60"
+                    class="admin-btn"
                 >実行する</button>
             </div>
         </div>
@@ -590,24 +1130,24 @@
         aria-labelledby="admin-delete-modal-title"
         hidden
     >
-        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-lg" data-admin-delete-panel>
+        <div class="admin-modal-panel w-full max-w-md rounded-xl border border-admin-border/50 bg-admin-card p-6" data-admin-delete-panel>
             <div class="mb-4 flex items-start justify-between gap-3">
                 <div class="flex items-start gap-3">
-                    <span class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500" aria-hidden="true">
+                    <span class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-admin-danger" aria-hidden="true">
                         <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M8.5 3a1.5 1.5 0 0 0-1.415 1H4a1 1 0 0 0 0 2h.293l.72 9.364A2.5 2.5 0 0 0 7.505 18h4.99a2.5 2.5 0 0 0 2.492-2.636L15.707 6H16a1 1 0 1 0 0-2h-3.085A1.5 1.5 0 0 0 11.5 3h-3Zm1 1a.5.5 0 0 0-.5.5V5h2v-.5a.5.5 0 0 0-.5-.5h-1ZM7.3 6l.69 8.97a.5.5 0 0 0 .498.53h3.024a.5.5 0 0 0 .498-.53L12.7 6H7.3Z" clip-rule="evenodd"/>
                         </svg>
                     </span>
                     <div>
-                        <h2 id="admin-delete-modal-title" class="text-lg font-semibold text-gray-900">削除の確認</h2>
-                        <p id="admin-delete-modal-message" class="mt-2 text-sm text-gray-700"></p>
-                        <p class="mt-2 text-sm text-gray-500">この操作は取り消せません。</p>
+                        <h2 id="admin-delete-modal-title" class="text-lg font-semibold text-admin-text">削除の確認</h2>
+                        <p id="admin-delete-modal-message" class="mt-2 text-sm text-admin-text/90"></p>
+                        <p class="mt-2 text-sm text-admin-muted">この操作は取り消せません。</p>
                     </div>
                 </div>
                 <button
                     type="button"
                     id="admin-delete-modal-close"
-                    class="rounded-md p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-salon-button/40"
+                    class="rounded-md p-1 text-admin-muted transition hover:bg-admin-hover hover:text-admin-text focus:outline-none focus:ring-2 focus:ring-admin-accent/40"
                     aria-label="閉じる"
                     data-admin-delete-cancel
                 >
@@ -620,13 +1160,13 @@
             <div class="mt-6 flex justify-end gap-3">
                 <button
                     type="button"
-                    class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-salon-button/30"
+                    class="admin-btn-secondary"
                     data-admin-delete-cancel
                 >キャンセル</button>
                 <button
                     type="button"
                     id="admin-delete-confirm"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-red-500 bg-white px-4 py-2 text-sm font-medium text-red-600 transition hover:border-red-600 hover:bg-red-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-400/40 disabled:cursor-not-allowed disabled:opacity-60"
+                    class="btn-admin-delete"
                 >
                     <svg class="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fill-rule="evenodd" d="M8.5 3a1.5 1.5 0 0 0-1.415 1H4a1 1 0 0 0 0 2h.293l.72 9.364A2.5 2.5 0 0 0 7.505 18h4.99a2.5 2.5 0 0 0 2.492-2.636L15.707 6H16a1 1 0 1 0 0-2h-3.085A1.5 1.5 0 0 0 11.5 3h-3Zm1 1a.5.5 0 0 0-.5.5V5h2v-.5a.5.5 0 0 0-.5-.5h-1ZM7.3 6l.69 8.97a.5.5 0 0 0 .498.53h3.024a.5.5 0 0 0 .498-.53L12.7 6H7.3Z" clip-rule="evenodd"/>
