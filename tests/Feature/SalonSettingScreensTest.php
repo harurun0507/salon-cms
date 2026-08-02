@@ -45,7 +45,7 @@ class SalonSettingScreensTest extends TestCase
             ->get(route('admin.home.top'))
             ->assertOk()
             ->assertSee('トップページ表示件数')
-            ->assertSee('セクション表示・表示順')
+            ->assertSee('トップページの表示順')
             ->assertSee('ヒーロー設定')
             ->assertSee('コンセプト設定');
     }
@@ -65,14 +65,14 @@ class SalonSettingScreensTest extends TestCase
             ->get(route('admin.home.top'))
             ->assertOk()
             ->assertSee('トップページ表示件数')
-            ->assertSee('セクション表示・表示順');
+            ->assertSee('トップページの表示順');
 
         $html = $response->getContent();
 
         $this->assertStringContainsString('ヒーロー設定', $html);
         $this->assertStringContainsString('コンセプト設定', $html);
         $this->assertStringContainsString('トップページ表示件数', $html);
-        $this->assertStringContainsString('セクション表示・表示順', $html);
+        $this->assertStringContainsString('トップページの表示順', $html);
         $this->assertStringContainsString('name="hero_label"', $html);
         $this->assertStringContainsString('name="hero_title"', $html);
         $this->assertStringContainsString('name="concept_title"', $html);

@@ -37,7 +37,7 @@
                 data-confirm-form="top-page-form"
                 data-confirm-title="トップページ設定保存の確認"
                 data-confirm-message="トップページ設定を保存します。&#10;よろしいですか？"
-                data-confirm-note="ヒーロー、コンセプト、表示件数、セクション表示・表示順など、現在入力されている内容が反映されます。"
+                data-confirm-note="ヒーロー、コンセプト、表示件数、トップページの表示順など、現在入力されている内容が反映されます。"
                 data-confirm-submit-label="保存する"
             >保存する</button>
             <p class="text-sm text-admin-muted">
@@ -134,8 +134,9 @@
 
         <div class="admin-card space-y-5">
             <div>
-                <h2 class="text-base font-medium text-admin-text">セクション表示・表示順</h2>
-                <p class="mt-1 text-sm text-admin-muted">ドラッグで表示順を変更し、スイッチでトップページへの表示／非表示を切り替えます。一覧・詳細ページには影響しません。</p>
+                <h2 class="text-base font-medium text-admin-text">トップページの表示順</h2>
+                <p class="mt-1 text-sm text-admin-muted">トップページに表示する各セクションの表示・非表示と表示順を設定します。ドラッグで並び替え、スイッチで表示を切り替えられます。</p>
+                <p class="mt-1 text-xs text-admin-muted">お知らせ・ギャラリー・メニュー・スタッフの一覧・詳細ページには影響しません。</p>
             </div>
 
             @error('section_order')

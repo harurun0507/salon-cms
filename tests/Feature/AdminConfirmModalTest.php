@@ -167,7 +167,7 @@ class AdminConfirmModalTest extends TestCase
         $this->assertStringContainsString('data-confirm-form="top-page-form"', $html);
         $this->assertStringContainsString('data-confirm-title="トップページ設定保存の確認"', $html);
         $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
-        $this->assertStringContainsString('ヒーロー、コンセプト、表示件数、セクション表示・表示順など、現在入力されている内容が反映されます。', $html);
+        $this->assertStringContainsString('ヒーロー、コンセプト、表示件数、トップページの表示順など、現在入力されている内容が反映されます。', $html);
         $this->assertStringNotContainsString('return confirm(', $html);
         $this->assertSame(1, substr_count($html, 'data-confirm-form="top-page-form"'));
     }
