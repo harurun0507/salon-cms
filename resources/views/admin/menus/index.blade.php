@@ -468,7 +468,7 @@
                                     @if($row['kind'] === 'existing')
                                         @php $menu = $row['menu']; @endphp
                                         <tr class="align-top menu-list-row" data-menu-row="{{ $menu->id }}">
-                                            <td class="menu-cell-middle !py-3 !pr-1">
+                                            <td class="!py-3 !pr-1">
                                                 <span
                                                     class="menu-drag-handle"
                                                     data-menu-drag-handle
@@ -509,7 +509,7 @@
                                             <td class="!py-3 !pr-3 min-w-0">
                                                 <input type="text" name="menus[{{ $menu->id }}][price]" value="{{ old('menus.'.$menu->id.'.price', $menu->price) }}" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。">
                                             </td>
-                                            <td class="menu-cell-middle !py-3 !pr-3">
+                                            <td class="!py-3 !pr-3">
                                                 @php
                                                     $menuPublished = old('menus.'.$menu->id.'.is_published', $menu->is_published ? '1' : '0') == '1';
                                                 @endphp
@@ -533,7 +533,7 @@
                                                     </span>
                                                 </label>
                                             </td>
-                                            <td class="menu-cell-middle !py-3 !pl-1 !pr-2 text-center">
+                                            <td class="!py-3 !pl-1 !pr-2 text-center">
                                                 <input
                                                     type="number"
                                                     name="menus[{{ $menu->id }}][sort_order]"
@@ -549,7 +549,7 @@
                                                     <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
                                                 @enderror
                                             </td>
-                                            <td class="menu-cell-middle !py-3 !pl-0 !pr-4 text-left">
+                                            <td class="!py-3 !pl-0 !pr-4 text-left">
                                                 <button
                                                     type="button"
                                                     class="category-delete-x"
@@ -569,7 +569,7 @@
                                             $newMenuData = $row['data'];
                                         @endphp
                                         <tr class="align-top menu-list-row" data-menu-row="{{ $newMenuKey }}" data-new-menu="{{ $newMenuKey }}">
-                                            <td class="menu-cell-middle !py-3 !pr-1">
+                                            <td class="!py-3 !pr-1">
                                                 <span
                                                     class="menu-drag-handle"
                                                     data-menu-drag-handle
@@ -614,7 +614,7 @@
                                             <td class="!py-3 !pr-3 min-w-0">
                                                 <input type="text" name="menus[{{ $newMenuKey }}][price]" value="{{ $newMenuData['price'] ?? '' }}" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。">
                                             </td>
-                                            <td class="menu-cell-middle !py-3 !pr-3">
+                                            <td class="!py-3 !pr-3">
                                                 @php
                                                     $newMenuPublished = ($newMenuData['is_published'] ?? '1') == '1';
                                                 @endphp
@@ -638,7 +638,7 @@
                                                     </span>
                                                 </label>
                                             </td>
-                                            <td class="menu-cell-middle !py-3 !pl-1 !pr-2 text-center">
+                                            <td class="!py-3 !pl-1 !pr-2 text-center">
                                                 <input
                                                     type="number"
                                                     name="menus[{{ $newMenuKey }}][sort_order]"
@@ -654,7 +654,7 @@
                                                     <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
                                                 @enderror
                                             </td>
-                                            <td class="menu-cell-middle !py-3 !pl-0 !pr-4 text-left">
+                                            <td class="!py-3 !pl-0 !pr-4 text-left">
                                                 <button
                                                     type="button"
                                                     class="category-delete-x"
@@ -753,7 +753,7 @@
                                         $newMenuData = $row['data'];
                                     @endphp
                                     <tr class="align-top menu-list-row" data-menu-row="{{ $newMenuKey }}" data-new-menu="{{ $newMenuKey }}">
-                                        <td class="menu-cell-middle !py-3 !pr-1">
+                                        <td class="!py-3 !pr-1">
                                             <span
                                                 class="menu-drag-handle"
                                                 data-menu-drag-handle
@@ -798,7 +798,7 @@
                                         <td class="!py-3 !pr-3 min-w-0">
                                             <input type="text" name="menus[{{ $newMenuKey }}][price]" value="{{ $newMenuData['price'] ?? '' }}" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。">
                                         </td>
-                                        <td class="menu-cell-middle !py-3 !pr-3">
+                                        <td class="!py-3 !pr-3">
                                             @php
                                                 $newMenuPublished = ($newMenuData['is_published'] ?? '1') == '1';
                                             @endphp
@@ -822,7 +822,7 @@
                                                 </span>
                                             </label>
                                         </td>
-                                        <td class="menu-cell-middle !py-3 !pl-1 !pr-2 text-center">
+                                        <td class="!py-3 !pl-1 !pr-2 text-center">
                                             <input
                                                 type="number"
                                                 name="menus[{{ $newMenuKey }}][sort_order]"
@@ -838,7 +838,7 @@
                                                 <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
                                             @enderror
                                         </td>
-                                        <td class="menu-cell-middle !py-3 !pl-0 !pr-4 text-left">
+                                        <td class="!py-3 !pl-0 !pr-4 text-left">
                                             <button
                                                 type="button"
                                                 class="category-delete-x"
@@ -1048,7 +1048,7 @@
 
     <template id="new-menu-row-template">
         <tr class="align-top menu-list-row" data-menu-row="__MENU_ID__" data-new-menu="__MENU_ID__">
-            <td class="menu-cell-middle !py-3 !pr-1">
+            <td class="!py-3 !pr-1">
                 <span
                     class="menu-drag-handle"
                     data-menu-drag-handle
@@ -1090,7 +1090,7 @@
             <td class="!py-3 !pr-3 min-w-0">
                 <input type="text" name="menus[__MENU_ID__][price]" value="" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。">
             </td>
-            <td class="menu-cell-middle !py-3 !pr-3">
+            <td class="!py-3 !pr-3">
                 <label class="menu-published-control" data-published-control>
                     <input type="hidden" name="menus[__MENU_ID__][is_published]" value="0">
                     <input
@@ -1108,7 +1108,7 @@
                     </span>
                 </label>
             </td>
-            <td class="menu-cell-middle !py-3 !pl-1 !pr-2 text-center">
+            <td class="!py-3 !pl-1 !pr-2 text-center">
                 <input
                     type="number"
                     name="menus[__MENU_ID__][sort_order]"
@@ -1121,7 +1121,7 @@
                     aria-label="表示順"
                 >
             </td>
-            <td class="menu-cell-middle !py-3 !pl-0 !pr-4 text-left">
+            <td class="!py-3 !pl-0 !pr-4 text-left">
                 <button
                     type="button"
                     class="category-delete-x"
@@ -1171,10 +1171,6 @@
         .menu-list-table td {
             vertical-align: top;
             box-sizing: border-box;
-        }
-
-        .menu-list-table td.menu-cell-middle {
-            vertical-align: middle;
         }
 
         .menu-list-table td.min-w-0 {

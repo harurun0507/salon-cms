@@ -709,12 +709,7 @@
             <header class="sticky top-0 z-20 flex items-center justify-between border-b border-admin-border/60 bg-admin-card/95 px-4 py-4 backdrop-blur-sm md:px-8">
                 <h1 class="admin-page-title flex items-center gap-3">
                     <span class="admin-page-title-icon hidden sm:inline-flex" aria-hidden="true">
-                        <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 21c-4.5-2.5-7.5-6.2-7.5-10.2C4.5 6.2 7.8 3 12 3c4.2 0 7.5 3.2 7.5 7.8 0 4-3 7.7-7.5 10.2Z" />
-                            <path d="M12 21V9" />
-                            <path d="M12 12c1.8-.8 3.2-2.2 4-4" />
-                            <path d="M12 15c-1.5-.6-2.7-1.7-3.5-3" />
-                        </svg>
+                        <x-admin.leaf-icon />
                     </span>
                     @yield('heading', '管理画面')
                 </h1>
@@ -1043,10 +1038,8 @@
         <div class="admin-modal-panel w-full max-w-md rounded-xl border border-admin-border/50 bg-admin-card p-6" data-admin-confirm-panel>
             <div class="mb-4 flex items-start justify-between gap-3">
                 <div class="flex items-start gap-3">
-                    <span class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-admin-selected text-admin-accent" aria-hidden="true">
-                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/>
-                        </svg>
+                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E8EFE2] text-[#6F8258]" aria-hidden="true">
+                        <x-admin.leaf-icon class="h-[18px] w-[18px]" />
                     </span>
                     <div>
                         <h2 id="admin-confirm-modal-title" class="text-lg font-semibold text-admin-text">確認</h2>
