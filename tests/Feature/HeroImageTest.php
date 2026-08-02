@@ -61,25 +61,21 @@ class HeroImageTest extends TestCase
         $setting = SalonSetting::current();
         $user = $this->admin();
 
-        $response = $this->actingAs($user)->put(route('admin.settings.update'), [
-            'shop_name' => 'Test Salon',
-            'shop_name_display_type' => 'text',
+        $response = $this->actingAs($user)->put(route('admin.home.hero.update'), [
             'new_hero_images' => [
                 UploadedFile::fake()->image('a.jpg'),
                 UploadedFile::fake()->image('b.jpg'),
             ],
         ]);
 
-        $response->assertRedirect(route('admin.settings.edit'));
+        $response->assertRedirect(route('admin.home.hero'));
         $this->assertSame(2, $setting->heroImages()->count());
 
         $images = $setting->heroImages()->ordered()->get();
         $first = $images[0];
         $second = $images[1];
 
-        $this->actingAs($user)->put(route('admin.settings.update'), [
-            'shop_name' => 'Test Salon',
-            'shop_name_display_type' => 'text',
+        $this->actingAs($user)->put(route('admin.home.hero.update'), [
             'hero_images' => [
                 $first->id => [
                     'sort_order' => 2,
@@ -92,7 +88,7 @@ class HeroImageTest extends TestCase
                     'is_published' => '0',
                 ],
             ],
-        ])->assertRedirect(route('admin.settings.edit'));
+        ])->assertRedirect(route('admin.home.hero'));
 
         $first->refresh();
         $second->refresh();
@@ -180,8 +176,8 @@ class HeroImageTest extends TestCase
         Storage::disk('public')->assertExists($path);
 
         $this->actingAs($this->admin())
-            ->delete(route('admin.settings.hero-images.destroy', $image))
-            ->assertRedirect(route('admin.settings.edit'));
+            ->delete(route('admin.home.hero.destroy', $image))
+            ->assertRedirect(route('admin.home.hero'));
 
         $this->assertDatabaseMissing('hero_images', ['id' => $image->id]);
         Storage::disk('public')->assertMissing($path);
@@ -202,25 +198,23 @@ class HeroImageTest extends TestCase
             ]);
         }
 
-        $this->actingAs($user)->from(route('admin.settings.edit'))->put(route('admin.settings.update'), [
-            'shop_name' => 'Test Salon',
-            'shop_name_display_type' => 'text',
+        $this->actingAs($user)->from(route('admin.home.hero'))->put(route('admin.home.hero.update'), [
             'new_hero_images' => [
                 UploadedFile::fake()->image('extra.jpg'),
             ],
-        ])->assertRedirect(route('admin.settings.edit'))
+        ])->assertRedirect(route('admin.home.hero'))
             ->assertSessionHasErrors('new_hero_images');
 
         $this->assertSame(HeroImage::MAX_COUNT, $setting->heroImages()->count());
     }
 
-    public function test_settings_page_does_not_reference_legacy_hero_image_column_for_display(): void
+    public function test_hero_page_does_not_reference_legacy_hero_image_column_for_display(): void
     {
         Storage::fake('public');
         $setting = SalonSetting::current();
         $setting->update(['hero_image' => 'settings/legacy-only.png']);
 
-        $response = $this->actingAs($this->admin())->get(route('admin.settings.edit'));
+        $response = $this->actingAs($this->admin())->get(route('admin.home.hero'));
         $response->assertOk();
         $response->assertDontSee('storage/settings/legacy-only.png', false);
         $response->assertDontSee('現在登録されている画像はありません', false);
@@ -228,12 +222,12 @@ class HeroImageTest extends TestCase
         $response->assertSee('カードを追加し、「保存する」で登録できます。', false);
     }
 
-    public function test_settings_page_uses_add_button_instead_of_permanent_dropzone(): void
+    public function test_hero_page_uses_add_button_instead_of_permanent_dropzone(): void
     {
         SalonSetting::current();
 
         $html = $this->actingAs($this->admin())
-            ->get(route('admin.settings.edit'))
+            ->get(route('admin.home.hero'))
             ->assertOk()
             ->getContent();
 
@@ -249,7 +243,6 @@ class HeroImageTest extends TestCase
         $this->assertStringContainsString('createHeroSlot', $html);
         $this->assertStringContainsString('heroAddCard.before(block)', $html);
         $this->assertStringContainsString('syncHeroAddUi', $html);
-        $this->assertStringContainsString('lg:items-start', $html);
         $this->assertStringContainsString('menu-published-checkbox', $html);
         $this->assertStringContainsString('data-published-control', $html);
         $this->assertStringContainsString('menu-published-label is-published', $html);
@@ -265,9 +258,11 @@ class HeroImageTest extends TestCase
         $this->assertStringNotContainsString('mt-auto border-t border-gray-200 pt-4', $html);
         $this->assertStringNotContainsString('id="hero-image-dropzone"', $html);
         $this->assertStringNotContainsString('name="new_hero_images[]"', $html);
+        $this->assertStringNotContainsString('この機能は現在準備中です。', $html);
+        $this->assertStringContainsString('data-confirm-form="hero-form"', $html);
     }
 
-    public function test_settings_page_keeps_add_card_after_existing_hero_images(): void
+    public function test_hero_page_keeps_add_card_after_existing_hero_images(): void
     {
         Storage::fake('public');
         $setting = SalonSetting::current();
@@ -279,7 +274,7 @@ class HeroImageTest extends TestCase
         ]);
 
         $html = $this->actingAs($this->admin())
-            ->get(route('admin.settings.edit'))
+            ->get(route('admin.home.hero'))
             ->assertOk()
             ->getContent();
 
@@ -300,7 +295,7 @@ class HeroImageTest extends TestCase
         $this->assertGreaterThan($existingPos, $addCardPos);
     }
 
-    public function test_settings_page_hides_add_card_when_hero_images_at_max(): void
+    public function test_hero_page_hides_add_card_when_hero_images_at_max(): void
     {
         Storage::fake('public');
         $setting = SalonSetting::current();
@@ -314,7 +309,7 @@ class HeroImageTest extends TestCase
         }
 
         $html = $this->actingAs($this->admin())
-            ->get(route('admin.settings.edit'))
+            ->get(route('admin.home.hero'))
             ->assertOk()
             ->getContent();
 
@@ -323,7 +318,7 @@ class HeroImageTest extends TestCase
         $this->assertStringNotContainsString('id="hero-image-add-footer"', $html);
     }
 
-    public function test_settings_page_styles_hero_publish_checkbox_like_menus(): void
+    public function test_hero_page_styles_hero_publish_checkbox_like_menus(): void
     {
         Storage::fake('public');
         $setting = SalonSetting::current();
@@ -335,7 +330,7 @@ class HeroImageTest extends TestCase
         ]);
 
         $html = $this->actingAs($this->admin())
-            ->get(route('admin.settings.edit'))
+            ->get(route('admin.home.hero'))
             ->assertOk()
             ->getContent();
 
@@ -354,9 +349,7 @@ class HeroImageTest extends TestCase
         Storage::fake('public');
         $setting = SalonSetting::current();
 
-        $this->actingAs($this->admin())->put(route('admin.settings.update'), [
-            'shop_name' => 'Test Salon',
-            'shop_name_display_type' => 'text',
+        $this->actingAs($this->admin())->put(route('admin.home.hero.update'), [
             'new_hero_images' => [
                 'new_1' => UploadedFile::fake()->image('with-meta.jpg'),
             ],
@@ -367,12 +360,37 @@ class HeroImageTest extends TestCase
                     'is_published' => '0',
                 ],
             ],
-        ])->assertRedirect(route('admin.settings.edit'));
+        ])->assertRedirect(route('admin.home.hero'));
 
         $image = $setting->heroImages()->first();
         $this->assertNotNull($image);
         $this->assertSame(7, $image->sort_order);
         $this->assertSame('新規alt', $image->alt_text);
         $this->assertFalse($image->is_published);
+    }
+
+    public function test_settings_page_does_not_show_hero_image_ui(): void
+    {
+        Storage::fake('public');
+        $setting = SalonSetting::current();
+        HeroImage::query()->create([
+            'salon_setting_id' => $setting->id,
+            'image_path' => 'settings/exists.jpg',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.settings.edit'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringNotContainsString('id="hero-images-list"', $html);
+        $this->assertStringNotContainsString('id="hero-image-add-card"', $html);
+        $this->assertStringNotContainsString('createHeroSlot', $html);
+        $this->assertStringNotContainsString('メインビジュアル画像', $html);
+        $this->assertStringNotContainsString('lg:grid-cols-2', $html);
+        $this->assertStringContainsString('id="settings-form"', $html);
+        $this->assertStringContainsString('name="shop_name"', $html);
     }
 }

@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Gallery;
-use App\Models\HeroImage;
 use App\Models\Menu;
 use App\Models\MenuCategory;
 use App\Models\News;
@@ -92,12 +91,6 @@ class AdminActionButtonsTest extends TestCase
             'menu_category_id' => $category->id,
             'name' => 'カット',
             'price' => 5000,
-            'sort_order' => 1,
-            'is_published' => true,
-        ]);
-        HeroImage::query()->create([
-            'salon_setting_id' => $setting->id,
-            'image_path' => 'settings/a.jpg',
             'sort_order' => 1,
             'is_published' => true,
         ]);

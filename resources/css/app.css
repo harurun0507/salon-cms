@@ -173,7 +173,7 @@
     }
 
     .admin-nav-link {
-        @apply flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-admin-text/90 transition-colors duration-150 hover:bg-admin-hover hover:text-admin-text;
+        @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm leading-snug text-admin-text/90 transition-colors duration-150 hover:bg-admin-hover hover:text-admin-text;
     }
 
     .admin-nav-link svg {
@@ -185,11 +185,49 @@
     }
 
     .admin-nav-link-active {
-        @apply bg-admin-selected font-medium text-admin-accent-dark hover:bg-admin-selected hover:text-admin-accent-dark;
+        @apply rounded-xl bg-admin-selected px-4 font-medium text-admin-accent-dark hover:bg-admin-selected hover:text-admin-accent-dark;
     }
 
     .admin-nav-link-active svg {
         @apply text-admin-accent-dark;
+    }
+
+    .admin-nav-parent {
+        @apply flex cursor-pointer list-none items-center gap-2.5 rounded-lg px-3 py-2 text-sm leading-snug text-admin-text/90 transition-colors duration-150 hover:bg-admin-hover hover:text-admin-text;
+        list-style: none;
+    }
+
+    .admin-nav-parent::-webkit-details-marker {
+        display: none;
+    }
+
+    .admin-nav-parent::marker {
+        display: none;
+        content: '';
+    }
+
+    .admin-nav-parent svg {
+        @apply text-admin-icon;
+    }
+
+    .admin-nav-parent:hover svg {
+        @apply text-admin-accent;
+    }
+
+    .admin-nav-chevron {
+        @apply ml-auto shrink-0 transition-transform duration-150;
+    }
+
+    .admin-nav-group[open] > .admin-nav-parent .admin-nav-chevron {
+        transform: rotate(180deg);
+    }
+
+    .admin-nav-link-child {
+        @apply ml-4 gap-2 py-2 pl-8 leading-snug;
+    }
+
+    .admin-nav-child-icon {
+        @apply !h-4 !w-4;
     }
 
     .admin-table-wrap {

@@ -66,11 +66,19 @@
                 .admin-icon-btn-edit:focus, .admin-icon-btn-edit:focus-visible { outline: none; background-color: #F5F6F1; border-color: #C4C9B8; color: #5A6248; box-shadow: 0 0 0 3px rgba(107, 115, 85, 0.15); }
                 .admin-icon-btn-edit svg { height: 0.875rem; width: 0.875rem; flex-shrink: 0; }
                 .btn-admin-delete { @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-admin-danger/70 bg-admin-card px-3 text-sm font-medium text-admin-danger shadow-[0_2px_10px_rgba(0,0,0,0.04)] transition duration-150 hover:-translate-y-0.5 hover:border-admin-danger-dark hover:bg-admin-danger hover:text-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-admin-danger/40 focus:ring-offset-1 focus:ring-offset-admin-bg; }
-                .admin-nav-link { @apply flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-admin-text/90 transition-colors duration-150 hover:bg-admin-hover hover:text-admin-text; }
+                .admin-nav-link { @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm leading-snug text-admin-text/90 transition-colors duration-150 hover:bg-admin-hover hover:text-admin-text; }
                 .admin-nav-link svg { @apply text-admin-icon; }
                 .admin-nav-link:hover svg { @apply text-admin-accent; }
-                .admin-nav-link-active { @apply bg-admin-selected font-medium text-admin-accent-dark hover:bg-admin-selected hover:text-admin-accent-dark; }
+                .admin-nav-link-active { @apply rounded-xl bg-admin-selected px-4 font-medium text-admin-accent-dark hover:bg-admin-selected hover:text-admin-accent-dark; }
                 .admin-nav-link-active svg { @apply text-admin-accent-dark; }
+                .admin-nav-parent { @apply flex cursor-pointer list-none items-center gap-2.5 rounded-lg px-3 py-2 text-sm leading-snug text-admin-text/90 transition-colors duration-150 hover:bg-admin-hover hover:text-admin-text; list-style: none; }
+                .admin-nav-parent::-webkit-details-marker { display: none; }
+                .admin-nav-parent::marker { display: none; content: ''; }
+                .admin-nav-parent svg { @apply text-admin-icon; }
+                .admin-nav-parent:hover svg { @apply text-admin-accent; }
+                .admin-nav-chevron { @apply ml-auto shrink-0 transition-transform duration-150; }
+                .admin-nav-group[open] > .admin-nav-parent .admin-nav-chevron { transform: rotate(180deg); }
+                .admin-nav-link-child { @apply ml-4 py-2 pl-10 leading-snug; }
                 .admin-table-wrap { @apply overflow-hidden rounded-xl border border-admin-border/40 bg-admin-card shadow-[0_2px_10px_rgba(0,0,0,0.04)]; }
                 .admin-table { @apply min-w-full divide-y divide-admin-border/40 text-sm text-admin-text; }
                 .admin-table thead { @apply bg-admin-sidebar/80; }
@@ -147,7 +155,7 @@
 <body class="bg-admin-bg font-sans text-admin-text antialiased">
     <div class="flex min-h-screen">
         <aside class="relative sticky top-0 hidden h-screen w-64 shrink-0 overflow-hidden border-r border-[#E5E0D7] bg-[#F6F2EA] text-admin-text md:flex md:flex-col">
-            <div class="relative z-10 flex items-center gap-3 px-6 py-5">
+            <div class="relative z-10 flex items-center gap-3.5 px-7 py-7">
                     <div
                         class="pointer-events-none shrink-0 text-[#A79D87]"
                         aria-hidden="true"
@@ -156,7 +164,7 @@
                             viewBox="0 0 72 112"
                             fill="none"
                             xmlns="http://www.w3.org/2000/svg"
-                            class="h-14 w-9 opacity-70"
+                            class="h-14 w-9 opacity-55"
                         >
                             <!-- 主茎 -->
                             <path
@@ -284,42 +292,12 @@
                         </svg>
                     </div>
 
-                <div>
-                    <div class="font-serif text-xl text-[#3D3833]">Sun ＆ Me</div>
-                    <div class="mt-0.5 text-xs text-[#736D65]">管理画面</div>
+                <div class="min-w-0 pt-0.5">
+                    <div class="font-serif text-xl leading-tight tracking-wide text-[#3D3833]">Sun ＆ Me</div>
+                    <div class="mt-1 text-xs tracking-wide text-[#736D65]">管理画面</div>
                 </div>
             </div>
-            <nav class="relative z-10 space-y-1 p-4 text-sm">
-
-                <a href="{{ route('admin.dashboard') }}" class="admin-nav-link {{ request()->routeIs('admin.dashboard') ? 'admin-nav-link-active' : '' }}">
-                    <x-admin.nav-icon name="dashboard" />
-                    <span>ダッシュボード</span>
-                </a>
-                <a href="{{ route('admin.news.index') }}" class="admin-nav-link {{ request()->routeIs('admin.news.*') ? 'admin-nav-link-active' : '' }}">
-                    <x-admin.nav-icon name="news" />
-                    <span>お知らせ</span>
-                </a>
-                <a href="{{ route('admin.galleries.index') }}" class="admin-nav-link {{ request()->routeIs('admin.galleries.*') ? 'admin-nav-link-active' : '' }}">
-                    <x-admin.nav-icon name="gallery" />
-                    <span>ギャラリー</span>
-                </a>
-                <a href="{{ route('admin.menus.index') }}" class="admin-nav-link {{ request()->routeIs('admin.menus.*') ? 'admin-nav-link-active' : '' }}">
-                    <x-admin.nav-icon name="menus" />
-                    <span>メニュー・料金</span>
-                </a>
-                <a href="{{ route('admin.staff.index') }}" class="admin-nav-link {{ request()->routeIs('admin.staff.*') ? 'admin-nav-link-active' : '' }}">
-                    <x-admin.nav-icon name="staff" />
-                    <span>スタッフ</span>
-                </a>
-                <a href="{{ route('admin.settings.edit') }}" class="admin-nav-link {{ request()->routeIs('admin.settings.*') ? 'admin-nav-link-active' : '' }}">
-                    <x-admin.nav-icon name="settings" />
-                    <span>店舗情報</span>
-                </a>
-                <a href="{{ route('home') }}" target="_blank" class="admin-nav-link">
-                    <x-admin.nav-icon name="external" />
-                    <span>公開サイトを見る</span>
-                </a>
-            </nav>
+            <x-admin.sidebar-nav />
             <div
                 class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[330px] overflow-hidden text-[#B8AE98]"
                 aria-hidden="true"
@@ -338,14 +316,14 @@
                            C147 240 174 227 205 242
                            C239 259 261 292 280 330H0Z"
                         fill="#C4BCA9"
-                        opacity=".13"
+                        opacity=".07"
                     />
                     <path
                         d="M0 330V276
                            C45 249 92 253 127 270
                            C167 290 219 279 280 330H0Z"
                         fill="#D9D2C5"
-                        opacity=".2"
+                        opacity=".1"
                     />
                 </svg>
 
@@ -354,7 +332,7 @@
                     viewBox="0 0 280 330"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
-                    class="absolute bottom-0 left-0 h-[315px] w-[245px] opacity-60"
+                    class="absolute bottom-0 left-0 h-[315px] w-[245px] opacity-28"
                 >
                     <!-- 主枝 -->
                     <path
