@@ -148,12 +148,18 @@ class SeoAutomationTest extends TestCase
         $html = $this->get(route('home'))->assertOk()->getContent();
 
         $this->assertStringContainsString('<link rel="canonical" href="'.e(url()->to(route('home'))).'">', $html);
-        $this->assertStringContainsString('<link rel="icon" href="'.e(asset('favicon.ico')).'">', $html);
+        $this->assertStringContainsString('images/favicon-site-32.png', $html);
+        $this->assertStringContainsString('images/favicon-site-192.png', $html);
+        $this->assertStringContainsString('images/favicon-site.png', $html);
+        $this->assertStringContainsString('rel="apple-touch-icon"', $html);
+        $this->assertStringNotContainsString('images/admin-favicon', $html);
+        $this->assertStringNotContainsString(asset('favicon.ico'), $html);
         $this->assertStringNotContainsString('googletagmanager.com/gtag/js', $html);
         $this->assertStringNotContainsString('gtag(', $html);
 
         $menuHtml = $this->get(route('menu'))->assertOk()->getContent();
         $this->assertStringContainsString('<link rel="canonical" href="'.e(url()->to(route('menu'))).'">', $menuHtml);
+        $this->assertStringContainsString('images/favicon-site-32.png', $menuHtml);
     }
 
     public function test_public_head_outputs_custom_favicon_and_ga4_when_set(): void
@@ -169,6 +175,7 @@ class SeoAutomationTest extends TestCase
         $html = $this->get(route('home'))->assertOk()->getContent();
 
         $this->assertStringContainsString('<link rel="icon" href="'.e(asset('storage/'.$faviconPath)).'">', $html);
+        $this->assertStringNotContainsString('images/favicon-site', $html);
         $this->assertStringContainsString('https://www.googletagmanager.com/gtag/js?id=G-TEST12345', $html);
         $this->assertStringContainsString("gtag('config', \"G-TEST12345\")", $html);
         $this->assertStringContainsString('<link rel="canonical" href="', $html);

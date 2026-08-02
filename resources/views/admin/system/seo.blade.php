@@ -159,7 +159,7 @@
                                     <p class="banner-dropzone-text text-sm text-gray-700">画像をドラッグ＆ドロップ、またはクリックして選択</p>
                                 </div>
                                 <p class="banner-dropzone-hint mt-1.5 text-xs text-gray-500">
-                                    ICO・PNG・SVG・WebP、1MBまで。未設定時はデフォルトの favicon.ico を使用します。
+                                    ICO・PNG・SVG・WebP、1MBまで。未設定時はデフォルトのサイトロゴ（S＋ビーグル）を使用します。
                                 </p>
                             </div>
                             <p class="banner-dropzone-drag-message" aria-hidden="true">ここにファビコンをドロップしてください</p>

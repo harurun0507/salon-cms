@@ -16,6 +16,8 @@
         $ogImageUrl = $setting->seoOgImageUrl();
         $twitterCard = $setting->seoTwitterCard();
         $faviconUrl = $setting->faviconUrl();
+        $hasCustomFavicon = $setting->hasCustomFavicon();
+        $siteFaviconVersion = '2';
         $canonicalUrl = url()->current();
         $gaMeasurementId = $setting->hasGaMeasurementId() ? (string) $setting->ga_measurement_id : null;
     @endphp
@@ -23,7 +25,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $documentTitle }}</title>
-    <link rel="icon" href="{{ $faviconUrl }}">
+    @if($hasCustomFavicon)
+        <link rel="icon" href="{{ $faviconUrl }}">
+    @else
+        <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-site-32.png') }}?v={{ $siteFaviconVersion }}">
+        <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('images/favicon-site-192.png') }}?v={{ $siteFaviconVersion }}">
+        <link rel="icon" type="image/png" href="{{ asset('images/favicon-site.png') }}?v={{ $siteFaviconVersion }}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/favicon-site-180.png') }}?v={{ $siteFaviconVersion }}">
+    @endif
     <link rel="canonical" href="{{ $canonicalUrl }}">
     @if($metaDescription)
         <meta name="description" content="{{ $metaDescription }}">

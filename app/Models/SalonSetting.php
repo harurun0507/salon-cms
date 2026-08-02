@@ -128,7 +128,12 @@ class SalonSetting extends Model
             return asset('storage/'.$this->favicon_path);
         }
 
-        return asset('favicon.ico');
+        return asset('images/favicon-site.png');
+    }
+
+    public function hasCustomFavicon(): bool
+    {
+        return filled($this->favicon_path);
     }
 
     public function hasGaMeasurementId(): bool
