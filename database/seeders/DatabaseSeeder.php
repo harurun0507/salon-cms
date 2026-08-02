@@ -48,21 +48,135 @@ class DatabaseSeeder extends Seeder
 
         SocialLink::ensureDefaults();
 
-        $cut = MenuCategory::query()->updateOrCreate(['name' => 'カット'], ['sort_order' => 1]);
-        $color = MenuCategory::query()->updateOrCreate(['name' => 'カラー'], ['sort_order' => 2]);
+        $categories = [
+            'カット' => 1,
+            'カラー' => 2,
+            'パーマ' => 3,
+            '縮毛矯正' => 4,
+            'トリートメント' => 5,
+            'ヘッドスパ' => 6,
+        ];
 
-        Menu::query()->updateOrCreate(
-            ['menu_category_id' => $cut->id, 'name' => 'カット'],
-            ['price' => '¥5,500', 'description' => 'シャンプー・ブロー込み', 'sort_order' => 1, 'is_published' => true]
-        );
-        Menu::query()->updateOrCreate(
-            ['menu_category_id' => $cut->id, 'name' => 'カット + トリートメント'],
-            ['price' => '¥7,700', 'description' => 'ダメージケア込み', 'sort_order' => 2, 'is_published' => true]
-        );
-        Menu::query()->updateOrCreate(
-            ['menu_category_id' => $color->id, 'name' => 'カラー'],
-            ['price' => '¥8,800', 'description' => 'カット・シャンプー・ブロー込み', 'sort_order' => 1, 'is_published' => true]
-        );
+        $categoryModels = [];
+        foreach ($categories as $name => $sortOrder) {
+            $categoryModels[$name] = MenuCategory::query()->updateOrCreate(
+                ['name' => $name],
+                ['sort_order' => $sortOrder]
+            );
+        }
+
+        $menus = [
+            'カット' => [
+                [
+                    'name' => 'カット',
+                    'price' => '¥5,940',
+                    'description' => 'ナチュラルで軽やかな毛束感の表現☆似合う長さをイメージしながら☆SB込',
+                ],
+                [
+                    'name' => '高校生　大学生　学割カット',
+                    'price' => '¥5,500',
+                    'description' => '高校生～大学生までご利用ください☆',
+                ],
+                [
+                    'name' => 'ジュニアカット',
+                    'price' => '¥4,950',
+                    'description' => '中学生までご利用いただけます☆',
+                ],
+                [
+                    'name' => 'キッズカット＊10歳まで ￥3960',
+                    'price' => '要問い合わせ',
+                    'description' => '10歳までのお子様カット☆原則お子様のシャンプーはなしでお願いしています＊ご予約はお電話にてお願いいたします',
+                ],
+                [
+                    'name' => '前髪カット ￥1650',
+                    'price' => '要問い合わせ',
+                    'description' => '気になればいつでもご連絡ください☆S・Bは含みません',
+                ],
+            ],
+            'カラー' => [
+                [
+                    'name' => 'ヘアカラー',
+                    'price' => '¥7,700～',
+                    'description' => '肌色や髪質に合わせてご提案させていただきます☆カラーブランドにより別途料金あり　ロング料金1100～　SB別途1650',
+                ],
+                [
+                    'name' => 'ヘアマニキュア',
+                    'price' => '¥8,250～',
+                    'description' => '酸性コーティングカラーで艶感を☆細くなってきた髪にもオススメです☆ノンダメージ☆ハリとコシが蘇りますロング料金1100～SB別途1650',
+                ],
+                [
+                    'name' => 'ケアブリーチ',
+                    'price' => '要問い合わせ',
+                    'description' => 'ハイトーンカラーのベース作り☆ワンブリーチの料金になります☆ロング1100～SB別途1650',
+                ],
+            ],
+            'パーマ' => [
+                [
+                    'name' => 'パーマ',
+                    'price' => '¥8,800～',
+                    'description' => 'ウェーブやカールデザインの表現☆乾かしただけでキマル☆軽やかに動く毛束感 スタイリングも楽になります　ロング料金1100～SB別途1650',
+                ],
+                [
+                    'name' => 'デジタルパーマ',
+                    'price' => '¥12,980～',
+                    'description' => 'かかりづらい髪質でもしっかりカール☆艶と柔らかい印象のヘアデザインに☆ロング料金1100～SB別途1650',
+                ],
+            ],
+            '縮毛矯正' => [
+                [
+                    'name' => '縮毛矯正',
+                    'price' => '¥16,940～',
+                    'description' => 'ナチュラルでやわらかい質感の仕上がりに☆ロング料金1100～SB別途1650',
+                ],
+                [
+                    'name' => 'ポイント前髪縮毛矯正',
+                    'price' => '¥8,800～',
+                    'description' => '前髪だけ等気になる部分に施術する部分縮毛矯正です☆かける範囲に応じてプラス料金あり',
+                ],
+            ],
+            'トリートメント' => [
+                [
+                    'name' => 'ダメージ、エイジングによるクセ改善　Link酸熱トリートメント ホームケア付',
+                    'price' => '¥13,200～',
+                    'description' => '髪を補修しながら＜うねり＞＜広がり＞＜ぱさつき＞解消　つややかな髪が持続するトリートメント☆エイジングが気になる髪にも☆ロング料金1100～SB込',
+                ],
+                [
+                    'name' => 'Link髪質改善トリートメント　ホームケア付',
+                    'price' => '¥5,940',
+                    'description' => 'ハリや弾力が欲しい髪、しっとりとやわらかい質感にしたい髪、お悩み毎にアプローチするパーソナルトリートメント☆SB1650',
+                ],
+                [
+                    'name' => 'Link高保湿トリートメント',
+                    'price' => '¥3,960',
+                    'description' => 'ゼロタイムでもしっかり補修☆月１のメンテナンスに☆SB別途1650',
+                ],
+            ],
+            'ヘッドスパ' => [
+                [
+                    'name' => 'リラックスヘッドスパ',
+                    'price' => '¥6,600',
+                    'description' => 'フラットブースで行うリラクゼーションメニュー☆頭皮環境を整え、健康的なヘアサイクルへSB別途1650',
+                ],
+            ],
+        ];
+
+        foreach ($menus as $categoryName => $items) {
+            $category = $categoryModels[$categoryName];
+            foreach ($items as $index => $item) {
+                Menu::query()->updateOrCreate(
+                    [
+                        'menu_category_id' => $category->id,
+                        'name' => $item['name'],
+                    ],
+                    [
+                        'price' => $item['price'],
+                        'description' => $item['description'],
+                        'sort_order' => $index + 1,
+                        'is_published' => true,
+                    ]
+                );
+            }
+        }
 
         StaffMember::query()->updateOrCreate(
             ['name' => 'タナカ コウヘイ'],
