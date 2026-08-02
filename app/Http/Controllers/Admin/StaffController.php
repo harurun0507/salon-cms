@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\StaffMember;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class StaffController extends AdminController
@@ -17,103 +17,100 @@ class StaffController extends AdminController
         return view('admin.staff.index', compact('staffMembers'));
     }
 
-    public function create(): View
-    {
-        return view('admin.staff.create');
-    }
-
-    public function store(Request $request): RedirectResponse|JsonResponse
+    public function bulkUpdate(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'photo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
-            'profile' => ['nullable', 'string'],
-            'role' => ['nullable', 'string', 'max:255'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-            'is_published' => ['sometimes', 'boolean'],
+            'staff' => ['nullable', 'array'],
+            'staff.*.name' => ['required', 'string', 'max:255'],
+            'staff.*.role' => ['nullable', 'string', 'max:255'],
+            'staff.*.profile' => ['nullable', 'string'],
+            'staff.*.sort_order' => ['nullable', 'integer', 'min:0'],
+            'staff.*.is_published' => ['nullable', 'in:0,1'],
+            'staff.*.photo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'new_staff' => ['nullable', 'array'],
+            'new_staff.*.name' => ['required', 'string', 'max:255'],
+            'new_staff.*.role' => ['nullable', 'string', 'max:255'],
+            'new_staff.*.profile' => ['nullable', 'string'],
+            'new_staff.*.sort_order' => ['nullable', 'integer', 'min:0'],
+            'new_staff.*.is_published' => ['nullable', 'in:0,1'],
+            'new_staff.*.photo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'deleted_ids' => ['nullable', 'array'],
+            'deleted_ids.*' => ['integer', 'exists:staff_members,id'],
         ]);
 
-        $staff = StaffMember::create([
-            'name' => $validated['name'],
-            'photo_path' => $this->storeImage($request->file('photo'), 'staff'),
-            'profile' => $validated['profile'] ?? null,
-            'role' => $validated['role'] ?? null,
-            'sort_order' => $validated['sort_order'] ?? 0,
-            'is_published' => $request->boolean('is_published', true),
-        ]);
+        $existingPayload = $validated['staff'] ?? [];
+        $newPayload = $validated['new_staff'] ?? [];
+        $deletedIds = collect($validated['deleted_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->all();
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'message' => 'スタッフを登録しました。',
-                'staff' => [
-                    'id' => $staff->id,
-                    'name' => $staff->name,
-                    'role' => $staff->role,
-                    'profile' => $staff->profile,
-                    'sort_order' => (int) $staff->sort_order,
-                    'is_published' => (bool) $staff->is_published,
-                    'photo_url' => $staff->photo_path ? asset('storage/'.$staff->photo_path) : null,
-                    'photo_path' => $staff->photo_path,
-                    'update_url' => route('admin.staff.update', $staff),
-                    'destroy_url' => route('admin.staff.destroy', $staff),
-                ],
-            ]);
+        $orderedItems = [];
+        foreach ($existingPayload as $id => $data) {
+            if (in_array((int) $id, $deletedIds, true)) {
+                continue;
+            }
+            $orderedItems[] = [
+                'type' => 'existing',
+                'id' => (int) $id,
+                'data' => $data,
+                'order' => (int) ($data['sort_order'] ?? 0),
+            ];
+        }
+        foreach ($newPayload as $key => $data) {
+            $orderedItems[] = [
+                'type' => 'new',
+                'key' => (string) $key,
+                'data' => $data,
+                'order' => (int) ($data['sort_order'] ?? 0),
+            ];
         }
 
-        return redirect()->route('admin.staff.index')->with('success', 'スタッフを登録しました。');
-    }
+        usort($orderedItems, function (array $a, array $b) {
+            if ($a['order'] === $b['order']) {
+                return 0;
+            }
 
-    public function edit(StaffMember $staff): View
-    {
-        return view('admin.staff.edit', compact('staff'));
-    }
+            return $a['order'] < $b['order'] ? -1 : 1;
+        });
 
-    public function update(Request $request, StaffMember $staff): RedirectResponse|JsonResponse
-    {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'photo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
-            'profile' => ['nullable', 'string'],
-            'role' => ['nullable', 'string', 'max:255'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-            'is_published' => ['sometimes', 'boolean'],
-        ]);
+        DB::transaction(function () use ($request, $orderedItems, $deletedIds) {
+            if ($deletedIds !== []) {
+                $toDelete = StaffMember::query()->whereIn('id', $deletedIds)->get();
+                foreach ($toDelete as $member) {
+                    $this->deleteImage($member->photo_path);
+                    $member->delete();
+                }
+            }
 
-        $staff->update([
-            'name' => $validated['name'],
-            'photo_path' => $this->storeImage($request->file('photo'), 'staff', $staff->photo_path),
-            'profile' => $validated['profile'] ?? null,
-            'role' => $validated['role'] ?? null,
-            'sort_order' => $validated['sort_order'] ?? 0,
-            'is_published' => $request->boolean('is_published'),
-        ]);
+            $order = 1;
+            foreach ($orderedItems as $item) {
+                $data = $item['data'];
+                $attrs = [
+                    'name' => $data['name'],
+                    'role' => $data['role'] ?? null,
+                    'profile' => $data['profile'] ?? null,
+                    'sort_order' => $order,
+                    'is_published' => ($data['is_published'] ?? '0') === '1',
+                ];
 
-        if ($request->wantsJson()) {
-            $staff->refresh();
+                if ($item['type'] === 'existing') {
+                    $member = StaffMember::query()->find($item['id']);
+                    if (! $member) {
+                        continue;
+                    }
 
-            return response()->json([
-                'message' => 'スタッフ情報を更新しました。',
-                'staff' => [
-                    'id' => $staff->id,
-                    'name' => $staff->name,
-                    'role' => $staff->role,
-                    'profile' => $staff->profile,
-                    'sort_order' => (int) $staff->sort_order,
-                    'is_published' => (bool) $staff->is_published,
-                    'photo_url' => $staff->photo_path ? asset('storage/'.$staff->photo_path) : null,
-                    'photo_path' => $staff->photo_path,
-                ],
-            ]);
-        }
+                    $photoFile = $request->file("staff.{$item['id']}.photo");
+                    $attrs['photo_path'] = $this->storeImage($photoFile, 'staff', $member->photo_path);
+                    $member->update($attrs);
+                } else {
+                    $photoFile = $request->file("new_staff.{$item['key']}.photo");
+                    StaffMember::query()->create(array_merge($attrs, [
+                        'photo_path' => $this->storeImage($photoFile, 'staff'),
+                    ]));
+                }
 
-        return redirect()->route('admin.staff.index')->with('success', 'スタッフを更新しました。');
-    }
+                $order++;
+            }
+        });
 
-    public function destroy(StaffMember $staff): RedirectResponse
-    {
-        $this->deleteImage($staff->photo_path);
-        $staff->delete();
-
-        return redirect()->route('admin.staff.index')->with('success', 'スタッフを削除しました。');
+        return redirect()->route('admin.staff.index')->with('success', 'スタッフを一括保存しました。');
     }
 }

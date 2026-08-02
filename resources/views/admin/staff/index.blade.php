@@ -3,1076 +3,803 @@
 @section('heading', 'スタッフ管理')
 
 @section('content')
-    <div class="mb-6 flex justify-between">
+    @php
+        $maxOrder = (int) ($staffMembers->max('sort_order') ?? 0);
+
+        $oldNewStaff = old('new_staff', []);
+        if (! is_array($oldNewStaff)) {
+            $oldNewStaff = [];
+        }
+        $nextNewIndex = 1;
+        foreach (array_keys($oldNewStaff) as $key) {
+            if (preg_match('/^new_(\d+)$/', (string) $key, $m)) {
+                $nextNewIndex = max($nextNewIndex, ((int) $m[1]) + 1);
+            }
+        }
+    @endphp
+
+    <div class="sticky top-[4.5rem] z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8">
+        <div class="flex min-w-0 flex-wrap items-center gap-3">
+            <button
+                type="button"
+                class="admin-btn shadow-md shrink-0"
+                data-admin-confirm-trigger
+                data-confirm-form="staff-bulk-form"
+                data-confirm-title="スタッフ保存の確認"
+                data-confirm-message="変更内容を保存します。&#10;よろしいですか？"
+                data-confirm-note="写真、名前、役職、プロフィール、表示順、公開状態、削除など、現在入力されている内容が反映されます。"
+                data-confirm-submit-label="保存する"
+            >保存する</button>
+            <p class="text-sm text-admin-muted">
+                カードで編集し、「保存する」でまとめて反映できます
+            </p>
+        </div>
+    </div>
+
+    <div class="mb-6">
         <p class="text-sm text-admin-muted">スタッフ情報の管理</p>
-        <x-admin.create-button type="button" data-open-staff-create>スタッフ追加</x-admin.create-button>
     </div>
 
-    <div class="admin-table-wrap">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>写真</th>
-                    <th>名前</th>
-                    <th>役職</th>
-                    <th>表示順</th>
-                    <th>状態</th>
-                    <th class="text-right">操作</th>
-                </tr>
-            </thead>
-            <tbody id="staff-table-body">
-                @forelse($staffMembers as $member)
-                    <tr data-staff-row="{{ $member->id }}" data-sort-order="{{ $member->sort_order }}">
-                        <td>
-                            <div class="staff-photo-cell h-12 w-12">
-                                @if($member->photo_path)
-                                    <img src="{{ asset('storage/'.$member->photo_path) }}" alt="" class="staff-photo h-12 w-12 rounded-full object-cover">
-                                @endif
-                            </div>
-                        </td>
-                        <td class="staff-name">{{ $member->name }}</td>
-                        <td class="staff-role">{{ $member->role }}</td>
-                        <td class="staff-sort-order">{{ $member->sort_order }}</td>
-                        <td class="staff-status">
-                            <span class="menu-published-label {{ $member->is_published ? 'is-published' : 'is-unpublished' }}">
-                                <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
-                                <span data-published-text>{{ $member->is_published ? '公開' : '非公開' }}</span>
-                            </span>
-                        </td>
-                        <td class="text-right">
-                            <x-admin.action-group>
-                                <x-admin.edit-button
-                                    type="button"
-                                    data-open-staff-edit
-                                    data-staff-id="{{ $member->id }}"
-                                />
-                                <x-admin.delete-button
-                                    :action="route('admin.staff.destroy', $member)"
-                                    :name="$member->name"
-                                />
-                            </x-admin.action-group>
-                        </td>
-                    </tr>
-                @empty
-                    <tr id="staff-empty-row">
-                        <td colspan="6" class="!p-0 hover:!bg-transparent">
-                            <x-admin.empty-state
-                                variant="users"
-                                title="スタッフが登録されていません。"
-                                description="スタッフ情報を追加してみましょう。"
+    @if ($errors->any())
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <ul class="list-disc space-y-1 pl-5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form
+        method="POST"
+        action="{{ route('admin.staff.bulk-update') }}"
+        id="staff-bulk-form"
+        enctype="multipart/form-data"
+        data-staff-workspace
+        data-next-new-index="{{ $nextNewIndex }}"
+        data-max-order="{{ $maxOrder }}"
+    >
+        @csrf
+        @method('PUT')
+
+        <div id="staff-deleted-ids"></div>
+
+        <div id="staff-grid" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" data-staff-grid>
+            @foreach($staffMembers as $member)
+                @php
+                    $prefix = 'staff.'.$member->id;
+                    $publishedOld = old($prefix.'.is_published', $member->is_published ? '1' : '0');
+                    $isPublished = in_array((string) $publishedOld, ['1', 'true', 'on'], true);
+                    $sortOrder = old($prefix.'.sort_order', $member->sort_order);
+                    $cardName = trim((string) old($prefix.'.name', $member->name));
+                    $headingTitle = $cardName !== '' ? $cardName : '新規スタッフ';
+                @endphp
+                <div
+                    class="admin-card staff-card"
+                    data-staff-card
+                    data-staff-id="{{ $member->id }}"
+                    data-staff-existing
+                >
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span
+                                class="staff-drag-handle"
+                                data-staff-drag-handle
+                                draggable="true"
+                                role="button"
+                                tabindex="0"
+                                aria-label="スタッフを並び替え"
+                                title="ドラッグして並び替え"
                             >
-                                <x-admin.create-button type="button" data-open-staff-create>スタッフ追加</x-admin.create-button>
-                            </x-admin.empty-state>
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-
-    <template id="staff-row-template">
-        <tr data-staff-row="" data-sort-order="0">
-            <td>
-                <div class="staff-photo-cell h-12 w-12"></div>
-            </td>
-            <td class="staff-name"></td>
-            <td class="staff-role"></td>
-            <td class="staff-sort-order"></td>
-            <td class="staff-status">
-                <span class="menu-published-label is-unpublished">
-                    <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
-                    <span data-published-text></span>
-                </span>
-            </td>
-            <td class="text-right">
-                <div class="admin-action-group">
-                    <button type="button" class="admin-icon-btn admin-icon-btn-edit" data-open-staff-edit data-staff-id="" aria-label="編集" title="編集">
-                        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.829-2.828Z"/></svg>
-                    </button>
-                    <form action="" method="POST" class="inline" data-admin-delete-form>
-                        <input type="hidden" name="_token" value="">
-                        <input type="hidden" name="_method" value="DELETE">
+                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <circle cx="7" cy="5" r="1.25"/>
+                                    <circle cx="13" cy="5" r="1.25"/>
+                                    <circle cx="7" cy="10" r="1.25"/>
+                                    <circle cx="13" cy="10" r="1.25"/>
+                                    <circle cx="7" cy="15" r="1.25"/>
+                                    <circle cx="13" cy="15" r="1.25"/>
+                                </svg>
+                            </span>
+                            <p class="banner-card-label truncate text-sm font-medium text-gray-800" data-staff-card-title title="{{ $headingTitle }}">{{ $headingTitle }}</p>
+                        </div>
                         <button
                             type="button"
-                            data-admin-delete-trigger
-                            data-delete-message=""
                             class="admin-icon-btn admin-icon-btn-delete"
+                            data-staff-remove
                             aria-label="削除"
                             title="削除"
                         >
                             <span aria-hidden="true">&times;</span>
                         </button>
-                    </form>
+                    </div>
+
+                    <input type="hidden" name="staff[{{ $member->id }}][sort_order]" value="{{ $sortOrder }}" data-staff-order>
+
+                    <div class="mb-3">
+                        <div data-staff-dropzone class="banner-dropzone cursor-pointer overflow-hidden rounded-lg {{ $member->photo_path ? '' : 'is-empty' }}">
+                            <div data-staff-preview class="{{ $member->photo_path ? '' : 'hidden' }}">
+                                @if($member->photo_path)
+                                    <img
+                                        src="{{ asset('storage/'.$member->photo_path) }}"
+                                        alt=""
+                                        class="aspect-square w-full object-cover"
+                                        data-staff-image
+                                    >
+                                @endif
+                            </div>
+                            <div data-staff-placeholder class="banner-dropzone-placeholder {{ $member->photo_path ? 'hidden' : '' }} min-h-[7.5rem] flex-col items-center justify-center px-4 text-center">
+                                <div class="banner-dropzone-main">
+                                    <svg class="banner-dropzone-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                        <circle cx="9" cy="10.5" r="1.5" fill="currentColor" opacity="0.7"/>
+                                        <path d="M5.5 16.5l4-3.5 2.5 2 3.5-3.5 3 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <p class="banner-dropzone-text text-sm text-gray-700">写真をドラッグ＆ドロップ、またはクリックして選択</p>
+                                </div>
+                                <p class="banner-dropzone-hint mt-2 text-xs text-gray-500">JPEG / PNG / WebP、5MBまで</p>
+                            </div>
+                            <p class="banner-dropzone-drag-message" aria-hidden="true">ここに写真をドロップしてください</p>
+                        </div>
+                        <input
+                            type="file"
+                            name="staff[{{ $member->id }}][photo]"
+                            accept="image/jpeg,image/png,image/webp"
+                            class="hidden"
+                            data-staff-file
+                        >
+                        <p class="mt-1 text-xs text-admin-muted">クリックまたは DnD で写真を変更できます</p>
+                        <p class="mt-1 hidden text-sm text-red-600" data-staff-photo-error role="alert"></p>
+                        @error($prefix.'.photo')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label for="staff_name_{{ $member->id }}" class="admin-label">名前 <span class="admin-required-badge">必須</span></label>
+                            <input
+                                type="text"
+                                name="staff[{{ $member->id }}][name]"
+                                id="staff_name_{{ $member->id }}"
+                                value="{{ old($prefix.'.name', $member->name) }}"
+                                maxlength="255"
+                                required
+                                class="admin-input"
+                                data-staff-name-input
+                            >
+                            @error($prefix.'.name')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="staff_role_{{ $member->id }}" class="admin-label">役職・担当</label>
+                            <input
+                                type="text"
+                                name="staff[{{ $member->id }}][role]"
+                                id="staff_role_{{ $member->id }}"
+                                value="{{ old($prefix.'.role', $member->role) }}"
+                                maxlength="255"
+                                class="admin-input"
+                            >
+                            @error($prefix.'.role')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="staff_profile_{{ $member->id }}" class="admin-label">プロフィール</label>
+                            <textarea
+                                name="staff[{{ $member->id }}][profile]"
+                                id="staff_profile_{{ $member->id }}"
+                                rows="4"
+                                class="admin-input"
+                            >{{ old($prefix.'.profile', $member->profile) }}</textarea>
+                            @error($prefix.'.profile')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <span class="admin-label">公開</span>
+                            <div class="admin-segmented mt-1" role="radiogroup" aria-label="公開状態">
+                                <label class="admin-segmented-option">
+                                    <input type="radio" name="staff[{{ $member->id }}][is_published]" value="1" class="admin-segmented-input" @checked($isPublished)>
+                                    <span class="admin-segmented-face">
+                                        <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                            <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
+                                            <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.35"/>
+                                        </svg>
+                                        <span class="admin-segmented-text">公開</span>
+                                    </span>
+                                </label>
+                                <label class="admin-segmented-option">
+                                    <input type="radio" name="staff[{{ $member->id }}][is_published]" value="0" class="admin-segmented-input" @checked(!$isPublished)>
+                                    <span class="admin-segmented-face">
+                                        <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                            <path d="M2 2.5 13.5 13.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                                            <path d="M6.7 4.1A6.4 6.4 0 0 1 8 3.5c4 0 6.5 4.5 6.5 4.5a10.3 10.3 0 0 1-2.15 2.55M4.2 5.85A10.2 10.2 0 0 0 1.5 8S4 12.5 8 12.5c.7 0 1.35-.12 1.95-.34" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M6.65 7.1a2 2 0 0 0 2.35 2.35" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                                        </svg>
+                                        <span class="admin-segmented-text">非公開</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </td>
-        </tr>
-    </template>
+            @endforeach
 
-    @php
-        $staffEditPayload = $staffMembers->mapWithKeys(function ($member) {
-            return [
-                (string) $member->id => [
-                    'id' => $member->id,
-                    'name' => $member->name,
-                    'role' => $member->role,
-                    'profile' => $member->profile,
-                    'sort_order' => (int) $member->sort_order,
-                    'is_published' => (bool) $member->is_published,
-                    'photo_url' => $member->photo_path ? asset('storage/'.$member->photo_path) : null,
-                    'update_url' => route('admin.staff.update', $member),
-                ],
-            ];
-        });
-    @endphp
-    <script type="application/json" id="staff-edit-data">{!! json_encode($staffEditPayload, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
-
-    {{-- スタッフ作成モーダル（一覧に1つ） --}}
-    <div
-        id="staff-create-modal"
-        class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="staff-create-modal-title"
-        hidden
-    >
-        <div class="admin-modal-panel flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-admin-border/50 bg-admin-card" data-staff-create-modal-panel>
-            <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
-                <h2 id="staff-create-modal-title" class="text-lg font-semibold text-gray-900">スタッフ追加</h2>
-                <button
-                    type="button"
-                    class="rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-salon-button/40"
-                    aria-label="閉じる"
-                    data-close-staff-create
+            @foreach($oldNewStaff as $key => $newItem)
+                @php
+                    if (! is_array($newItem)) {
+                        continue;
+                    }
+                    $prefix = 'new_staff.'.$key;
+                    $publishedOld = old($prefix.'.is_published', $newItem['is_published'] ?? '1');
+                    $isPublished = in_array((string) $publishedOld, ['1', 'true', 'on'], true);
+                    $sortOrder = old($prefix.'.sort_order', $newItem['sort_order'] ?? 0);
+                    $cardName = trim((string) old($prefix.'.name', $newItem['name'] ?? ''));
+                    $headingTitle = $cardName !== '' ? $cardName : '新規スタッフ';
+                    $role = old($prefix.'.role', $newItem['role'] ?? '');
+                    $profile = old($prefix.'.profile', $newItem['profile'] ?? '');
+                @endphp
+                <div
+                    class="admin-card staff-card"
+                    data-staff-card
+                    data-staff-new="1"
                 >
-                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/>
-                    </svg>
-                </button>
-            </div>
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span
+                                class="staff-drag-handle"
+                                data-staff-drag-handle
+                                draggable="true"
+                                role="button"
+                                tabindex="0"
+                                aria-label="スタッフを並び替え"
+                                title="ドラッグして並び替え"
+                            >
+                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <circle cx="7" cy="5" r="1.25"/>
+                                    <circle cx="13" cy="5" r="1.25"/>
+                                    <circle cx="7" cy="10" r="1.25"/>
+                                    <circle cx="13" cy="10" r="1.25"/>
+                                    <circle cx="7" cy="15" r="1.25"/>
+                                    <circle cx="13" cy="15" r="1.25"/>
+                                </svg>
+                            </span>
+                            <p class="banner-card-label truncate text-sm font-medium text-gray-800" data-staff-card-title title="{{ $headingTitle }}">{{ $headingTitle }}</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="admin-icon-btn admin-icon-btn-delete"
+                            data-staff-remove
+                            aria-label="削除"
+                            title="削除"
+                        >
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
 
-            <form
-                id="staff-create-form"
-                method="POST"
-                action="{{ route('admin.staff.store') }}"
-                enctype="multipart/form-data"
-                class="flex min-h-0 flex-1 flex-col"
+                    <input type="hidden" name="new_staff[{{ $key }}][sort_order]" value="{{ $sortOrder }}" data-staff-order>
+
+                    <div class="mb-3">
+                        <div data-staff-dropzone class="banner-dropzone is-empty cursor-pointer">
+                            <div data-staff-placeholder class="banner-dropzone-placeholder min-h-[7.5rem] flex-col items-center justify-center px-4 text-center">
+                                <div class="banner-dropzone-main">
+                                    <svg class="banner-dropzone-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                        <circle cx="9" cy="10.5" r="1.5" fill="currentColor" opacity="0.7"/>
+                                        <path d="M5.5 16.5l4-3.5 2.5 2 3.5-3.5 3 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <p class="banner-dropzone-text text-sm text-gray-700">写真をドラッグ＆ドロップ、またはクリックして選択</p>
+                                </div>
+                                <p class="banner-dropzone-hint mt-2 text-xs text-gray-500">JPEG / PNG / WebP、5MBまで</p>
+                            </div>
+                            <div data-staff-preview class="hidden"></div>
+                            <p class="banner-dropzone-drag-message" aria-hidden="true">ここに写真をドロップしてください</p>
+                        </div>
+                        <input
+                            type="file"
+                            name="new_staff[{{ $key }}][photo]"
+                            accept="image/jpeg,image/png,image/webp"
+                            class="hidden"
+                            data-staff-file
+                        >
+                        <p class="mt-1 hidden text-sm text-red-600" data-staff-photo-error role="alert"></p>
+                        @error($prefix.'.photo')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="admin-label">名前 <span class="admin-required-badge">必須</span></label>
+                            <input
+                                type="text"
+                                name="new_staff[{{ $key }}][name]"
+                                value="{{ $cardName }}"
+                                maxlength="255"
+                                required
+                                class="admin-input"
+                                data-staff-name-input
+                            >
+                            @error($prefix.'.name')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label class="admin-label">役職・担当</label>
+                            <input
+                                type="text"
+                                name="new_staff[{{ $key }}][role]"
+                                value="{{ $role }}"
+                                maxlength="255"
+                                class="admin-input"
+                            >
+                        </div>
+                        <div>
+                            <label class="admin-label">プロフィール</label>
+                            <textarea
+                                name="new_staff[{{ $key }}][profile]"
+                                rows="4"
+                                class="admin-input"
+                            >{{ $profile }}</textarea>
+                        </div>
+                        <div>
+                            <span class="admin-label">公開</span>
+                            <div class="admin-segmented mt-1" role="radiogroup" aria-label="公開状態">
+                                <label class="admin-segmented-option">
+                                    <input type="radio" name="new_staff[{{ $key }}][is_published]" value="1" class="admin-segmented-input" @checked($isPublished)>
+                                    <span class="admin-segmented-face">
+                                        <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                            <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
+                                            <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.35"/>
+                                        </svg>
+                                        <span class="admin-segmented-text">公開</span>
+                                    </span>
+                                </label>
+                                <label class="admin-segmented-option">
+                                    <input type="radio" name="new_staff[{{ $key }}][is_published]" value="0" class="admin-segmented-input" @checked(!$isPublished)>
+                                    <span class="admin-segmented-face">
+                                        <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                            <path d="M2 2.5 13.5 13.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                                            <path d="M6.7 4.1A6.4 6.4 0 0 1 8 3.5c4 0 6.5 4.5 6.5 4.5a10.3 10.3 0 0 1-2.15 2.55M4.2 5.85A10.2 10.2 0 0 0 1.5 8S4 12.5 8 12.5c.7 0 1.35-.12 1.95-.34" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M6.65 7.1a2 2 0 0 0 2.35 2.35" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                                        </svg>
+                                        <span class="admin-segmented-text">非公開</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+
+            <div
+                id="staff-add-card"
+                class="admin-card flex min-h-[22rem] w-full flex-col items-center justify-center px-6 py-10 text-center"
             >
-                @csrf
-
-                <div class="space-y-5 overflow-y-auto px-6 py-5">
-                    <div>
-                        <p class="admin-label">写真プレビュー</p>
-                        <div id="create-staff-photo-wrap" class="mt-1">
-                            <img id="create-staff-photo-preview" src="" alt="" class="hidden h-32 w-32 rounded-full object-cover">
-                            <p id="create-staff-photo-empty" class="text-sm text-gray-500">写真は選択されていません</p>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="create-staff-name" class="admin-label">名前</label>
-                        <input type="text" name="name" id="create-staff-name" required class="admin-input">
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="name"></p>
-                    </div>
-
-                    <div>
-                        <label for="create-staff-role" class="admin-label">役職・担当</label>
-                        <input type="text" name="role" id="create-staff-role" class="admin-input">
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="role"></p>
-                    </div>
-
-                    <div>
-                        <label for="create-staff-photo" class="admin-label">写真</label>
-                        <input type="file" name="photo" id="create-staff-photo" accept="image/jpeg,image/png,image/webp" class="admin-input">
-                        <p class="mt-1 text-xs text-gray-500">JPEG / PNG / WebP、最大5MB。選択すると上のプレビューが切り替わります。</p>
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="photo"></p>
-                        <p id="create-staff-photo-reselect-hint" class="mt-1 hidden text-xs text-amber-700">
-                            画像のバリデーションエラー後は、ブラウザの仕様上ファイルを再選択する必要があります。
-                        </p>
-                    </div>
-
-                    <div>
-                        <label for="create-staff-profile" class="admin-label">プロフィール</label>
-                        <textarea name="profile" id="create-staff-profile" rows="6" class="admin-input"></textarea>
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="profile"></p>
-                    </div>
-
-                    <div>
-                        <label for="create-staff-sort_order" class="admin-label">表示順</label>
-                        <input type="number" name="sort_order" id="create-staff-sort_order" min="0" value="0" class="admin-input">
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="sort_order"></p>
-                    </div>
-
-                    <div>
-                        <label class="menu-published-control" data-published-control>
-                            <input type="hidden" name="is_published" value="0">
-                            <input
-                                type="checkbox"
-                                name="is_published"
-                                id="create-staff-is_published"
-                                value="1"
-                                class="menu-published-checkbox"
-                                data-published-checkbox
-                                checked
-                                aria-label="公開状態"
-                            >
-                            <span class="menu-published-label is-published" data-published-label>
-                                <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
-                                <span data-published-text>公開</span>
-                            </span>
-                        </label>
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="is_published"></p>
-                    </div>
-                </div>
-
-                <div class="flex shrink-0 justify-end gap-3 border-t border-gray-200 px-6 py-4">
-                    <button type="button" class="admin-btn-secondary" data-close-staff-create>キャンセル</button>
-                    <button
-                        type="submit"
-                        id="staff-create-submit"
-                        class="inline-flex items-center rounded-md bg-salon-button px-4 py-2 text-sm font-medium text-white hover:bg-[#4f5d44] disabled:cursor-not-allowed disabled:opacity-60"
-                    >登録する</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {{-- スタッフ編集モーダル（一覧に1つ） --}}
-    <div
-        id="staff-edit-modal"
-        class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="staff-edit-modal-title"
-        hidden
-    >
-        <div class="admin-modal-panel flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-admin-border/50 bg-admin-card" data-staff-modal-panel>
-            <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
-                <h2 id="staff-edit-modal-title" class="text-lg font-semibold text-gray-900">スタッフ編集</h2>
-                <button
-                    type="button"
-                    class="rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-salon-button/40"
-                    aria-label="閉じる"
-                    data-close-staff-edit
-                >
-                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/>
+                <div class="admin-empty-state-icon !mb-4" aria-hidden="true">
+                    <svg class="h-14 w-14" viewBox="0 0 80 80" fill="none" stroke="#B8B09F" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M40 58V36" stroke-width="1.3"/>
+                        <path d="M40 42c6-3 11-8 13-14" stroke-width="1.25" opacity="0.75"/>
+                        <path d="M40 48c-6-2.5-10-7-12-12" stroke-width="1.25" opacity="0.75"/>
+                        <path d="M40 36c-5-8-3-16 2-20 6 2 10 9 8 16-2 3-5 4-10 4Z" stroke-width="1.3" opacity="0.65"/>
+                        <path d="M40 36c5-8 3-16-2-20-6 2-10 9-8 16 2 3 5 4 10 4Z" stroke-width="1.3" opacity="0.65"/>
+                        <circle cx="32" cy="50" r="5.5" stroke-width="1.35"/>
+                        <path d="M22 66c1.5-6 5-10 10-10s8.5 4 10 10" stroke-width="1.35"/>
+                        <circle cx="52" cy="48" r="4.5" stroke-width="1.3" opacity="0.85"/>
+                        <path d="M44 66c1-5 4-8.5 8-8.5s7 3.5 8 8.5" stroke-width="1.3" opacity="0.85"/>
                     </svg>
-                </button>
+                </div>
+                <x-admin.create-button data-staff-add>
+                    スタッフを追加
+                </x-admin.create-button>
+                <p class="mt-3 text-xs text-admin-muted">カードを追加し、保存で登録できます。</p>
             </div>
-
-            <form id="staff-edit-form" method="POST" enctype="multipart/form-data" class="flex min-h-0 flex-1 flex-col">
-                @csrf
-                <input type="hidden" name="_method" value="PUT">
-
-                <div class="space-y-5 overflow-y-auto px-6 py-5">
-                    <div>
-                        <p class="admin-label">登録済み写真</p>
-                        <div id="modal-staff-photo-wrap" class="mt-1">
-                            <img id="modal-staff-photo-preview" src="" alt="" class="hidden h-32 w-32 rounded-full object-cover">
-                            <p id="modal-staff-photo-empty" class="text-sm text-gray-500">写真は登録されていません</p>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="modal-staff-name" class="admin-label">名前</label>
-                        <input type="text" name="name" id="modal-staff-name" required class="admin-input">
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="name"></p>
-                    </div>
-
-                    <div>
-                        <label for="modal-staff-role" class="admin-label">役職・担当</label>
-                        <input type="text" name="role" id="modal-staff-role" class="admin-input">
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="role"></p>
-                    </div>
-
-                    <div>
-                        <label for="modal-staff-photo" class="admin-label">写真（変更する場合のみ）</label>
-                        <input type="file" name="photo" id="modal-staff-photo" accept="image/jpeg,image/png,image/webp" class="admin-input">
-                        <p class="mt-1 text-xs text-gray-500">JPEG / PNG / WebP、最大5MB。選択すると上のプレビューが切り替わります。</p>
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="photo"></p>
-                        <p id="modal-staff-photo-reselect-hint" class="mt-1 hidden text-xs text-amber-700">
-                            画像のバリデーションエラー後は、ブラウザの仕様上ファイルを再選択する必要があります。
-                        </p>
-                    </div>
-
-                    <div>
-                        <label for="modal-staff-profile" class="admin-label">プロフィール</label>
-                        <textarea name="profile" id="modal-staff-profile" rows="6" class="admin-input"></textarea>
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="profile"></p>
-                    </div>
-
-                    <div>
-                        <label for="modal-staff-sort_order" class="admin-label">表示順</label>
-                        <input type="number" name="sort_order" id="modal-staff-sort_order" min="0" class="admin-input">
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="sort_order"></p>
-                    </div>
-
-                    <div>
-                        <label class="menu-published-control" data-published-control>
-                            <input type="hidden" name="is_published" value="0">
-                            <input
-                                type="checkbox"
-                                name="is_published"
-                                id="modal-staff-is_published"
-                                value="1"
-                                class="menu-published-checkbox"
-                                data-published-checkbox
-                                aria-label="公開状態"
-                            >
-                            <span class="menu-published-label is-unpublished" data-published-label>
-                                <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
-                                <span data-published-text>非公開</span>
-                            </span>
-                        </label>
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="is_published"></p>
-                    </div>
-                </div>
-
-                <div class="flex shrink-0 justify-end gap-3 border-t border-gray-200 px-6 py-4">
-                    <button type="button" class="admin-btn-secondary" data-close-staff-edit>キャンセル</button>
-                    <button
-                        type="submit"
-                        id="staff-edit-submit"
-                        class="inline-flex items-center rounded-md bg-salon-button px-4 py-2 text-sm font-medium text-white hover:bg-[#4f5d44] disabled:cursor-not-allowed disabled:opacity-60"
-                    >更新する</button>
-                </div>
-            </form>
         </div>
-    </div>
+    </form>
+
+    <style>
+        .staff-drag-handle {
+            display: inline-flex;
+            flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+            width: 1.75rem;
+            height: 2rem;
+            color: rgba(115, 109, 101, 0.55);
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .staff-drag-handle:hover,
+        .staff-drag-handle:focus-visible {
+            color: #556344;
+        }
+        .staff-drag-handle:focus {
+            outline: none;
+        }
+        .staff-drag-handle:focus-visible {
+            box-shadow: inset 0 0 0 2px rgba(105, 122, 85, 0.35);
+            border-radius: 0.25rem;
+        }
+        .staff-drag-handle:active,
+        .staff-card.is-dragging .staff-drag-handle {
+            cursor: grabbing;
+        }
+        .staff-card.is-dragging {
+            opacity: 0.55;
+        }
+        .staff-card.is-drag-over {
+            outline: 2px dashed rgba(105, 122, 85, 0.45);
+            outline-offset: 2px;
+        }
+    </style>
 
     <script>
         (function () {
-            const modal = document.getElementById('staff-edit-modal');
-            const form = document.getElementById('staff-edit-form');
-            const submitBtn = document.getElementById('staff-edit-submit');
-            const dataEl = document.getElementById('staff-edit-data');
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+            const maxSize = 5 * 1024 * 1024;
+            const form = document.getElementById('staff-bulk-form');
+            const grid = document.getElementById('staff-grid');
+            const deletedIdsWrap = document.getElementById('staff-deleted-ids');
+            const addCard = document.getElementById('staff-add-card');
+            const addButton = addCard ? addCard.querySelector('[data-staff-add]') : null;
+            const emptyHeading = '新規スタッフ';
+            const dropzoneMainHtml =
+                '<div class="banner-dropzone-main">' +
+                    '<svg class="banner-dropzone-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+                        '<rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>' +
+                        '<circle cx="9" cy="10.5" r="1.5" fill="currentColor" opacity="0.7"/>' +
+                        '<path d="M5.5 16.5l4-3.5 2.5 2 3.5-3.5 3 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+                    '</svg>' +
+                    '<p class="banner-dropzone-text text-sm text-gray-700">写真をドラッグ＆ドロップ、またはクリックして選択</p>' +
+                '</div>';
 
-            let staffData = {};
-            try {
-                staffData = JSON.parse(dataEl?.textContent || '{}');
-            } catch (e) {
-                staffData = {};
+            if (!form || !grid || !addCard || !addButton) {
+                return;
             }
 
-            let openTrigger = null;
-            let submitting = false;
-            let savedPhotoUrl = null;
+            let nextNewIndex = parseInt(form.getAttribute('data-next-new-index') || '1', 10);
+            let maxOrder = parseInt(form.getAttribute('data-max-order') || '0', 10);
+            let dragCard = null;
 
-            const nameInput = document.getElementById('modal-staff-name');
-            const roleInput = document.getElementById('modal-staff-role');
-            const photoInput = document.getElementById('modal-staff-photo');
-            const profileInput = document.getElementById('modal-staff-profile');
-            const sortOrderInput = document.getElementById('modal-staff-sort_order');
-            const isPublishedInput = document.getElementById('modal-staff-is_published');
-            const photoPreview = document.getElementById('modal-staff-photo-preview');
-            const photoEmpty = document.getElementById('modal-staff-photo-empty');
-            const photoReselectHint = document.getElementById('modal-staff-photo-reselect-hint');
-
-            function syncPublishedLabel(checkbox) {
-                const control = checkbox.closest('[data-published-control]');
-                if (!control) {
-                    return;
+            function showCardPhotoError(card, message) {
+                const errorEl = card.querySelector('[data-staff-photo-error]');
+                if (errorEl) {
+                    errorEl.textContent = message || '';
+                    errorEl.classList.toggle('hidden', !message);
                 }
-                const label = control.querySelector('[data-published-label]');
-                const text = control.querySelector('[data-published-text]');
-                if (!label) {
-                    return;
-                }
-                const published = !!checkbox.checked;
-                label.classList.toggle('is-published', published);
-                label.classList.toggle('is-unpublished', !published);
-                if (text) {
-                    text.textContent = published ? '公開' : '非公開';
+                if (message && typeof window.showToast === 'function') {
+                    window.showToast(message, 'error');
                 }
             }
 
-            function setPublishedStatusCell(statusCell, published) {
-                if (!statusCell) {
-                    return;
-                }
-                let label = statusCell.querySelector('.menu-published-label');
-                if (!label) {
-                    statusCell.innerHTML =
-                        '<span class="menu-published-label">' +
-                            '<span class="menu-published-dot" data-published-dot aria-hidden="true"></span>' +
-                            '<span data-published-text></span>' +
-                        '</span>';
-                    label = statusCell.querySelector('.menu-published-label');
-                }
-                label.classList.toggle('is-published', !!published);
-                label.classList.toggle('is-unpublished', !published);
-                const text = statusCell.querySelector('[data-published-text]');
-                if (text) {
-                    text.textContent = published ? '公開' : '非公開';
-                }
-            }
-
-            document.addEventListener('change', function (e) {
-                const checkbox = e.target.closest('[data-published-checkbox]');
-                if (checkbox) {
-                    syncPublishedLabel(checkbox);
-                }
-            });
-
-            function setPhotoPreview(url) {
-                if (url) {
-                    photoPreview.src = url;
-                    photoPreview.classList.remove('hidden');
-                    photoEmpty.classList.add('hidden');
-                } else {
-                    photoPreview.removeAttribute('src');
-                    photoPreview.classList.add('hidden');
-                    photoEmpty.classList.remove('hidden');
-                }
-            }
-
-            function clearErrors() {
-                form.querySelectorAll('[data-error-for]').forEach(function (el) {
-                    el.textContent = '';
-                    el.classList.add('hidden');
-                });
-                photoReselectHint.classList.add('hidden');
-            }
-
-            function showErrors(errors) {
-                clearErrors();
-                Object.keys(errors || {}).forEach(function (field) {
-                    const target = form.querySelector('[data-error-for="' + field + '"]');
-                    if (target && errors[field] && errors[field][0]) {
-                        target.textContent = errors[field][0];
-                        target.classList.remove('hidden');
-                    }
-                });
-
-                if (errors && errors.photo) {
-                    photoInput.value = '';
-                    setPhotoPreview(savedPhotoUrl);
-                    photoReselectHint.classList.remove('hidden');
-                }
-            }
-
-            function resetFormState() {
-                form.reset();
-                photoInput.value = '';
-                clearErrors();
-                savedPhotoUrl = null;
-                setPhotoPreview(null);
-                submitBtn.disabled = false;
-                submitBtn.textContent = '更新する';
-                submitting = false;
-            }
-
-            function fillForm(item) {
-                resetFormState();
-                form.action = item.update_url;
-                nameInput.value = item.name || '';
-                roleInput.value = item.role || '';
-                profileInput.value = item.profile || '';
-                sortOrderInput.value = item.sort_order != null ? item.sort_order : 0;
-                isPublishedInput.checked = !!item.is_published;
-                syncPublishedLabel(isPublishedInput);
-                savedPhotoUrl = item.photo_url || null;
-                setPhotoPreview(savedPhotoUrl);
-            }
-
-            function openModal(staffId, trigger) {
-                const item = staffData[String(staffId)];
-                if (!item) {
-                    return;
-                }
-
-                openTrigger = trigger || null;
-                fillForm(item);
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-                modal.removeAttribute('hidden');
-                if (window.AdminUi) {
-                    window.AdminUi.lockBody();
-                } else {
-                    document.body.style.overflow = 'hidden';
-                }
-
-                requestAnimationFrame(function () {
-                    setTimeout(function () {
-                        nameInput.focus();
-                    }, 0);
-                });
-            }
-
-            function closeModal() {
-                if (submitting) {
-                    return;
-                }
-
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                modal.setAttribute('hidden', '');
-                if (window.AdminUi) {
-                    window.AdminUi.unlockBody();
-                } else {
-                    document.body.style.overflow = '';
-                }
-
-                resetFormState();
-
-                const restore = openTrigger;
-                openTrigger = null;
-                if (restore && typeof restore.focus === 'function') {
-                    restore.focus();
-                }
-            }
-
-            function updateRow(staff) {
-                const row = document.querySelector('[data-staff-row="' + staff.id + '"]');
-                if (!row) {
-                    return;
-                }
-
-                const photoCell = row.querySelector('.staff-photo-cell');
-                if (photoCell) {
-                    if (staff.photo_url) {
-                        let img = photoCell.querySelector('.staff-photo');
-                        if (!img) {
-                            img = document.createElement('img');
-                            img.className = 'staff-photo h-12 w-12 rounded-full object-cover';
-                            img.alt = '';
-                            photoCell.innerHTML = '';
-                            photoCell.appendChild(img);
-                        }
-                        img.src = staff.photo_url;
-                    } else {
-                        photoCell.innerHTML = '';
-                    }
-                }
-
-                const nameCell = row.querySelector('.staff-name');
-                const roleCell = row.querySelector('.staff-role');
-                const sortCell = row.querySelector('.staff-sort-order');
-                const statusCell = row.querySelector('.staff-status');
-
-                if (nameCell) {
-                    nameCell.textContent = staff.name || '';
-                }
-                if (roleCell) {
-                    roleCell.textContent = staff.role || '';
-                }
-                if (sortCell) {
-                    sortCell.textContent = staff.sort_order != null ? String(staff.sort_order) : '0';
-                }
-                setPublishedStatusCell(statusCell, !!staff.is_published);
-            }
-
-            document.addEventListener('click', function (e) {
-                const btn = e.target.closest('[data-open-staff-edit]');
-                if (!btn) {
-                    return;
-                }
-                openModal(btn.getAttribute('data-staff-id'), btn);
-            });
-
-            document.querySelectorAll('[data-close-staff-edit]').forEach(function (btn) {
-                btn.addEventListener('click', closeModal);
-            });
-
-            modal.addEventListener('click', function (e) {
-                if (e.target === modal) {
-                    closeModal();
-                }
-            });
-
-            document.addEventListener('keydown', function (e) {
-                if (modal.classList.contains('hidden')) {
-                    return;
-                }
-
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    closeModal();
-                    return;
-                }
-
-                if (window.AdminUi) {
-                    window.AdminUi.trapFocus(e, modal);
-                }
-            });
-
-            photoInput.addEventListener('change', function () {
-                const file = photoInput.files && photoInput.files[0];
-                photoReselectHint.classList.add('hidden');
-
+            function isValidImage(file) {
                 if (!file) {
-                    setPhotoPreview(savedPhotoUrl);
-                    return;
+                    return '写真を選択してください。';
                 }
-
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                    setPhotoPreview(event.target.result);
-                };
-                reader.readAsDataURL(file);
-            });
-
-            form.addEventListener('submit', function (e) {
-                e.preventDefault();
-                if (submitting) {
-                    return;
-                }
-
-                submitting = true;
-                submitBtn.disabled = true;
-                submitBtn.textContent = '更新中...';
-                clearErrors();
-
-                const formData = new FormData(form);
-
-                fetch(form.action, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': csrfToken,
-                    },
-                    body: formData,
-                    credentials: 'same-origin',
-                })
-                    .then(async function (response) {
-                        const data = await response.json().catch(function () {
-                            return {};
-                        });
-
-                        if (response.status === 422) {
-                            showErrors(data.errors || {});
-                            if (typeof window.showToast === 'function') {
-                                window.showToast('入力内容を確認してください。', 'error');
-                            }
-                            return;
-                        }
-
-                        if (!response.ok) {
-                            showErrors({ name: [data.message || '更新に失敗しました。'] });
-                            if (typeof window.showToast === 'function') {
-                                window.showToast(data.message || '更新に失敗しました。', 'error');
-                            }
-                            return;
-                        }
-
-                        const staff = data.staff;
-                        if (staff) {
-                            staffData[String(staff.id)] = {
-                                id: staff.id,
-                                name: staff.name,
-                                role: staff.role,
-                                profile: staff.profile,
-                                sort_order: staff.sort_order,
-                                is_published: !!staff.is_published,
-                                photo_url: staff.photo_url || null,
-                                update_url: form.action,
-                            };
-                            if (dataEl) {
-                                dataEl.textContent = JSON.stringify(staffData);
-                            }
-                            updateRow(staff);
-                        }
-
-                        submitting = false;
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = '更新する';
-                        closeModal();
-
-                        if (typeof window.showToast === 'function') {
-                            window.showToast(data.message || 'スタッフ情報を更新しました。', 'success');
-                        }
-                    })
-                    .catch(function () {
-                        showErrors({ name: ['通信エラーが発生しました。'] });
-                        if (typeof window.showToast === 'function') {
-                            window.showToast('通信エラーが発生しました。', 'error');
-                        }
-                    })
-                    .finally(function () {
-                        submitting = false;
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = '更新する';
-                    });
-            });
-
-            // ---- 作成モーダル ----
-            const createModal = document.getElementById('staff-create-modal');
-            const createForm = document.getElementById('staff-create-form');
-            const createSubmitBtn = document.getElementById('staff-create-submit');
-            const createNameInput = document.getElementById('create-staff-name');
-            const createPhotoInput = document.getElementById('create-staff-photo');
-            const createSortOrderInput = document.getElementById('create-staff-sort_order');
-            const createIsPublishedInput = document.getElementById('create-staff-is_published');
-            const createPhotoPreview = document.getElementById('create-staff-photo-preview');
-            const createPhotoEmpty = document.getElementById('create-staff-photo-empty');
-            const createPhotoReselectHint = document.getElementById('create-staff-photo-reselect-hint');
-            const rowTemplate = document.getElementById('staff-row-template');
-            const staffTableBody = document.getElementById('staff-table-body');
-            const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-            const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
-            let createOpenTrigger = null;
-            let createSubmitting = false;
-
-            function setCreatePhotoPreview(url) {
-                if (url) {
-                    createPhotoPreview.src = url;
-                    createPhotoPreview.classList.remove('hidden');
-                    createPhotoEmpty.classList.add('hidden');
-                } else {
-                    createPhotoPreview.removeAttribute('src');
-                    createPhotoPreview.classList.add('hidden');
-                    createPhotoEmpty.classList.remove('hidden');
-                }
-            }
-
-            function clearCreateErrors() {
-                createForm.querySelectorAll('[data-error-for]').forEach(function (el) {
-                    el.textContent = '';
-                    el.classList.add('hidden');
-                });
-                createPhotoReselectHint.classList.add('hidden');
-            }
-
-            function showCreateFieldError(field, message) {
-                const target = createForm.querySelector('[data-error-for="' + field + '"]');
-                if (target) {
-                    target.textContent = message;
-                    target.classList.remove('hidden');
-                }
-            }
-
-            function showCreateErrors(errors) {
-                clearCreateErrors();
-                Object.keys(errors || {}).forEach(function (field) {
-                    if (errors[field] && errors[field][0]) {
-                        showCreateFieldError(field, errors[field][0]);
-                    }
-                });
-
-                if (errors && errors.photo) {
-                    createPhotoInput.value = '';
-                    setCreatePhotoPreview(null);
-                    createPhotoReselectHint.classList.remove('hidden');
-                }
-            }
-
-            function resetCreateFormState() {
-                createForm.reset();
-                createPhotoInput.value = '';
-                createSortOrderInput.value = '0';
-                createIsPublishedInput.checked = true;
-                syncPublishedLabel(createIsPublishedInput);
-                clearCreateErrors();
-                setCreatePhotoPreview(null);
-                createSubmitBtn.disabled = false;
-                createSubmitBtn.textContent = '登録する';
-                createSubmitting = false;
-            }
-
-            function openCreateModal(trigger) {
-                createOpenTrigger = trigger || null;
-                resetCreateFormState();
-                createModal.classList.remove('hidden');
-                createModal.classList.add('flex');
-                createModal.removeAttribute('hidden');
-                if (window.AdminUi) {
-                    window.AdminUi.lockBody();
-                } else {
-                    document.body.style.overflow = 'hidden';
-                }
-
-                requestAnimationFrame(function () {
-                    setTimeout(function () {
-                        createNameInput.focus();
-                    }, 0);
-                });
-            }
-
-            function closeCreateModal() {
-                if (createSubmitting) {
-                    return;
-                }
-
-                createModal.classList.add('hidden');
-                createModal.classList.remove('flex');
-                createModal.setAttribute('hidden', '');
-                if (window.AdminUi) {
-                    window.AdminUi.unlockBody();
-                } else {
-                    document.body.style.overflow = '';
-                }
-
-                resetCreateFormState();
-
-                const restore = createOpenTrigger;
-                createOpenTrigger = null;
-                if (restore && typeof restore.focus === 'function') {
-                    restore.focus();
-                }
-            }
-
-            function validateCreatePhotoFile(file) {
-                if (!file) {
-                    return null;
-                }
-                if (ALLOWED_TYPES.indexOf(file.type) === -1) {
+                if (allowedTypes.indexOf(file.type) === -1) {
                     return 'JPEG / PNG / WebP形式の画像を選択してください。';
                 }
-                if (file.size > MAX_IMAGE_BYTES) {
+                if (file.size > maxSize) {
                     return '画像サイズは5MB以下にしてください。';
                 }
                 return null;
             }
 
-            function compareStaffRows(a, b) {
-                const sortA = Number(a.getAttribute('data-sort-order') || 0);
-                const sortB = Number(b.getAttribute('data-sort-order') || 0);
-                if (sortA !== sortB) {
-                    return sortA - sortB;
-                }
-                const idA = Number(a.getAttribute('data-staff-row') || 0);
-                const idB = Number(b.getAttribute('data-staff-row') || 0);
-                return idA - idB;
-            }
-
-            function insertStaffRow(row) {
-                const empty = document.getElementById('staff-empty-row');
-                if (empty) {
-                    empty.remove();
+            function setCardPreview(card, fileOrUrl) {
+                const preview = card.querySelector('[data-staff-preview]');
+                const placeholder = card.querySelector('[data-staff-placeholder]');
+                const dropzone = card.querySelector('[data-staff-dropzone]');
+                if (!preview || !placeholder) {
+                    return;
                 }
 
-                const rows = Array.from(staffTableBody.querySelectorAll('[data-staff-row]'));
-                let inserted = false;
-                for (let i = 0; i < rows.length; i++) {
-                    if (compareStaffRows(row, rows[i]) < 0) {
-                        staffTableBody.insertBefore(row, rows[i]);
-                        inserted = true;
-                        break;
-                    }
-                }
-                if (!inserted) {
-                    staffTableBody.appendChild(row);
-                }
-            }
-
-            function buildStaffRow(staff) {
-                const node = rowTemplate.content.firstElementChild.cloneNode(true);
-                const sortOrder = staff.sort_order != null ? staff.sort_order : 0;
-
-                node.setAttribute('data-staff-row', String(staff.id));
-                node.setAttribute('data-sort-order', String(sortOrder));
-
-                const photoCell = node.querySelector('.staff-photo-cell');
-                if (photoCell) {
-                    photoCell.innerHTML = '';
-                    if (staff.photo_url) {
-                        const img = document.createElement('img');
-                        img.src = staff.photo_url;
+                function showImage(src) {
+                    let img = preview.querySelector('[data-staff-image]');
+                    if (!img) {
+                        img = document.createElement('img');
+                        img.setAttribute('data-staff-image', '');
                         img.alt = '';
-                        img.className = 'staff-photo h-12 w-12 rounded-full object-cover';
-                        photoCell.appendChild(img);
+                        img.className = 'aspect-square w-full object-cover';
+                        preview.appendChild(img);
+                    }
+                    img.src = src;
+                    placeholder.classList.add('hidden');
+                    preview.classList.remove('hidden');
+                    if (dropzone) {
+                        dropzone.classList.remove('is-empty');
+                        dropzone.classList.add('overflow-hidden', 'rounded-lg');
                     }
                 }
 
-                const nameEl = node.querySelector('.staff-name');
-                if (nameEl) {
-                    nameEl.textContent = staff.name || '';
+                if (typeof fileOrUrl === 'string') {
+                    showImage(fileOrUrl);
+                    return;
                 }
 
-                const roleEl = node.querySelector('.staff-role');
-                if (roleEl) {
-                    roleEl.textContent = staff.role || '';
-                }
-
-                const sortEl = node.querySelector('.staff-sort-order');
-                if (sortEl) {
-                    sortEl.textContent = String(sortOrder);
-                }
-
-                setPublishedStatusCell(node.querySelector('.staff-status'), !!staff.is_published);
-
-                const editBtn = node.querySelector('[data-open-staff-edit]');
-                if (editBtn) {
-                    editBtn.setAttribute('data-staff-id', String(staff.id));
-                }
-
-                const deleteForm = node.querySelector('form[data-admin-delete-form]');
-                if (deleteForm) {
-                    deleteForm.action = staff.destroy_url || '';
-                    const tokenInput = deleteForm.querySelector('input[name="_token"]');
-                    if (tokenInput) {
-                        tokenInput.value = csrfToken;
-                    }
-                    const deleteBtn = deleteForm.querySelector('[data-admin-delete-trigger]');
-                    if (deleteBtn) {
-                        deleteBtn.setAttribute(
-                            'data-delete-message',
-                            '「' + (staff.name || '') + '」を削除しますか？'
-                        );
-                    }
-                }
-
-                return node;
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    showImage(e.target.result);
+                };
+                reader.readAsDataURL(fileOrUrl);
             }
 
-            document.querySelectorAll('[data-open-staff-create]').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    openCreateModal(btn);
-                });
-            });
-
-            document.querySelectorAll('[data-close-staff-create]').forEach(function (btn) {
-                btn.addEventListener('click', closeCreateModal);
-            });
-
-            createModal.addEventListener('click', function (e) {
-                if (e.target === createModal) {
-                    closeCreateModal();
-                }
-            });
-
-            document.addEventListener('keydown', function (e) {
-                if (createModal.classList.contains('hidden')) {
-                    return;
-                }
-
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    closeCreateModal();
-                    return;
-                }
-
-                if (window.AdminUi) {
-                    window.AdminUi.trapFocus(e, createModal);
-                }
-            });
-
-            createPhotoInput.addEventListener('change', function () {
-                createPhotoReselectHint.classList.add('hidden');
-                const file = createPhotoInput.files && createPhotoInput.files[0];
-
-                if (!file) {
-                    setCreatePhotoPreview(null);
-                    return;
-                }
-
-                const error = validateCreatePhotoFile(file);
+            function applyFile(card, file) {
+                const input = card.querySelector('[data-staff-file]');
+                const error = isValidImage(file);
                 if (error) {
-                    createPhotoInput.value = '';
-                    setCreatePhotoPreview(null);
-                    showCreateFieldError('photo', error);
-                    if (typeof window.showToast === 'function') {
-                        window.showToast(error, 'error');
+                    if (input) {
+                        input.value = '';
                     }
+                    showCardPhotoError(card, error);
                     return;
                 }
+                showCardPhotoError(card, '');
+                if (input) {
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    input.files = dt.files;
+                }
+                setCardPreview(card, file);
+            }
 
-                clearCreateErrors();
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                    setCreatePhotoPreview(event.target.result);
-                };
-                reader.readAsDataURL(file);
+            function syncCardHeading(card) {
+                const label = card.querySelector('[data-staff-card-title]');
+                const input = card.querySelector('[data-staff-name-input]');
+                if (!label || !input) {
+                    return;
+                }
+                const value = (input.value || '').trim();
+                const text = value !== '' ? value : emptyHeading;
+                label.textContent = text;
+                label.setAttribute('title', text);
+            }
+
+            function syncDisplayOrders() {
+                grid.querySelectorAll('[data-staff-card]').forEach(function (card, index) {
+                    const orderInput = card.querySelector('[data-staff-order]');
+                    if (orderInput) {
+                        orderInput.value = String(index + 1);
+                    }
+                });
+                maxOrder = grid.querySelectorAll('[data-staff-card]').length;
+                form.setAttribute('data-max-order', String(maxOrder));
+            }
+
+            function clearDropzoneDragState(dropzone) {
+                if (!dropzone) {
+                    return;
+                }
+                dropzone._staffDragCounter = 0;
+                dropzone.classList.remove('is-drag-active');
+            }
+
+            function bindCard(card) {
+                const dropzone = card.querySelector('[data-staff-dropzone]');
+                const input = card.querySelector('[data-staff-file]');
+                const removeBtn = card.querySelector('[data-staff-remove]');
+                const nameInput = card.querySelector('[data-staff-name-input]');
+
+                if (dropzone) {
+                    dropzone._staffDragCounter = 0;
+                }
+
+                dropzone?.addEventListener('click', function () {
+                    input?.click();
+                });
+                input?.addEventListener('change', function () {
+                    applyFile(card, input.files && input.files[0]);
+                });
+
+                dropzone?.addEventListener('dragenter', function (e) {
+                    if (dragCard) {
+                        return;
+                    }
+                    e.preventDefault();
+                    dropzone._staffDragCounter = (dropzone._staffDragCounter || 0) + 1;
+                    dropzone.classList.add('is-drag-active');
+                });
+                dropzone?.addEventListener('dragover', function (e) {
+                    if (dragCard) {
+                        return;
+                    }
+                    e.preventDefault();
+                    dropzone.classList.add('is-drag-active');
+                });
+                dropzone?.addEventListener('dragleave', function (e) {
+                    if (dragCard) {
+                        return;
+                    }
+                    e.preventDefault();
+                    dropzone._staffDragCounter = Math.max(0, (dropzone._staffDragCounter || 0) - 1);
+                    if (dropzone._staffDragCounter === 0) {
+                        dropzone.classList.remove('is-drag-active');
+                    }
+                });
+                dropzone?.addEventListener('drop', function (e) {
+                    if (dragCard) {
+                        return;
+                    }
+                    e.preventDefault();
+                    clearDropzoneDragState(dropzone);
+                    applyFile(card, e.dataTransfer.files[0]);
+                });
+
+                nameInput?.addEventListener('input', function () {
+                    syncCardHeading(card);
+                });
+                syncCardHeading(card);
+
+                removeBtn?.addEventListener('click', function () {
+                    const existingId = card.getAttribute('data-staff-id');
+                    if (existingId && deletedIdsWrap) {
+                        const hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = 'deleted_ids[]';
+                        hidden.value = existingId;
+                        deletedIdsWrap.appendChild(hidden);
+                    }
+                    card.remove();
+                    syncDisplayOrders();
+                });
+            }
+
+            function createEmptyCard() {
+                const key = 'new_' + nextNewIndex;
+                nextNewIndex += 1;
+                form.setAttribute('data-next-new-index', String(nextNewIndex));
+
+                const order = grid.querySelectorAll('[data-staff-card]').length + 1;
+                maxOrder = Math.max(maxOrder, order);
+                form.setAttribute('data-max-order', String(maxOrder));
+
+                const card = document.createElement('div');
+                card.className = 'admin-card staff-card';
+                card.setAttribute('data-staff-card', '');
+                card.setAttribute('data-staff-new', '1');
+                card.innerHTML =
+                    '<div class="mb-3 flex items-center justify-between gap-3">' +
+                        '<div class="flex min-w-0 items-center gap-2">' +
+                            '<span class="staff-drag-handle" data-staff-drag-handle draggable="true" role="button" tabindex="0" aria-label="スタッフを並び替え" title="ドラッグして並び替え">' +
+                                '<svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">' +
+                                    '<circle cx="7" cy="5" r="1.25"/><circle cx="13" cy="5" r="1.25"/>' +
+                                    '<circle cx="7" cy="10" r="1.25"/><circle cx="13" cy="10" r="1.25"/>' +
+                                    '<circle cx="7" cy="15" r="1.25"/><circle cx="13" cy="15" r="1.25"/>' +
+                                '</svg>' +
+                            '</span>' +
+                            '<p class="banner-card-label truncate text-sm font-medium text-gray-800" data-staff-card-title title="' + emptyHeading + '">' + emptyHeading + '</p>' +
+                        '</div>' +
+                        '<button type="button" class="admin-icon-btn admin-icon-btn-delete" data-staff-remove aria-label="削除" title="削除">' +
+                            '<span aria-hidden="true">&times;</span>' +
+                        '</button>' +
+                    '</div>' +
+                    '<input type="hidden" name="new_staff[' + key + '][sort_order]" value="' + order + '" data-staff-order>' +
+                    '<div class="mb-3">' +
+                        '<div data-staff-dropzone class="banner-dropzone is-empty cursor-pointer">' +
+                            '<div data-staff-placeholder class="banner-dropzone-placeholder">' +
+                                dropzoneMainHtml +
+                                '<p class="banner-dropzone-hint mt-2 text-xs text-gray-500">JPEG / PNG / WebP、5MBまで</p>' +
+                            '</div>' +
+                            '<div data-staff-preview class="hidden"></div>' +
+                            '<p class="banner-dropzone-drag-message" aria-hidden="true">ここに写真をドロップしてください</p>' +
+                        '</div>' +
+                        '<input type="file" name="new_staff[' + key + '][photo]" accept="image/jpeg,image/png,image/webp" class="hidden" data-staff-file>' +
+                        '<p class="mt-1 hidden text-sm text-red-600" data-staff-photo-error role="alert"></p>' +
+                    '</div>' +
+                    '<div class="space-y-3">' +
+                        '<div>' +
+                            '<label for="staff_new_name_' + key + '" class="admin-label">名前 <span class="admin-required-badge">必須</span></label>' +
+                            '<input type="text" name="new_staff[' + key + '][name]" id="staff_new_name_' + key + '" value="" maxlength="255" required class="admin-input" data-staff-name-input>' +
+                        '</div>' +
+                        '<div>' +
+                            '<label for="staff_new_role_' + key + '" class="admin-label">役職・担当</label>' +
+                            '<input type="text" name="new_staff[' + key + '][role]" id="staff_new_role_' + key + '" value="" maxlength="255" class="admin-input">' +
+                        '</div>' +
+                        '<div>' +
+                            '<label for="staff_new_profile_' + key + '" class="admin-label">プロフィール</label>' +
+                            '<textarea name="new_staff[' + key + '][profile]" id="staff_new_profile_' + key + '" rows="4" class="admin-input"></textarea>' +
+                        '</div>' +
+                        '<div>' +
+                            '<span class="admin-label">公開</span>' +
+                            '<div class="admin-segmented mt-1" role="radiogroup" aria-label="公開状態">' +
+                                '<label class="admin-segmented-option">' +
+                                    '<input type="radio" name="new_staff[' + key + '][is_published]" value="1" class="admin-segmented-input" checked>' +
+                                    '<span class="admin-segmented-face">' +
+                                        '<svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+                                            '<path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>' +
+                                            '<circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.35"/>' +
+                                        '</svg>' +
+                                        '<span class="admin-segmented-text">公開</span>' +
+                                    '</span>' +
+                                '</label>' +
+                                '<label class="admin-segmented-option">' +
+                                    '<input type="radio" name="new_staff[' + key + '][is_published]" value="0" class="admin-segmented-input">' +
+                                    '<span class="admin-segmented-face">' +
+                                        '<svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+                                            '<path d="M2 2.5 13.5 13.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>' +
+                                            '<path d="M6.7 4.1A6.4 6.4 0 0 1 8 3.5c4 0 6.5 4.5 6.5 4.5a10.3 10.3 0 0 1-2.15 2.55M4.2 5.85A10.2 10.2 0 0 0 1.5 8S4 12.5 8 12.5c.7 0 1.35-.12 1.95-.34" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>' +
+                                            '<path d="M6.65 7.1a2 2 0 0 0 2.35 2.35" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>' +
+                                        '</svg>' +
+                                        '<span class="admin-segmented-text">非公開</span>' +
+                                    '</span>' +
+                                '</label>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+
+                addCard.before(card);
+                bindCard(card);
+                syncDisplayOrders();
+            }
+
+            grid.addEventListener('dragstart', function (e) {
+                const handle = e.target.closest('[data-staff-drag-handle]');
+                if (!handle || !grid.contains(handle)) {
+                    return;
+                }
+                const card = handle.closest('[data-staff-card]');
+                if (!card) {
+                    e.preventDefault();
+                    return;
+                }
+                dragCard = card;
+                card.classList.add('is-dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', card.getAttribute('data-staff-id') || 'new');
             });
 
-            createForm.addEventListener('submit', function (e) {
+            grid.addEventListener('dragend', function () {
+                if (dragCard) {
+                    dragCard.classList.remove('is-dragging');
+                }
+                grid.querySelectorAll('.is-drag-over').forEach(function (el) {
+                    el.classList.remove('is-drag-over');
+                });
+                grid.querySelectorAll('[data-staff-dropzone]').forEach(clearDropzoneDragState);
+                dragCard = null;
+                syncDisplayOrders();
+            });
+
+            grid.addEventListener('dragover', function (e) {
+                if (!dragCard) {
+                    return;
+                }
                 e.preventDefault();
-                if (createSubmitting) {
+                const over = e.target.closest('[data-staff-card]');
+                if (!over || over === dragCard || !grid.contains(over)) {
                     return;
                 }
-
-                clearCreateErrors();
-
-                const file = createPhotoInput.files && createPhotoInput.files[0];
-                const clientError = validateCreatePhotoFile(file);
-                if (clientError) {
-                    showCreateFieldError('photo', clientError);
-                    if (typeof window.showToast === 'function') {
-                        window.showToast(clientError, 'error');
+                grid.querySelectorAll('.is-drag-over').forEach(function (el) {
+                    if (el !== over) {
+                        el.classList.remove('is-drag-over');
                     }
+                });
+                over.classList.add('is-drag-over');
+                const rect = over.getBoundingClientRect();
+                const before = (e.clientY - rect.top) < rect.height / 2;
+                if (before) {
+                    over.before(dragCard);
+                } else {
+                    over.after(dragCard);
+                }
+            });
+
+            grid.addEventListener('drop', function (e) {
+                if (!dragCard) {
                     return;
                 }
+                e.preventDefault();
+            });
 
-                createSubmitting = true;
-                createSubmitBtn.disabled = true;
-                createSubmitBtn.textContent = '登録中...';
+            grid.querySelectorAll('[data-staff-card]').forEach(bindCard);
+            syncDisplayOrders();
 
-                const formData = new FormData(createForm);
-
-                fetch(createForm.action, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': csrfToken,
-                    },
-                    body: formData,
-                    credentials: 'same-origin',
-                })
-                    .then(async function (response) {
-                        const data = await response.json().catch(function () {
-                            return {};
-                        });
-
-                        if (response.status === 422) {
-                            showCreateErrors(data.errors || {});
-                            if (typeof window.showToast === 'function') {
-                                window.showToast('入力内容を確認してください。', 'error');
-                            }
-                            return;
-                        }
-
-                        if (!response.ok) {
-                            showCreateErrors({ name: [data.message || '登録に失敗しました。'] });
-                            if (typeof window.showToast === 'function') {
-                                window.showToast(data.message || '登録に失敗しました。', 'error');
-                            }
-                            return;
-                        }
-
-                        const staff = data.staff;
-                        if (staff) {
-                            staffData[String(staff.id)] = {
-                                id: staff.id,
-                                name: staff.name,
-                                role: staff.role,
-                                profile: staff.profile,
-                                sort_order: staff.sort_order,
-                                is_published: !!staff.is_published,
-                                photo_url: staff.photo_url || null,
-                                update_url: staff.update_url,
-                            };
-                            if (dataEl) {
-                                dataEl.textContent = JSON.stringify(staffData);
-                            }
-
-                            const row = buildStaffRow(staff);
-                            insertStaffRow(row);
-                        }
-
-                        createSubmitting = false;
-                        createSubmitBtn.disabled = false;
-                        createSubmitBtn.textContent = '登録する';
-                        closeCreateModal();
-
-                        if (typeof window.showToast === 'function') {
-                            window.showToast(data.message || 'スタッフを登録しました。', 'success');
-                        }
-                    })
-                    .catch(function () {
-                        showCreateErrors({ name: ['通信エラーが発生しました。'] });
-                        if (typeof window.showToast === 'function') {
-                            window.showToast('通信エラーが発生しました。', 'error');
-                        }
-                    })
-                    .finally(function () {
-                        createSubmitting = false;
-                        createSubmitBtn.disabled = false;
-                        createSubmitBtn.textContent = '登録する';
-                    });
+            addButton.addEventListener('click', function (e) {
+                e.preventDefault();
+                createEmptyCard();
             });
         })();
     </script>

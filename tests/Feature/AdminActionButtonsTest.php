@@ -49,7 +49,7 @@ class AdminActionButtonsTest extends TestCase
         $this->assertStringNotContainsString('btn-admin-edit', $html);
     }
 
-    public function test_staff_list_uses_shared_icon_action_buttons(): void
+    public function test_staff_inline_cards_use_add_card_and_delete_icon_without_edit_button(): void
     {
         StaffMember::query()->create([
             'name' => 'Staff',
@@ -62,16 +62,16 @@ class AdminActionButtonsTest extends TestCase
             ->assertOk()
             ->getContent();
 
+        $this->assertStringContainsString('id="staff-add-card"', $html);
+        $this->assertStringContainsString('data-staff-add', $html);
         $this->assertStringContainsString('btn-admin-create', $html);
-        $this->assertStringContainsString('admin-icon-btn', $html);
-        $this->assertStringContainsString('admin-icon-btn-edit', $html);
         $this->assertStringContainsString('admin-icon-btn-delete', $html);
-        $this->assertStringContainsString('admin-action-group', $html);
-        $this->assertStringContainsString('aria-label="編集"', $html);
+        $this->assertStringContainsString('data-staff-remove', $html);
         $this->assertStringContainsString('aria-label="削除"', $html);
         $this->assertStringContainsString('&times;', $html);
+        $this->assertStringNotContainsString('admin-icon-btn-edit', $html);
+        $this->assertStringNotContainsString('admin-action-group', $html);
         $this->assertStringNotContainsString('btn-admin-edit', $html);
-        $this->assertDoesNotMatchRegularExpression('/admin-icon-btn-edit[^>]*>\s*<svg[^>]*>.*?<\/svg>\s*<span>編集<\/span>/s', $html);
     }
 
     public function test_gallery_inline_cards_use_add_card_and_delete_icon_without_edit_button(): void

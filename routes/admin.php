@@ -35,7 +35,9 @@ Route::middleware('web')->prefix('admin')->name('admin.')->group(function () {
         Route::put('menus/items/{menu}', [MenuController::class, 'update'])->name('menus.update');
         Route::delete('menus/items/{menu}', [MenuController::class, 'destroy'])->name('menus.destroy');
 
-        Route::resource('staff', StaffController::class)->except(['show']);
+        Route::get('staff', [StaffController::class, 'index'])->name('staff.index');
+        Route::put('staff/bulk', [StaffController::class, 'bulkUpdate'])->name('staff.bulk-update');
+
         Route::get('settings', [SalonSettingController::class, 'edit'])->name('settings.edit');
         Route::put('settings', [SalonSettingController::class, 'update'])->name('settings.update');
         Route::delete('settings/logo', [SalonSettingController::class, 'destroyLogo'])->name('settings.logo.destroy');

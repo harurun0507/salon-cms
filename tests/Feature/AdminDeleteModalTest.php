@@ -61,7 +61,7 @@ class AdminDeleteModalTest extends TestCase
         $this->assertStringContainsString('id="admin-delete-modal"', $html);
     }
 
-    public function test_staff_delete_messages(): void
+    public function test_staff_defers_delete_to_bulk_save_without_delete_modal_trigger(): void
     {
         StaffMember::query()->create([
             'name' => '山田 花子',
@@ -73,8 +73,31 @@ class AdminDeleteModalTest extends TestCase
             ->get(route('admin.staff.index'))
             ->assertOk()
             ->getContent();
-        $this->assertStringContainsString('data-delete-message="「山田 花子」を削除しますか？"', $staffHtml);
+
+        $this->assertStringContainsString('data-staff-remove', $staffHtml);
+        $this->assertStringContainsString('admin-icon-btn-delete', $staffHtml);
+        $this->assertStringContainsString('id="staff-deleted-ids"', $staffHtml);
+        $this->assertStringContainsString("hidden.name = 'deleted_ids[]'", $staffHtml);
+        $this->assertStringNotContainsString('data-delete-message="「山田 花子」を削除しますか？"', $staffHtml);
         $this->assertStringNotContainsString('return confirm(', $staffHtml);
+        $this->assertStringContainsString('id="admin-delete-modal"', $staffHtml);
+    }
+
+    public function test_staff_bulk_delete_via_save_works(): void
+    {
+        $staff = StaffMember::query()->create([
+            'name' => '削除対象',
+            'sort_order' => 1,
+            'is_published' => false,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.staff.bulk-update'), [
+                'deleted_ids' => [$staff->id],
+            ])
+            ->assertRedirect(route('admin.staff.index'));
+
+        $this->assertDatabaseMissing('staff_members', ['id' => $staff->id]);
     }
 
     public function test_gallery_defers_delete_to_bulk_save_without_delete_modal_trigger(): void

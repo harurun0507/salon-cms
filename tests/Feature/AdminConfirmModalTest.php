@@ -213,4 +213,23 @@ class AdminConfirmModalTest extends TestCase
         $this->assertStringNotContainsString('return confirm(', $html);
         $this->assertSame(1, substr_count($html, 'data-confirm-form="news-bulk-form"'));
     }
+
+    public function test_staff_bulk_save_uses_confirm_modal_without_browser_confirm(): void
+    {
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.staff.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
+        $this->assertStringContainsString('-mx-4 -mt-4 mb-6', $html);
+        $this->assertStringContainsString('data-admin-confirm-trigger', $html);
+        $this->assertStringContainsString('data-confirm-form="staff-bulk-form"', $html);
+        $this->assertStringContainsString('data-confirm-title="スタッフ保存の確認"', $html);
+        $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
+        $this->assertStringContainsString('写真、名前、役職、プロフィール、表示順、公開状態、削除など', $html);
+        $this->assertStringContainsString('カードで編集し、「保存する」でまとめて反映できます', $html);
+        $this->assertStringNotContainsString('return confirm(', $html);
+        $this->assertSame(1, substr_count($html, 'data-confirm-form="staff-bulk-form"'));
+    }
 }
