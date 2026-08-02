@@ -143,7 +143,7 @@ class ShopNameLogoTest extends TestCase
         Storage::disk('public')->assertMissing($path);
     }
 
-    public function test_settings_page_uses_custom_shop_name_display_radios(): void
+    public function test_settings_page_uses_segmented_shop_name_display(): void
     {
         SalonSetting::current();
 
@@ -152,14 +152,16 @@ class ShopNameLogoTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('admin-radio-group', $html);
-        $this->assertStringContainsString('admin-radio-control', $html);
-        $this->assertStringContainsString('class="admin-radio"', $html);
+        $this->assertStringContainsString('admin-segmented', $html);
+        $this->assertStringContainsString('admin-segmented-option', $html);
+        $this->assertStringContainsString('admin-segmented-input', $html);
         $this->assertStringContainsString('name="shop_name_display_type"', $html);
         $this->assertStringContainsString('value="text"', $html);
         $this->assertStringContainsString('value="logo"', $html);
         $this->assertStringContainsString('文字で表示', $html);
         $this->assertStringContainsString('ロゴ画像で表示', $html);
+        $this->assertStringNotContainsString('admin-radio-group', $html);
+        $this->assertStringNotContainsString('class="admin-radio"', $html);
     }
 
     public function test_settings_page_keeps_basic_fields_only(): void
@@ -171,6 +173,15 @@ class ShopNameLogoTest extends TestCase
             ->assertOk()
             ->getContent();
 
+        $this->assertStringContainsString('店舗表示', $html);
+        $this->assertStringContainsString('公開サイトのヘッダーに表示する店名・ロゴを設定します。', $html);
+        $this->assertStringContainsString('住所、営業時間、定休日、電話番号を設定します。', $html);
+        $this->assertStringContainsString('Googleマップへのリンクと埋め込み表示を設定します。', $html);
+        $this->assertStringContainsString('Googleマップ リンクURL', $html);
+        $this->assertStringContainsString('Googleマップ 埋め込みURL', $html);
+        $this->assertStringContainsString('banner-dropzone', $html);
+        $this->assertStringContainsString('ここにロゴ画像をドロップしてください', $html);
+        $this->assertStringContainsString('JPEG・PNG・WebP、5MBまで。', $html);
         $this->assertStringContainsString('name="shop_name"', $html);
         $this->assertStringContainsString('name="address"', $html);
         $this->assertStringContainsString('name="business_hours"', $html);
@@ -178,6 +189,7 @@ class ShopNameLogoTest extends TestCase
         $this->assertStringContainsString('name="phone"', $html);
         $this->assertStringContainsString('name="google_map_url"', $html);
         $this->assertStringContainsString('name="google_map_embed_url"', $html);
+        $this->assertStringNotContainsString('Google Map リンクURL', $html);
         $this->assertStringNotContainsString('name="hero_label"', $html);
         $this->assertStringNotContainsString('name="hero_title"', $html);
         $this->assertStringNotContainsString('name="concept_title"', $html);
