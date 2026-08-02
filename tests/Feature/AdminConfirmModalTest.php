@@ -99,7 +99,7 @@ class AdminConfirmModalTest extends TestCase
         $this->assertStringContainsString('data-confirm-title="メインビジュアル保存の確認"', $html);
         $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
         $this->assertStringContainsString('画像・表示順・公開状態・altテキストなど、現在入力されている内容が反映されます。', $html);
-        $this->assertStringContainsString('各項目を編集し、「保存する」でまとめて反映できます', $html);
+        $this->assertStringContainsString('カードで編集し、「保存する」でまとめて反映できます', $html);
         $this->assertStringContainsString('id="hero-image-error"', $html);
         $this->assertStringContainsString('showImageError', $html);
         $this->assertStringNotContainsString('return confirm(', $html);

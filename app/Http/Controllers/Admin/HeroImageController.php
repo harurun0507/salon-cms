@@ -6,6 +6,7 @@ use App\Models\HeroImage;
 use App\Models\SalonSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -22,67 +23,93 @@ class HeroImageController extends AdminController
     {
         $validated = $request->validate([
             'hero_images' => ['nullable', 'array'],
-            'hero_images.*.sort_order' => ['required', 'integer', 'min:0', 'max:9999'],
+            'hero_images.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'hero_images.*.alt_text' => ['nullable', 'string', 'max:255'],
-            'hero_images.*.is_published' => ['nullable', 'boolean'],
+            'hero_images.*.is_published' => ['nullable', 'in:0,1'],
             // Future per-image fields (catch_copy, link_url, …) can be validated here.
             'new_hero_images' => ['nullable', 'array'],
             'new_hero_images.*' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
             'new_hero_meta' => ['nullable', 'array'],
             'new_hero_meta.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'new_hero_meta.*.alt_text' => ['nullable', 'string', 'max:255'],
-            'new_hero_meta.*.is_published' => ['nullable', 'boolean'],
+            'new_hero_meta.*.is_published' => ['nullable', 'in:0,1'],
             'deleted_ids' => ['nullable', 'array'],
             'deleted_ids.*' => ['integer', 'exists:hero_images,id'],
         ]);
 
         $setting = SalonSetting::current();
-        $newFiles = collect($request->file('new_hero_images', []))->filter();
+        $existingPayload = $validated['hero_images'] ?? [];
         $newMeta = $validated['new_hero_meta'] ?? [];
+        $newFiles = collect($request->file('new_hero_images', []))->filter();
         $deletedIds = collect($validated['deleted_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->all();
 
         $this->assertHeroImageLimit($setting, $newFiles->count(), $deletedIds);
 
-        if ($deletedIds !== []) {
-            $toDelete = $setting->heroImages()->whereIn('id', $deletedIds)->get();
-            foreach ($toDelete as $heroImage) {
-                $this->deleteImage($heroImage->image_path);
-                $heroImage->delete();
-            }
-        }
-
-        foreach ($validated['hero_images'] ?? [] as $id => $data) {
+        $orderedItems = [];
+        foreach ($existingPayload as $id => $data) {
             if (in_array((int) $id, $deletedIds, true)) {
                 continue;
             }
-
-            $heroImage = $setting->heroImages()->whereKey($id)->first();
-            if (! $heroImage) {
-                continue;
-            }
-
-            $heroImage->update($this->heroMetaAttributes($data));
+            $orderedItems[] = [
+                'type' => 'existing',
+                'id' => (int) $id,
+                'data' => $data,
+                'order' => (int) ($data['sort_order'] ?? 0),
+            ];
         }
-
-        $nextSort = (int) ($setting->heroImages()->max('sort_order') ?? 0);
-
         foreach ($newFiles as $key => $file) {
             $meta = $newMeta[$key] ?? [];
-            if (array_key_exists('sort_order', $meta) && $meta['sort_order'] !== null && $meta['sort_order'] !== '') {
-                $sortOrder = (int) $meta['sort_order'];
-                $nextSort = max($nextSort, $sortOrder);
-            } else {
-                $sortOrder = ++$nextSort;
+            $orderedItems[] = [
+                'type' => 'new',
+                'key' => (string) $key,
+                'file' => $file,
+                'data' => $meta,
+                'order' => (int) ($meta['sort_order'] ?? 0),
+            ];
+        }
+
+        usort($orderedItems, function (array $a, array $b) {
+            if ($a['order'] === $b['order']) {
+                return 0;
             }
 
-            $setting->heroImages()->create([
-                'image_path' => $this->storeImage($file, 'settings'),
-                ...$this->heroMetaAttributes($meta, [
-                    'sort_order' => $sortOrder,
+            return $a['order'] < $b['order'] ? -1 : 1;
+        });
+
+        DB::transaction(function () use ($setting, $orderedItems, $deletedIds) {
+            if ($deletedIds !== []) {
+                $toDelete = $setting->heroImages()->whereIn('id', $deletedIds)->get();
+                foreach ($toDelete as $heroImage) {
+                    $this->deleteImage($heroImage->image_path);
+                    $heroImage->delete();
+                }
+            }
+
+            $order = 1;
+            foreach ($orderedItems as $item) {
+                $data = $item['data'];
+                $attrs = $this->heroMetaAttributes($data, [
+                    'sort_order' => $order,
                     'is_published' => true,
-                ]),
-            ]);
-        }
+                ]);
+                $attrs['sort_order'] = $order;
+
+                if ($item['type'] === 'existing') {
+                    $heroImage = $setting->heroImages()->whereKey($item['id'])->first();
+                    if (! $heroImage) {
+                        continue;
+                    }
+                    $heroImage->update($attrs);
+                } else {
+                    $setting->heroImages()->create([
+                        'image_path' => $this->storeImage($item['file'], 'settings'),
+                        ...$attrs,
+                    ]);
+                }
+
+                $order++;
+            }
+        });
 
         return redirect()->route('admin.home.hero')->with('success', 'メインビジュアルを更新しました。');
     }
@@ -121,7 +148,7 @@ class HeroImageController extends AdminController
                 : (int) ($defaults['sort_order'] ?? 0),
             'alt_text' => $data['alt_text'] ?? ($defaults['alt_text'] ?? null),
             'is_published' => array_key_exists('is_published', $data)
-                ? filter_var($data['is_published'], FILTER_VALIDATE_BOOLEAN)
+                ? ((string) $data['is_published'] === '1')
                 : $publishedDefault,
         ];
 
