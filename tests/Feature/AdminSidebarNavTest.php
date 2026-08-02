@@ -30,6 +30,11 @@ class AdminSidebarNavTest extends TestCase
         );
         $this->assertStringContainsString('Sun ＆ Me', $html);
         $this->assertStringContainsString('管理画面', $html);
+        $this->assertStringContainsString('<title>ダッシュボード | 管理画面 - Sun ＆ Me</title>', $html);
+        $this->assertStringContainsString('images/admin-favicon-32.png', $html);
+        $this->assertStringContainsString('images/admin-favicon-192.png', $html);
+        $this->assertStringContainsString('rel="apple-touch-icon"', $html);
+        $this->assertStringNotContainsString('name="favicon"', $html);
     }
 
     public function test_sidebar_shows_hierarchical_labels_and_not_old_menu_label(): void

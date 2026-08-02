@@ -4,7 +4,21 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', '管理画面') - Sun ＆ Me</title>
+    @php
+        $adminPageTitle = trim($__env->yieldContent('title'));
+        if ($adminPageTitle === '') {
+            $adminPageTitle = trim($__env->yieldContent('heading'));
+        }
+        $adminDocumentTitle = ($adminPageTitle !== '' && $adminPageTitle !== '管理画面')
+            ? $adminPageTitle.' | 管理画面 - Sun ＆ Me'
+            : '管理画面 - Sun ＆ Me';
+        $adminFaviconVersion = '2';
+    @endphp
+    <title>{{ $adminDocumentTitle }}</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/admin-favicon-32.png') }}?v={{ $adminFaviconVersion }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('images/admin-favicon-192.png') }}?v={{ $adminFaviconVersion }}">
+    <link rel="icon" type="image/png" href="{{ asset('images/admin-favicon.png') }}?v={{ $adminFaviconVersion }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/admin-favicon-180.png') }}?v={{ $adminFaviconVersion }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600&family=Noto+Serif+JP:wght@500;600&display=swap" rel="stylesheet">
