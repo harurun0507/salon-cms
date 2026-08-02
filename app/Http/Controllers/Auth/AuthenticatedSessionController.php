@@ -22,8 +22,15 @@ class AuthenticatedSessionController extends Controller
             'password' => ['required'],
         ]);
 
+        $credentials['is_active'] = true;
+
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
+
+            $user = Auth::user();
+            if ($user) {
+                $user->forceFill(['last_login_at' => now()])->save();
+            }
 
             return redirect()->intended(route('admin.dashboard'));
         }

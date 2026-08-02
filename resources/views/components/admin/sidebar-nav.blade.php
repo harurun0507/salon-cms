@@ -1,11 +1,24 @@
 @php
     $items = config('admin_nav.items', []);
     $external = config('admin_nav.external');
+    $userRole = auth()->user()?->role ?? null;
+
+    $canSee = function (array $entry) use ($userRole): bool {
+        $roles = $entry['roles'] ?? null;
+        if ($roles === null || $roles === []) {
+            return true;
+        }
+
+        return $userRole !== null && in_array($userRole, $roles, true);
+    };
 @endphp
 
 <nav class="relative z-10 flex min-h-0 flex-1 flex-col px-4 pb-4 pt-2 text-sm" aria-label="管理メニュー" data-admin-sidebar-nav>
     <div class="min-h-0 flex-1 space-y-2.5 overflow-y-auto pb-2">
         @foreach ($items as $item)
+            @if (! $canSee($item))
+                @continue
+            @endif
             @if (($item['type'] ?? '') === 'link')
                 <a
                     href="{{ route($item['route']) }}"
@@ -16,8 +29,12 @@
                 </a>
             @elseif (($item['type'] ?? '') === 'group')
                 @php
+                    $visibleChildren = collect($item['children'] ?? [])->filter(fn (array $child) => $canSee($child))->values()->all();
+                    if ($visibleChildren === []) {
+                        continue;
+                    }
                     $groupKey = $item['key'] ?? \Illuminate\Support\Str::slug($item['label'] ?? 'group');
-                    $isGroupOpen = collect($item['children'] ?? [])->contains(
+                    $isGroupOpen = collect($visibleChildren)->contains(
                         fn (array $child) => request()->routeIs($child['active'])
                     );
                 @endphp
@@ -43,7 +60,7 @@
                         </svg>
                     </summary>
                     <div class="admin-nav-children mt-0.5 space-y-0.5">
-                        @foreach ($item['children'] as $child)
+                        @foreach ($visibleChildren as $child)
                             <a
                                 href="{{ route($child['route']) }}"
                                 class="admin-nav-link admin-nav-link-child {{ request()->routeIs($child['active']) ? 'admin-nav-link-active' : '' }}"

@@ -153,6 +153,7 @@ class AdminSidebarNavTest extends TestCase
         $this->get(route('admin.store.reservations'))->assertRedirect();
         $this->get(route('admin.system.seo'))->assertRedirect();
         $this->get(route('admin.system.analytics'))->assertRedirect();
+        $this->get(route('admin.system.users'))->assertRedirect();
     }
 
     #[DataProvider('placeholderRoutesProvider')]
@@ -167,7 +168,6 @@ class AdminSidebarNavTest extends TestCase
 
     public function test_placeholder_pages_require_authentication(): void
     {
-        $this->get(route('admin.system.users'))->assertRedirect();
         $this->get(route('admin.system.design'))->assertRedirect();
     }
 
@@ -179,13 +179,13 @@ class AdminSidebarNavTest extends TestCase
             ['admin.store.reservations', '予約設定', 'reservations-form', 'store'],
             ['admin.system.seo', 'SEO', 'seo-form', 'system'],
             ['admin.system.analytics', 'Analytics（GA4）', 'analytics-form', 'system'],
+            ['admin.system.users', '管理ユーザー', 'users-bulk-form', 'system'],
         ];
     }
 
     public static function placeholderRoutesProvider(): array
     {
         return [
-            ['admin.system.users', '管理ユーザー'],
             ['admin.system.design', 'デザイン設定'],
         ];
     }
