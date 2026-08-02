@@ -18,14 +18,18 @@ class AnalyticsSettingController extends AdminController
 
     public function update(Request $request): RedirectResponse
     {
+        $request->merge([
+            'ga_measurement_id' => trim((string) $request->input('ga_measurement_id', '')),
+        ]);
+
         $validated = $request->validate([
-            'ga_measurement_id' => ['nullable', 'string', 'max:32', 'regex:/^G-[A-Z0-9]+$/i'],
+            'ga_measurement_id' => ['nullable', 'string', 'max:32', 'regex:/^G-[A-Z0-9-]+$/i'],
         ], [
-            'ga_measurement_id.regex' => 'Measurement ID は G- で始まる形式（例: G-XXXXXXXXXX）で入力してください。',
+            'ga_measurement_id.regex' => '「G-」から始まる測定IDを入力してください。',
         ]);
 
         $measurementId = isset($validated['ga_measurement_id'])
-            ? strtoupper(trim((string) $validated['ga_measurement_id']))
+            ? strtoupper((string) $validated['ga_measurement_id'])
             : null;
 
         if ($measurementId === '') {

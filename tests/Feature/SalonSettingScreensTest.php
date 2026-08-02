@@ -385,9 +385,30 @@ class SalonSettingScreensTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('Google Analytics 4', $html);
+        $this->assertStringContainsString('Google Analyticsを利用すると、公開サイトの閲覧数やアクセス状況をGoogle Analyticsの管理画面で確認できます。', $html);
+        $this->assertStringContainsString('Google Analyticsで発行された「測定ID（G-から始まるID）」を入力してください。', $html);
+        $this->assertStringContainsString('Google Analytics 測定ID', $html);
+        $this->assertStringContainsString('placeholder="G-XXXXXXXXXX"', $html);
+        $this->assertStringContainsString('状態', $html);
+        $this->assertStringContainsString('未設定', $html);
+        $this->assertStringContainsString('アクセス解析は現在無効です。', $html);
+        $this->assertStringContainsString('測定IDを設定すると、公開サイトのアクセス解析を開始できます。', $html);
+        $this->assertStringContainsString('測定IDは、Google Analyticsの「管理」→「データストリーム」→対象のWebサイトから確認できます。', $html);
+        $this->assertStringContainsString('Google Analyticsを開く', $html);
+        $this->assertStringContainsString('https://analytics.google.com/', $html);
         $this->assertStringContainsString('name="ga_measurement_id"', $html);
         $this->assertStringContainsString('analytics-form', $html);
+        $this->assertSame(1, substr_count($html, 'Google Analyticsを開く'));
+        $this->assertTrue(
+            strpos($html, 'Google Analytics 測定ID') < strpos($html, 'Google Analyticsを開く')
+            && strpos($html, 'Google Analyticsを開く') < strpos($html, 'name="ga_measurement_id"')
+        );
+        $this->assertStringNotContainsString('測定ID（Measurement ID）', $html);
+        $this->assertStringNotContainsString('admin-service-heading', $html);
+        $this->assertStringNotContainsString('測定IDが未入力の場合、アクセス解析は行われません。', $html);
+        $this->assertStringNotContainsString('測定IDは「G-」から始まる文字列です。', $html);
         $this->assertStringNotContainsString('この機能は現在準備中です。', $html);
+        $this->assertStringNotContainsString('公開サイトでアクセス解析が有効になります。', $html);
 
         $this->actingAs($this->admin())->put(route('admin.system.analytics.update'), [
             'ga_measurement_id' => 'g-abc123xyz',
@@ -396,6 +417,19 @@ class SalonSettingScreensTest extends TestCase
         $fresh = SalonSetting::current()->fresh();
         $this->assertSame('G-ABC123XYZ', $fresh->ga_measurement_id);
         $this->assertSame('Keep Shop', $fresh->shop_name);
+
+        $configuredHtml = $this->actingAs($this->admin())
+            ->get(route('admin.system.analytics'))
+            ->assertOk()
+            ->getContent();
+        $this->assertStringContainsString('設定済み', $configuredHtml);
+        $this->assertStringContainsString('公開サイトでアクセス解析が有効です。', $configuredHtml);
+        $this->assertStringContainsString('data-configured="1"', $configuredHtml);
+
+        $this->actingAs($this->admin())->put(route('admin.system.analytics.update'), [
+            'ga_measurement_id' => '  G-abc-123  ',
+        ])->assertRedirect(route('admin.system.analytics'));
+        $this->assertSame('G-ABC-123', SalonSetting::current()->fresh()->ga_measurement_id);
 
         $this->actingAs($this->admin())->put(route('admin.system.analytics.update'), [
             'ga_measurement_id' => '',
@@ -410,6 +444,16 @@ class SalonSettingScreensTest extends TestCase
             ->from(route('admin.system.analytics'))
             ->put(route('admin.system.analytics.update'), [
                 'ga_measurement_id' => 'UA-123456-1',
+            ])
+            ->assertRedirect(route('admin.system.analytics'))
+            ->assertSessionHasErrors([
+                'ga_measurement_id' => '「G-」から始まる測定IDを入力してください。',
+            ]);
+
+        $this->actingAs($this->admin())
+            ->from(route('admin.system.analytics'))
+            ->put(route('admin.system.analytics.update'), [
+                'ga_measurement_id' => 'G-ABC_DEF',
             ])
             ->assertRedirect(route('admin.system.analytics'))
             ->assertSessionHasErrors('ga_measurement_id');

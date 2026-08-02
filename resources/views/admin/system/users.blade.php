@@ -45,7 +45,10 @@
     </div>
 
     <div class="mb-6">
-        <p class="text-sm text-admin-muted">管理画面にログインできるユーザーを管理します。ログイン実績のないユーザーは削除、実績のあるユーザーは無効化されます。</p>
+        <p class="text-sm text-admin-muted">
+            管理画面にログインできるユーザーを管理します。<br>
+            利用を停止する場合は「無効」を選択してください。
+        </p>
     </div>
 
     @if ($errors->any())
