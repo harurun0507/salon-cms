@@ -1,11 +1,4 @@
 {{-- Expects: $heroImages, $heroCount, $maxHeroImages --}}
-<div class="mb-6">
-    <div class="flex flex-wrap items-end justify-between gap-2">
-        <p class="text-sm text-admin-muted">トップページのメインビジュアルを登録します。推奨：横長画像（JPEG / PNG / WebP、5MBまで、合計最大{{ $maxHeroImages }}枚）</p>
-        <p id="hero-image-count" class="text-xs text-gray-500">登録数: {{ $heroCount }} / {{ $maxHeroImages }}枚</p>
-    </div>
-</div>
-
 @if ($errors->any())
     <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
         <ul class="list-disc space-y-1 pl-5">

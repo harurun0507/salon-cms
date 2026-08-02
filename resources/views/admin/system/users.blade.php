@@ -39,16 +39,9 @@
                 data-confirm-submit-label="保存する"
             >保存する</button>
             <p class="text-sm text-admin-muted">
-                カードで編集し、「保存する」でまとめて反映できます
+                管理画面にログインできるユーザーを追加・編集します。利用を停止する場合は「無効」を選択してください。
             </p>
         </div>
-    </div>
-
-    <div class="mb-6">
-        <p class="text-sm text-admin-muted">
-            管理画面にログインできるユーザーを管理します。<br>
-            利用を停止する場合は「無効」を選択してください。
-        </p>
     </div>
 
     @if ($errors->any())

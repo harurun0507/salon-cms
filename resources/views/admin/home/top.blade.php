@@ -41,7 +41,7 @@
                 data-confirm-submit-label="保存する"
             >保存する</button>
             <p class="text-sm text-admin-muted">
-                各項目を編集し、「保存する」でまとめて反映できます
+                トップページに表示するテキストや各セクションの表示設定を編集します。
             </p>
         </div>
     </div>

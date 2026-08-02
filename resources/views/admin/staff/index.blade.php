@@ -31,13 +31,9 @@
                 data-confirm-submit-label="保存する"
             >保存する</button>
             <p class="text-sm text-admin-muted">
-                カードで編集し、「保存する」でまとめて反映できます
+                公開サイトに表示するスタッフ情報を登録・編集します。
             </p>
         </div>
-    </div>
-
-    <div class="mb-6">
-        <p class="text-sm text-admin-muted">スタッフ情報の管理</p>
     </div>
 
     @if ($errors->any())

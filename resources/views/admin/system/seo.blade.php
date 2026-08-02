@@ -34,7 +34,7 @@
                 data-confirm-submit-label="保存する"
             >保存する</button>
             <p class="text-sm text-admin-muted">
-                各項目を編集し、「保存する」でまとめて反映できます
+                検索結果やSNSで表示されるサイト情報を設定します。
             </p>
         </div>
     </div>

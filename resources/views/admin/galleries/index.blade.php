@@ -20,13 +20,9 @@
                 data-confirm-submit-label="保存する"
             >保存する</button>
             <p class="text-sm text-admin-muted">
-                カードで編集し、「保存する」でまとめて反映できます
+                公開サイトに表示するギャラリー画像を登録・編集します。
             </p>
         </div>
-    </div>
-
-    <div class="mb-6">
-        <p class="text-sm text-admin-muted">画像のアップロード・表示順・公開設定</p>
     </div>
 
     @if ($errors->any())

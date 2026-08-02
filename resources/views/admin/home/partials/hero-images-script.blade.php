@@ -138,7 +138,8 @@
         function syncHeroAddUi() {
             const count = heroBlockCount();
             if (heroCountEl) {
-                heroCountEl.textContent = '登録数: ' + count + ' / ' + maxTotal + '枚';
+                heroCountEl.textContent = count + ' / ' + maxTotal + '枚';
+                heroCountEl.closest('.hero-count-badge')?.classList.toggle('is-full', count >= maxTotal);
             }
             const atMax = count >= maxTotal;
             heroAddCard?.classList.toggle('hidden', atMax);

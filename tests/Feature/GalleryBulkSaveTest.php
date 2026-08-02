@@ -75,7 +75,7 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringContainsString('sticky top-[4.5rem]', $html);
         $this->assertStringContainsString('-mx-4 -mt-4 mb-6', $html);
         $this->assertStringContainsString('保存する', $html);
-        $this->assertStringContainsString('カードで編集し、「保存する」でまとめて反映できます', $html);
+        $this->assertStringContainsString('公開サイトに表示するギャラリー画像を登録・編集します。', $html);
         $this->assertStringContainsString('data-admin-confirm-trigger', $html);
         $this->assertStringContainsString('data-confirm-form="galleries-bulk-form"', $html);
         $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);

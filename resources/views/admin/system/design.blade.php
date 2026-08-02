@@ -45,7 +45,7 @@
                 data-design-reset
             >初期値に戻す</button>
             <p class="text-sm text-admin-muted">
-                各項目を編集し、「保存する」でまとめて公開サイトへ反映できます
+                公開サイトの色・フォント・角丸・余白などを設定します。
             </p>
         </div>
     </div>

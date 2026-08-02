@@ -369,7 +369,20 @@ class HeroImageTest extends TestCase
         $this->assertStringContainsString('heroAddCard.before(card)', $html);
         $this->assertStringContainsString('syncHeroAddUi', $html);
         $this->assertStringContainsString('data-confirm-form="hero-form"', $html);
-        $this->assertStringContainsString('カードで編集し、「保存する」でまとめて反映できます', $html);
+        $this->assertStringContainsString('トップページのメインビジュアルを登録します。推奨：横長画像', $html);
+        $this->assertStringContainsString('id="hero-image-count"', $html);
+        $this->assertStringContainsString('>登録数</span>', $html);
+        $this->assertStringContainsString('1 / '.HeroImage::MAX_COUNT.'枚', $html);
+        $this->assertStringContainsString('hero-count-badge', $html);
+        $this->assertMatchesRegularExpression(
+            '/sticky top-\[4\.5rem\].*?id="hero-image-count"/s',
+            $html
+        );
+        $this->assertStringNotContainsString('登録数:', $html);
+        $this->assertDoesNotMatchRegularExpression(
+            '/mb-6 flex justify-end[\s\S]*id="hero-image-count"/',
+            $html
+        );
 
         $this->assertStringNotContainsString('menu-published-checkbox', $html);
         $this->assertStringNotContainsString('menu-published-control', $html);

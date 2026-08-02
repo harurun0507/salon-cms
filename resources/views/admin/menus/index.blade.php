@@ -180,7 +180,7 @@
                 data-confirm-submit-label="一括保存する"
             >一括保存</button>
             <p class="text-sm text-admin-muted">
-                表形式で編集し、「一括保存」で反映できます
+                公開サイトに表示するメニュー・料金・カテゴリを登録・編集します。
             </p>
         </div>
     </div>

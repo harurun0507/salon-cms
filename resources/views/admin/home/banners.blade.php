@@ -32,13 +32,9 @@
                 data-confirm-submit-label="保存する"
             >保存する</button>
             <p class="text-sm text-admin-muted">
-                カードで編集し、「保存する」でまとめて反映できます
+                トップページなどに表示するバナーを登録します。推奨サイズ：1200×400px（JPEG / PNG / WebP、5MBまで）
             </p>
         </div>
-    </div>
-
-    <div class="mb-6">
-        <p class="text-sm text-admin-muted">トップページなどに表示するバナーを登録します。推奨サイズ：1200×400px（JPEG / PNG / WebP、5MBまで）</p>
     </div>
 
     @if ($errors->any())
