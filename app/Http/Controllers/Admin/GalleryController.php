@@ -47,7 +47,36 @@ class GalleryController extends AdminController
             }
         }
 
-        DB::transaction(function () use ($request, $existingPayload, $newPayload, $deletedIds) {
+        $orderedItems = [];
+        foreach ($existingPayload as $id => $data) {
+            if (in_array((int) $id, $deletedIds, true)) {
+                continue;
+            }
+            $orderedItems[] = [
+                'type' => 'existing',
+                'id' => (int) $id,
+                'data' => $data,
+                'order' => (int) ($data['sort_order'] ?? 0),
+            ];
+        }
+        foreach ($newPayload as $key => $data) {
+            $orderedItems[] = [
+                'type' => 'new',
+                'key' => (string) $key,
+                'data' => $data,
+                'order' => (int) ($data['sort_order'] ?? 0),
+            ];
+        }
+
+        usort($orderedItems, function (array $a, array $b) {
+            if ($a['order'] === $b['order']) {
+                return 0;
+            }
+
+            return $a['order'] < $b['order'] ? -1 : 1;
+        });
+
+        DB::transaction(function () use ($request, $orderedItems, $deletedIds) {
             if ($deletedIds !== []) {
                 $toDelete = Gallery::query()->whereIn('id', $deletedIds)->get();
                 foreach ($toDelete as $gallery) {
@@ -56,38 +85,36 @@ class GalleryController extends AdminController
                 }
             }
 
-            foreach ($existingPayload as $id => $data) {
-                if (in_array((int) $id, $deletedIds, true)) {
-                    continue;
-                }
-
-                $gallery = Gallery::query()->find($id);
-                if (! $gallery) {
-                    continue;
-                }
-
-                $imageFile = $request->file("galleries.{$id}.image");
-
-                $gallery->update([
-                    'image_path' => $this->storeImage($imageFile, 'galleries', $gallery->image_path),
+            $order = 1;
+            foreach ($orderedItems as $item) {
+                $data = $item['data'];
+                $attrs = [
                     'caption' => $data['caption'] ?? null,
-                    'sort_order' => $data['sort_order'] ?? 0,
+                    'sort_order' => $order,
                     'is_published' => ($data['is_published'] ?? '0') === '1',
-                ]);
-            }
+                ];
 
-            foreach ($newPayload as $key => $data) {
-                $imageFile = $request->file("new_galleries.{$key}.image");
-                if (! $imageFile) {
-                    continue;
+                if ($item['type'] === 'existing') {
+                    $gallery = Gallery::query()->find($item['id']);
+                    if (! $gallery) {
+                        continue;
+                    }
+
+                    $imageFile = $request->file("galleries.{$item['id']}.image");
+                    $attrs['image_path'] = $this->storeImage($imageFile, 'galleries', $gallery->image_path);
+                    $gallery->update($attrs);
+                } else {
+                    $imageFile = $request->file("new_galleries.{$item['key']}.image");
+                    if (! $imageFile) {
+                        continue;
+                    }
+
+                    Gallery::query()->create(array_merge($attrs, [
+                        'image_path' => $this->storeImage($imageFile, 'galleries'),
+                    ]));
                 }
 
-                Gallery::query()->create([
-                    'image_path' => $this->storeImage($imageFile, 'galleries'),
-                    'caption' => $data['caption'] ?? null,
-                    'sort_order' => $data['sort_order'] ?? 0,
-                    'is_published' => ($data['is_published'] ?? '0') === '1',
-                ]);
+                $order++;
             }
         });
 

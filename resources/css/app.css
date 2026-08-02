@@ -461,36 +461,6 @@
 }
 
 /*
- * Gallery card: sort order + published equal two columns (~50% each).
- * Real CSS (not Tailwind arbitrary grid-cols-[...]) so Vite build always includes it.
- */
-.gallery-card-meta {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    align-items: start;
-}
-
-/* Fill left column width */
-.admin-input.gallery-sort-input,
-.gallery-sort-input {
-    width: 100%;
-    max-width: 100%;
-}
-
-.gallery-card-published {
-    display: flex;
-    align-items: center;
-    min-height: 2.625rem;
-}
-
-@media (max-width: 639px) {
-    .gallery-card-meta {
-        grid-template-columns: 1fr;
-    }
-}
-
-/*
  * Admin radio (settings shop-name display type, etc.)
  * Matches menu-published-checkbox size / sage palette / focus ring.
  */
@@ -910,7 +880,8 @@
     display: flex;
 }
 
-.banner-dropzone.is-drag-active [data-banner-preview] {
+.banner-dropzone.is-drag-active [data-banner-preview],
+.banner-dropzone.is-drag-active [data-gallery-preview] {
     opacity: 0.35;
 }
 
