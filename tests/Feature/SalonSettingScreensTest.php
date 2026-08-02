@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\SalonSetting;
+use App\Models\SocialLink;
 use App\Models\TopPageSection;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -155,7 +156,7 @@ class SalonSettingScreensTest extends TestCase
         $this->assertLessThan(strpos($home, 'id="menu"'), strpos($home, 'id="staff"'));
     }
 
-    public function test_sns_page_shows_and_saves_instagram_url(): void
+    public function test_sns_page_shows_and_saves_social_links(): void
     {
         SalonSetting::current()->update([
             'instagram_url' => 'https://instagram.com/old',
@@ -168,26 +169,55 @@ class SalonSettingScreensTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('name="instagram_url"', $html);
-        $this->assertStringContainsString('SNSアカウント', $html);
+        $this->assertStringContainsString('SNS・公式アカウント', $html);
+        $this->assertStringContainsString('公開サイトに表示するSNSや公式アカウントのリンクを設定します。', $html);
+        $this->assertStringContainsString('name="links[instagram][url]"', $html);
         $this->assertStringContainsString('admin-service-heading', $html);
         $this->assertStringContainsString('admin-service-icon', $html);
         $this->assertStringContainsString('admin-service-name', $html);
         $this->assertStringContainsString('>Instagram</span>', $html);
         $this->assertStringContainsString('プロフィールURL', $html);
-        $this->assertStringContainsString('公開サイトのInstagramアイコンから遷移するURLです。', $html);
-        $this->assertStringNotContainsString('Instagram プロフィールURL', $html);
+        $this->assertStringContainsString('表示する', $html);
+        $this->assertStringContainsString('表示しない', $html);
+        $this->assertStringContainsString('data-sns-grid', $html);
+        $this->assertStringNotContainsString('name="instagram_url"', $html);
         $this->assertStringNotContainsString('name="hot_pepper_url"', $html);
         $this->assertStringNotContainsString('name="hero_label"', $html);
 
-        $this->actingAs($this->admin())->put(route('admin.store.sns.update'), [
-            'instagram_url' => 'https://instagram.com/new-salon',
-        ])->assertRedirect(route('admin.store.sns'));
+        $payload = $this->snsPayload([
+            'instagram' => [
+                'url' => 'https://instagram.com/new-salon',
+                'is_visible' => '1',
+                'display_order' => 1,
+            ],
+        ]);
+
+        $this->actingAs($this->admin())->put(route('admin.store.sns.update'), $payload)
+            ->assertRedirect(route('admin.store.sns'));
+
+        $instagram = SocialLink::query()->where('service_key', 'instagram')->first();
+        $this->assertNotNull($instagram);
+        $this->assertSame('https://instagram.com/new-salon', $instagram->url);
+        $this->assertTrue($instagram->is_visible);
 
         $fresh = SalonSetting::current()->fresh();
         $this->assertSame('https://instagram.com/new-salon', $fresh->instagram_url);
         $this->assertSame('https://beauty.hotpepper.jp/keep', $fresh->hot_pepper_url);
         $this->assertSame('Keep Label', $fresh->hero_label);
+    }
+
+    private function snsPayload(array $overrides = []): array
+    {
+        $links = [];
+        foreach (config('social_links.services') as $key => $meta) {
+            $links[$key] = array_merge([
+                'url' => null,
+                'is_visible' => '0',
+                'display_order' => (int) $meta['default_order'],
+            ], $overrides[$key] ?? []);
+        }
+
+        return ['links' => $links];
     }
 
     public function test_reservations_page_shows_and_saves_hot_pepper_url(): void

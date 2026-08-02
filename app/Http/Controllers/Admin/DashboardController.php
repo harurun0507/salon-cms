@@ -9,6 +9,7 @@ use App\Models\Menu;
 use App\Models\MenuCategory;
 use App\Models\News;
 use App\Models\SalonSetting;
+use App\Models\SocialLink;
 use App\Models\StaffMember;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -45,7 +46,7 @@ class DashboardController extends AdminController
             'indexing' => ! $setting->noindex,
             'ga_configured' => $setting->hasGaMeasurementId(),
             'reservation_configured' => filled($setting->hot_pepper_url),
-            'sns_configured' => filled($setting->instagram_url),
+            'sns_configured' => SocialLink::hasAnyConfigured(),
         ];
 
         $attentionItems = $this->buildAttentionItems(
@@ -357,10 +358,10 @@ class DashboardController extends AdminController
             ];
         }
 
-        if (blank($setting->instagram_url)) {
+        if (! SocialLink::hasAnyConfigured()) {
             $items[] = [
-                'key' => 'instagram',
-                'label' => 'Instagram URLが未設定です',
+                'key' => 'sns',
+                'label' => 'SNSリンクが未設定です',
                 'url' => route('admin.store.sns'),
             ];
         }

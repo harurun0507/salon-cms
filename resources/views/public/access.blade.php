@@ -24,9 +24,9 @@
                         @if($setting->google_map_url)
                             <a href="{{ $setting->google_map_url }}" target="_blank" rel="noopener noreferrer" class="btn-outline">Googleマップで開く</a>
                         @endif
-                        @if($setting->instagram_url)
-                            <a href="{{ $setting->instagram_url }}" target="_blank" rel="noopener noreferrer" class="btn-outline">Instagram</a>
-                        @endif
+                    </div>
+                    <div class="mt-4">
+                        <x-social-links variant="access" />
                     </div>
                 </div>
 

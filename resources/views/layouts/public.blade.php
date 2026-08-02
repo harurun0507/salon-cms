@@ -175,11 +175,9 @@
                     <p class="font-serif text-lg">{{ $setting->shop_name }}</p>
                     <p class="mt-2 text-sm text-salon-muted">{{ $setting->address }}</p>
                 </div>
-                <div class="flex gap-6 text-sm">
+                <div class="flex flex-col items-start gap-4 text-sm sm:flex-row sm:items-center sm:gap-6">
                     <a href="{{ route('privacy') }}" class="hover:text-salon-accent">Privacy Policy</a>
-                    @if($setting->instagram_url)
-                        <a href="{{ $setting->instagram_url }}" target="_blank" class="hover:text-salon-accent">Instagram</a>
-                    @endif
+                    <x-social-links variant="footer" />
                 </div>
             </div>
             <p class="mt-8 text-center text-xs text-salon-muted">&copy; {{ date('Y') }} {{ $setting->shop_name }}</p>

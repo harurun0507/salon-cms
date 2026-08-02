@@ -165,7 +165,7 @@ class AdminDashboardTest extends TestCase
         $this->assertStringContainsString('OGP画像が未設定です', $html);
         $this->assertStringContainsString('ファビコンが未設定です', $html);
         $this->assertStringContainsString('予約URLが未設定です', $html);
-        $this->assertStringContainsString('Instagram URLが未設定です', $html);
+        $this->assertStringContainsString('SNSリンクが未設定です', $html);
         $this->assertStringContainsString('公開中のメインビジュアルがありません', $html);
         $this->assertStringContainsString('公開中のスタッフがいません', $html);
         $this->assertStringContainsString('公開中のメニューがありません', $html);
@@ -220,7 +220,7 @@ class AdminDashboardTest extends TestCase
         $this->assertStringNotContainsString('OGP画像が未設定です', $resolved);
         $this->assertStringNotContainsString('ファビコンが未設定です', $resolved);
         $this->assertStringNotContainsString('予約URLが未設定です', $resolved);
-        $this->assertStringNotContainsString('Instagram URLが未設定です', $resolved);
+        $this->assertStringNotContainsString('SNSリンクが未設定です', $resolved);
         $this->assertStringNotContainsString('公開中のメインビジュアルがありません', $resolved);
         $this->assertStringNotContainsString('公開中のスタッフがいません', $resolved);
         $this->assertStringNotContainsString('公開中のメニューがありません', $resolved);
@@ -254,7 +254,7 @@ class AdminDashboardTest extends TestCase
         $this->assertStringContainsString('検索エンジン', $html);
         $this->assertStringContainsString('アクセス解析', $html);
         $this->assertStringContainsString('予約URLが未設定です', $html);
-        $this->assertStringContainsString('Instagram URLが未設定です', $html);
+        $this->assertStringContainsString('SNSリンクが未設定です', $html);
         $this->assertStringContainsString(route('admin.store.reservations'), $html);
         $this->assertStringContainsString(route('admin.store.sns'), $html);
         $this->assertStringContainsString('dashboard-attention-item', $html);

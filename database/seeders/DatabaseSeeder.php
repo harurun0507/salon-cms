@@ -7,6 +7,7 @@ use App\Models\Menu;
 use App\Models\MenuCategory;
 use App\Models\News;
 use App\Models\SalonSetting;
+use App\Models\SocialLink;
 use App\Models\StaffMember;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -44,6 +45,8 @@ class DatabaseSeeder extends Seeder
                 'hot_pepper_url' => 'https://beauty.hotpepper.jp/slnH000428792/?wak=CPMY100402_link_reservesalon_salon_beauty_20220223',
             ]
         );
+
+        SocialLink::ensureDefaults();
 
         $cut = MenuCategory::query()->updateOrCreate(['name' => 'カット'], ['sort_order' => 1]);
         $color = MenuCategory::query()->updateOrCreate(['name' => 'カラー'], ['sort_order' => 2]);
