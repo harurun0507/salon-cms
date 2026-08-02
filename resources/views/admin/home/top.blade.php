@@ -49,48 +49,50 @@
     <form id="top-page-form" method="POST" action="{{ route('admin.home.top.update') }}" class="space-y-5">
         @csrf @method('PUT')
 
-        <div class="admin-card space-y-5">
-            <div>
-                <h2 class="text-base font-medium text-admin-text">ヒーロー設定</h2>
-                <p class="mt-1 text-sm text-admin-muted">メインビジュアル上に表示するテキストを設定します。</p>
-            </div>
-            <div>
-                <label for="hero_label" class="admin-label">ヒーロー英字ラベル</label>
-                <input type="text" name="hero_label" id="hero_label" value="{{ old('hero_label', $setting->hero_label) }}" class="admin-input" placeholder="Personal Hair Salon">
-                <p class="mt-1 text-xs text-gray-500">メインビジュアル上部の小さい英字テキスト。未入力時は表示しません。</p>
-                @error('hero_label')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
-            <div>
-                <label for="hero_title" class="admin-label">メインコピー</label>
-                <textarea name="hero_title" id="hero_title" rows="3" class="admin-input" placeholder="あなたらしさに、 / 少しだけ今っぽさを。">{{ old('hero_title', $setting->hero_title) }}</textarea>
-                <p class="mt-1 text-xs text-gray-500">改行はトップページで反映されます。未入力時は表示しません。</p>
-                @error('hero_title')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
-        </div>
+        <div class="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-2">
+            <section class="admin-card min-w-0 space-y-5">
+                <div>
+                    <h2 class="text-base font-medium text-admin-text">ヒーロー設定</h2>
+                    <p class="mt-1 text-sm text-admin-muted">メインビジュアル上に表示するテキストを設定します。</p>
+                </div>
+                <div class="min-w-0">
+                    <label for="hero_label" class="admin-label">ヒーロー英字ラベル</label>
+                    <input type="text" name="hero_label" id="hero_label" value="{{ old('hero_label', $setting->hero_label) }}" class="admin-input" placeholder="Personal Hair Salon">
+                    <p class="mt-1 text-xs text-gray-500">メインビジュアル上部の小さい英字テキスト。未入力時は表示しません。</p>
+                    @error('hero_label')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="min-w-0">
+                    <label for="hero_title" class="admin-label">メインコピー</label>
+                    <textarea name="hero_title" id="hero_title" rows="3" class="admin-input min-w-0" placeholder="あなたらしさに、 / 少しだけ今っぽさを。">{{ old('hero_title', $setting->hero_title) }}</textarea>
+                    <p class="mt-1 text-xs text-gray-500">改行はトップページで反映されます。未入力時は表示しません。</p>
+                    @error('hero_title')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            </section>
 
-        <div class="admin-card space-y-5">
-            <div>
-                <h2 class="text-base font-medium text-admin-text">コンセプト設定</h2>
-                <p class="mt-1 text-sm text-admin-muted">トップページのコンセプト欄に表示する内容です。</p>
-            </div>
-            <div>
-                <label for="concept_title" class="admin-label">コンセプト見出し</label>
-                <input type="text" name="concept_title" id="concept_title" value="{{ old('concept_title', $setting->concept_title) }}" class="admin-input" placeholder="ナチュラルに、自分らしく。">
-                @error('concept_title')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
-            <div>
-                <label for="concept" class="admin-label">コンセプト文</label>
-                <textarea name="concept" id="concept" rows="5" class="admin-input">{{ old('concept', $setting->concept) }}</textarea>
-                @error('concept')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
+            <section class="admin-card min-w-0 space-y-5">
+                <div>
+                    <h2 class="text-base font-medium text-admin-text">コンセプト設定</h2>
+                    <p class="mt-1 text-sm text-admin-muted">トップページのコンセプト欄に表示する内容です。</p>
+                </div>
+                <div class="min-w-0">
+                    <label for="concept_title" class="admin-label">コンセプト見出し</label>
+                    <input type="text" name="concept_title" id="concept_title" value="{{ old('concept_title', $setting->concept_title) }}" class="admin-input" placeholder="ナチュラルに、自分らしく。">
+                    @error('concept_title')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="min-w-0">
+                    <label for="concept" class="admin-label">コンセプト文</label>
+                    <textarea name="concept" id="concept" rows="5" class="admin-input min-w-0">{{ old('concept', $setting->concept) }}</textarea>
+                    @error('concept')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            </section>
         </div>
 
         <div class="admin-card space-y-5">
