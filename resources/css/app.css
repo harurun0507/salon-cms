@@ -112,42 +112,27 @@
         white-space: nowrap;
     }
 
-    .sns-service {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .sns-service__header {
+    .sns-account-heading {
         display: flex;
         align-items: center;
-        gap: 0.625rem;
+        gap: 8px;
+        margin-bottom: 12px;
     }
 
-    .sns-service__icon {
-        display: inline-flex;
-        height: 2.25rem;
-        width: 2.25rem;
+    .sns-account-icon {
+        width: 18px;
+        height: 18px;
         flex-shrink: 0;
-        align-items: center;
-        justify-content: center;
-        border-radius: 0.5rem;
-        border: 1px solid #E5E0D7;
-        background-color: #F7F5F0;
-        color: #8A847A;
+        color: #697A55;
     }
 
-    .sns-service__name {
-        font-size: 0.9375rem;
+    .sns-account-name {
+        font-size: 15px;
         font-weight: 500;
         color: #3D3833;
     }
 
-    .sns-service__body {
-        min-width: 0;
-    }
-
-    .sns-service__help {
+    .sns-account-help {
         margin-top: 0.375rem;
         font-size: 0.75rem;
         line-height: 1.4;

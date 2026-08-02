@@ -168,7 +168,9 @@ class SalonSettingScreensTest extends TestCase
 
         $this->assertStringContainsString('name="instagram_url"', $html);
         $this->assertStringContainsString('SNSアカウント', $html);
-        $this->assertStringContainsString('sns-service', $html);
+        $this->assertStringContainsString('sns-account-heading', $html);
+        $this->assertStringContainsString('sns-account-icon', $html);
+        $this->assertStringContainsString('sns-account-name', $html);
         $this->assertStringContainsString('>Instagram</span>', $html);
         $this->assertStringContainsString('プロフィールURL', $html);
         $this->assertStringContainsString('公開サイトのInstagramアイコンから遷移するURLです。', $html);
