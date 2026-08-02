@@ -76,6 +76,8 @@
                     $publishedFrom = old($prefix.'.published_from', $formatLocal($banner->published_from));
                     $publishedUntil = old($prefix.'.published_until', $formatLocal($banner->published_until));
                     $displayOrder = old($prefix.'.display_order', $banner->display_order);
+                    $cardTitle = trim((string) old($prefix.'.title', $banner->title));
+                    $headingTitle = $cardTitle !== '' ? $cardTitle : '新規バナー';
                 @endphp
                 <div
                     class="admin-card banner-card"
@@ -103,7 +105,7 @@
                                     <circle cx="13" cy="15" r="1.25"/>
                                 </svg>
                             </span>
-                            <p class="banner-card-label truncate text-sm font-medium text-gray-800">バナー{{ $loop->iteration }}</p>
+                            <p class="banner-card-label truncate text-sm font-medium text-gray-800" data-banner-card-title title="{{ $headingTitle }}">{{ $headingTitle }}</p>
                         </div>
                         <button
                             type="button"
@@ -119,7 +121,7 @@
                     <input type="hidden" name="banners[{{ $banner->id }}][display_order]" value="{{ $displayOrder }}" data-banner-order>
 
                     <div class="mb-3">
-                        <div data-banner-dropzone class="cursor-pointer overflow-hidden rounded-lg">
+                        <div data-banner-dropzone class="banner-dropzone cursor-pointer overflow-hidden rounded-lg">
                             <div data-banner-preview>
                                 <img
                                     src="{{ asset('storage/'.$banner->image_path) }}"
@@ -128,10 +130,18 @@
                                     data-banner-image
                                 >
                             </div>
-                            <div data-banner-placeholder class="hidden min-h-[7.5rem] flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white px-4 text-center transition hover:border-gray-400 hover:bg-gray-50">
-                                <p class="text-sm text-gray-700">画像をドラッグ＆ドロップ、またはクリックして選択</p>
-                                <p class="mt-2 text-xs text-gray-500">推奨 1200×400 / JPEG・PNG・WebP・5MBまで</p>
+                            <div data-banner-placeholder class="banner-dropzone-placeholder hidden min-h-[7.5rem] flex-col items-center justify-center px-4 text-center">
+                                <div class="banner-dropzone-main">
+                                    <svg class="banner-dropzone-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                        <circle cx="9" cy="10.5" r="1.5" fill="currentColor" opacity="0.7"/>
+                                        <path d="M5.5 16.5l4-3.5 2.5 2 3.5-3.5 3 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <p class="banner-dropzone-text text-sm text-gray-700">画像をドラッグ＆ドロップ、またはクリックして選択</p>
+                                </div>
+                                <p class="banner-dropzone-hint mt-2 text-xs text-gray-500">推奨 1200×400 / JPEG・PNG・WebP・5MBまで</p>
                             </div>
+                            <p class="banner-dropzone-drag-message" aria-hidden="true">ここに画像をドロップしてください</p>
                         </div>
                         <input
                             type="file"
@@ -149,7 +159,7 @@
 
                     <div class="space-y-3">
                         <div>
-                            <label for="banner_title_{{ $banner->id }}" class="admin-label">タイトル <span class="text-red-500">*</span></label>
+                            <label for="banner_title_{{ $banner->id }}" class="admin-label">タイトル <span class="admin-required-badge">必須</span></label>
                             <input
                                 type="text"
                                 name="banners[{{ $banner->id }}][title]"
@@ -158,6 +168,7 @@
                                 maxlength="255"
                                 required
                                 class="admin-input"
+                                data-banner-title-input
                             >
                             @error($prefix.'.title')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -214,12 +225,21 @@
                             </div>
                         </div>
                         <div>
-                            <label for="banner_location_{{ $banner->id }}" class="admin-label">表示場所</label>
-                            <select name="banners[{{ $banner->id }}][display_location]" id="banner_location_{{ $banner->id }}" class="admin-input">
+                            <span class="admin-label" id="banner_location_label_{{ $banner->id }}">表示場所</span>
+                            <div class="banner-location-chips" role="radiogroup" aria-labelledby="banner_location_label_{{ $banner->id }}">
                                 @foreach($locationLabels as $value => $label)
-                                    <option value="{{ $value }}" @selected($displayLocation === $value)>{{ $label }}</option>
+                                    <label class="banner-location-chip">
+                                        <input
+                                            type="radio"
+                                            name="banners[{{ $banner->id }}][display_location]"
+                                            value="{{ $value }}"
+                                            class="banner-location-chip-input"
+                                            @checked($displayLocation === $value)
+                                        >
+                                        <span class="banner-location-chip-face">{{ $label }}</span>
+                                    </label>
                                 @endforeach
-                            </select>
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div>
@@ -262,22 +282,27 @@
                         </div>
                         <div>
                             <span class="admin-label">公開</span>
-                            <div class="mt-1">
-                                <label class="admin-switch" data-admin-switch>
-                                    <input type="hidden" name="banners[{{ $banner->id }}][is_published]" value="0">
-                                    <input
-                                        type="checkbox"
-                                        name="banners[{{ $banner->id }}][is_published]"
-                                        value="1"
-                                        class="admin-switch-input"
-                                        data-admin-switch-input
-                                        @checked($isPublished)
-                                        aria-label="公開状態"
-                                    >
-                                    <span class="admin-switch-track" aria-hidden="true">
-                                        <span class="admin-switch-thumb"></span>
+                            <div class="admin-segmented mt-1" role="radiogroup" aria-label="公開状態">
+                                <label class="admin-segmented-option">
+                                    <input type="radio" name="banners[{{ $banner->id }}][is_published]" value="1" class="admin-segmented-input" @checked($isPublished)>
+                                    <span class="admin-segmented-face">
+                                        <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                            <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
+                                            <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.35"/>
+                                        </svg>
+                                        <span class="admin-segmented-text">公開</span>
                                     </span>
-                                    <span class="admin-switch-text" data-admin-switch-text>{{ $isPublished ? 'ON' : 'OFF' }}</span>
+                                </label>
+                                <label class="admin-segmented-option">
+                                    <input type="radio" name="banners[{{ $banner->id }}][is_published]" value="0" class="admin-segmented-input" @checked(!$isPublished)>
+                                    <span class="admin-segmented-face">
+                                        <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                            <path d="M2 2.5 13.5 13.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                                            <path d="M6.7 4.1A6.4 6.4 0 0 1 8 3.5c4 0 6.5 4.5 6.5 4.5a10.3 10.3 0 0 1-2.15 2.55M4.2 5.85A10.2 10.2 0 0 0 1.5 8S4 12.5 8 12.5c.7 0 1.35-.12 1.95-.34" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M6.65 7.1a2 2 0 0 0 2.35 2.35" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                                        </svg>
+                                        <span class="admin-segmented-text">非公開</span>
+                                    </span>
                                 </label>
                             </div>
                         </div>
@@ -355,6 +380,16 @@
             const addCard = document.getElementById('banner-add-card');
             const addButton = addCard ? addCard.querySelector('[data-banner-add]') : null;
             const locationOptions = @json($locationLabels);
+            const emptyHeading = '新規バナー';
+            const dropzoneMainHtml =
+                '<div class="banner-dropzone-main">' +
+                    '<svg class="banner-dropzone-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+                        '<rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>' +
+                        '<circle cx="9" cy="10.5" r="1.5" fill="currentColor" opacity="0.7"/>' +
+                        '<path d="M5.5 16.5l4-3.5 2.5 2 3.5-3.5 3 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+                    '</svg>' +
+                    '<p class="banner-dropzone-text text-sm text-gray-700">画像をドラッグ＆ドロップ、またはクリックして選択</p>' +
+                '</div>';
 
             if (!form || !grid || !addCard || !addButton) {
                 return;
@@ -363,24 +398,6 @@
             let nextNewIndex = parseInt(form.getAttribute('data-next-new-index') || '1', 10);
             let maxOrder = parseInt(form.getAttribute('data-max-order') || '0', 10);
             let dragCard = null;
-
-            function syncSwitchLabel(input) {
-                const control = input.closest('[data-admin-switch]');
-                if (!control) {
-                    return;
-                }
-                const text = control.querySelector('[data-admin-switch-text]');
-                if (text) {
-                    text.textContent = input.checked ? 'ON' : 'OFF';
-                }
-            }
-
-            document.addEventListener('change', function (e) {
-                const switchInput = e.target.closest('[data-admin-switch-input]');
-                if (switchInput) {
-                    syncSwitchLabel(switchInput);
-                }
-            });
 
             function showCardImageError(card, message) {
                 const errorEl = card.querySelector('[data-banner-image-error]');
@@ -427,11 +444,7 @@
                     placeholder.classList.add('hidden');
                     preview.classList.remove('hidden');
                     if (dropzone) {
-                        dropzone.classList.remove(
-                            'rounded-lg', 'border-2', 'border-dashed', 'border-gray-300', 'bg-white',
-                            'px-4', 'min-h-[7.5rem]', 'flex', 'flex-col', 'items-center', 'justify-center',
-                            'text-center', 'transition', 'hover:border-gray-400', 'hover:bg-gray-50'
-                        );
+                        dropzone.classList.remove('is-empty');
                         dropzone.classList.add('overflow-hidden', 'rounded-lg');
                     }
                 }
@@ -467,13 +480,16 @@
                 setCardPreview(card, file);
             }
 
-            function renumberBannerTitles() {
-                grid.querySelectorAll('[data-banner-card]').forEach(function (card, index) {
-                    const label = card.querySelector('.banner-card-label');
-                    if (label) {
-                        label.textContent = 'バナー' + (index + 1);
-                    }
-                });
+            function syncCardHeading(card) {
+                const label = card.querySelector('[data-banner-card-title]');
+                const input = card.querySelector('[data-banner-title-input]');
+                if (!label || !input) {
+                    return;
+                }
+                const value = (input.value || '').trim();
+                const text = value !== '' ? value : emptyHeading;
+                label.textContent = text;
+                label.setAttribute('title', text);
             }
 
             function syncDisplayOrders() {
@@ -487,20 +503,37 @@
                 form.setAttribute('data-max-order', String(maxOrder));
             }
 
-            function locationSelectHtml(name, selected) {
-                let html = '<select name="' + name + '" class="admin-input">';
+            function locationChipsHtml(name, selected) {
+                let html = '<div class="banner-location-chips" role="radiogroup" aria-label="表示場所">';
                 Object.keys(locationOptions).forEach(function (value) {
-                    html += '<option value="' + value + '"' + (value === selected ? ' selected' : '') + '>' +
-                        locationOptions[value] + '</option>';
+                    html +=
+                        '<label class="banner-location-chip">' +
+                            '<input type="radio" name="' + name + '" value="' + value + '" class="banner-location-chip-input"' +
+                                (value === selected ? ' checked' : '') + '>' +
+                            '<span class="banner-location-chip-face">' + locationOptions[value] + '</span>' +
+                        '</label>';
                 });
-                html += '</select>';
+                html += '</div>';
                 return html;
+            }
+
+            function clearDropzoneDragState(dropzone) {
+                if (!dropzone) {
+                    return;
+                }
+                dropzone._bannerDragCounter = 0;
+                dropzone.classList.remove('is-drag-active');
             }
 
             function bindCard(card) {
                 const dropzone = card.querySelector('[data-banner-dropzone]');
                 const input = card.querySelector('[data-banner-file]');
                 const removeBtn = card.querySelector('[data-banner-remove]');
+                const titleInput = card.querySelector('[data-banner-title-input]');
+
+                if (dropzone) {
+                    dropzone._bannerDragCounter = 0;
+                }
 
                 dropzone?.addEventListener('click', function () {
                     input?.click();
@@ -508,30 +541,46 @@
                 input?.addEventListener('change', function () {
                     applyFile(card, input.files && input.files[0]);
                 });
-                ['dragenter', 'dragover'].forEach(function (eventName) {
-                    dropzone?.addEventListener(eventName, function (e) {
-                        if (dragCard) {
-                            return;
-                        }
-                        e.preventDefault();
-                        dropzone.classList.add('border-gray-400', 'bg-gray-50');
-                    });
+
+                dropzone?.addEventListener('dragenter', function (e) {
+                    if (dragCard) {
+                        return;
+                    }
+                    e.preventDefault();
+                    dropzone._bannerDragCounter = (dropzone._bannerDragCounter || 0) + 1;
+                    dropzone.classList.add('is-drag-active');
                 });
-                ['dragleave', 'drop'].forEach(function (eventName) {
-                    dropzone?.addEventListener(eventName, function (e) {
-                        if (dragCard) {
-                            return;
-                        }
-                        e.preventDefault();
-                        dropzone.classList.remove('border-gray-400', 'bg-gray-50');
-                    });
+                dropzone?.addEventListener('dragover', function (e) {
+                    if (dragCard) {
+                        return;
+                    }
+                    e.preventDefault();
+                    dropzone.classList.add('is-drag-active');
+                });
+                dropzone?.addEventListener('dragleave', function (e) {
+                    if (dragCard) {
+                        return;
+                    }
+                    e.preventDefault();
+                    dropzone._bannerDragCounter = Math.max(0, (dropzone._bannerDragCounter || 0) - 1);
+                    if (dropzone._bannerDragCounter === 0) {
+                        dropzone.classList.remove('is-drag-active');
+                    }
                 });
                 dropzone?.addEventListener('drop', function (e) {
                     if (dragCard) {
                         return;
                     }
+                    e.preventDefault();
+                    clearDropzoneDragState(dropzone);
                     applyFile(card, e.dataTransfer.files[0]);
                 });
+
+                titleInput?.addEventListener('input', function () {
+                    syncCardHeading(card);
+                });
+                syncCardHeading(card);
+
                 removeBtn?.addEventListener('click', function () {
                     const existingId = card.getAttribute('data-banner-id');
                     if (existingId && deletedIdsWrap) {
@@ -542,7 +591,6 @@
                         deletedIdsWrap.appendChild(hidden);
                     }
                     card.remove();
-                    renumberBannerTitles();
                     syncDisplayOrders();
                 });
             }
@@ -570,7 +618,7 @@
                                     '<circle cx="7" cy="15" r="1.25"/><circle cx="13" cy="15" r="1.25"/>' +
                                 '</svg>' +
                             '</span>' +
-                            '<p class="banner-card-label truncate text-sm font-medium text-gray-800">バナー</p>' +
+                            '<p class="banner-card-label truncate text-sm font-medium text-gray-800" data-banner-card-title title="' + emptyHeading + '">' + emptyHeading + '</p>' +
                         '</div>' +
                         '<button type="button" class="admin-icon-btn admin-icon-btn-delete" data-banner-remove aria-label="削除" title="削除">' +
                             '<span aria-hidden="true">&times;</span>' +
@@ -578,20 +626,21 @@
                     '</div>' +
                     '<input type="hidden" name="new_banners[' + key + '][display_order]" value="' + order + '" data-banner-order>' +
                     '<div class="mb-3">' +
-                        '<div data-banner-dropzone class="flex min-h-[7.5rem] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white px-4 text-center transition hover:border-gray-400 hover:bg-gray-50">' +
-                            '<div data-banner-placeholder>' +
-                                '<p class="text-sm text-gray-700">画像をドラッグ＆ドロップ、またはクリックして選択</p>' +
-                                '<p class="mt-2 text-xs text-gray-500">推奨 1200×400 / JPEG・PNG・WebP・5MBまで</p>' +
+                        '<div data-banner-dropzone class="banner-dropzone is-empty cursor-pointer">' +
+                            '<div data-banner-placeholder class="banner-dropzone-placeholder">' +
+                                dropzoneMainHtml +
+                                '<p class="banner-dropzone-hint mt-2 text-xs text-gray-500">推奨 1200×400 / JPEG・PNG・WebP・5MBまで</p>' +
                             '</div>' +
                             '<div data-banner-preview class="hidden"></div>' +
+                            '<p class="banner-dropzone-drag-message" aria-hidden="true">ここに画像をドロップしてください</p>' +
                         '</div>' +
                         '<input type="file" name="new_banners[' + key + '][image]" accept="image/jpeg,image/png,image/webp" class="hidden" data-banner-file>' +
                         '<p class="mt-1 hidden text-sm text-red-600" data-banner-image-error role="alert"></p>' +
                     '</div>' +
                     '<div class="space-y-3">' +
                         '<div>' +
-                            '<label class="admin-label">タイトル <span class="text-red-500">*</span></label>' +
-                            '<input type="text" name="new_banners[' + key + '][title]" value="" maxlength="255" required class="admin-input">' +
+                            '<label class="admin-label">タイトル <span class="admin-required-badge">必須</span></label>' +
+                            '<input type="text" name="new_banners[' + key + '][title]" value="" maxlength="255" required class="admin-input" data-banner-title-input>' +
                         '</div>' +
                         '<div>' +
                             '<label class="admin-label">説明文</label>' +
@@ -627,8 +676,8 @@
                             '</div>' +
                         '</div>' +
                         '<div>' +
-                            '<label class="admin-label">表示場所</label>' +
-                            locationSelectHtml('new_banners[' + key + '][display_location]', 'top') +
+                            '<span class="admin-label">表示場所</span>' +
+                            locationChipsHtml('new_banners[' + key + '][display_location]', 'top') +
                         '</div>' +
                         '<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">' +
                             '<div>' +
@@ -648,12 +697,27 @@
                         '</div>' +
                         '<div>' +
                             '<span class="admin-label">公開</span>' +
-                            '<div class="mt-1">' +
-                                '<label class="admin-switch" data-admin-switch>' +
-                                    '<input type="hidden" name="new_banners[' + key + '][is_published]" value="0">' +
-                                    '<input type="checkbox" name="new_banners[' + key + '][is_published]" value="1" class="admin-switch-input" data-admin-switch-input checked aria-label="公開状態">' +
-                                    '<span class="admin-switch-track" aria-hidden="true"><span class="admin-switch-thumb"></span></span>' +
-                                    '<span class="admin-switch-text" data-admin-switch-text>ON</span>' +
+                            '<div class="admin-segmented mt-1" role="radiogroup" aria-label="公開状態">' +
+                                '<label class="admin-segmented-option">' +
+                                    '<input type="radio" name="new_banners[' + key + '][is_published]" value="1" class="admin-segmented-input" checked>' +
+                                    '<span class="admin-segmented-face">' +
+                                        '<svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+                                            '<path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>' +
+                                            '<circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.35"/>' +
+                                        '</svg>' +
+                                        '<span class="admin-segmented-text">公開</span>' +
+                                    '</span>' +
+                                '</label>' +
+                                '<label class="admin-segmented-option">' +
+                                    '<input type="radio" name="new_banners[' + key + '][is_published]" value="0" class="admin-segmented-input">' +
+                                    '<span class="admin-segmented-face">' +
+                                        '<svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+                                            '<path d="M2 2.5 13.5 13.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>' +
+                                            '<path d="M6.7 4.1A6.4 6.4 0 0 1 8 3.5c4 0 6.5 4.5 6.5 4.5a10.3 10.3 0 0 1-2.15 2.55M4.2 5.85A10.2 10.2 0 0 0 1.5 8S4 12.5 8 12.5c.7 0 1.35-.12 1.95-.34" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>' +
+                                            '<path d="M6.65 7.1a2 2 0 0 0 2.35 2.35" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>' +
+                                        '</svg>' +
+                                        '<span class="admin-segmented-text">非公開</span>' +
+                                    '</span>' +
                                 '</label>' +
                             '</div>' +
                         '</div>' +
@@ -661,7 +725,6 @@
 
                 addCard.before(card);
                 bindCard(card);
-                renumberBannerTitles();
                 syncDisplayOrders();
             }
 
@@ -688,8 +751,8 @@
                 grid.querySelectorAll('.is-drag-over').forEach(function (el) {
                     el.classList.remove('is-drag-over');
                 });
+                grid.querySelectorAll('[data-banner-dropzone]').forEach(clearDropzoneDragState);
                 dragCard = null;
-                renumberBannerTitles();
                 syncDisplayOrders();
             });
 
@@ -725,7 +788,6 @@
             });
 
             grid.querySelectorAll('[data-banner-card]').forEach(bindCard);
-            renumberBannerTitles();
             syncDisplayOrders();
 
             addButton.addEventListener('click', function (e) {
