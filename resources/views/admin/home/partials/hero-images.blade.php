@@ -13,13 +13,22 @@
                     $publishedOld = old('hero_images.'.$image->id.'.is_published', $image->is_published ? '1' : '0');
                     $isPublished = in_array((string) $publishedOld, ['1', 'true', 'on'], true);
                 @endphp
-                <div class="hero-image-block rounded-lg border border-gray-200 bg-white p-4" data-hero-existing>
+                <div
+                    class="hero-image-block rounded-lg border border-gray-200 bg-white p-4"
+                    data-hero-existing
+                    data-hero-id="{{ $image->id }}"
+                >
                     <div class="mb-3 flex items-center justify-between gap-3">
                         <p class="hero-image-label text-sm font-medium text-gray-800">画像{{ $index + 1 }}</p>
-                        <x-admin.delete-button
-                            :action="route('admin.home.hero.destroy', $image)"
-                            message="メインビジュアル画像を削除しますか？"
-                        />
+                        <button
+                            type="button"
+                            class="admin-icon-btn admin-icon-btn-delete"
+                            data-hero-remove
+                            aria-label="削除"
+                            title="削除"
+                        >
+                            <span aria-hidden="true">&times;</span>
+                        </button>
                     </div>
                     <div class="mb-4">
                         <img src="{{ asset('storage/'.$image->image_path) }}" alt="{{ old('hero_images.'.$image->id.'.alt_text', $image->alt_text) }}" class="h-40 w-full max-w-xl rounded object-cover">

@@ -21,16 +21,35 @@
         </div>
     </div>
 
-    <div class="admin-card flex flex-col">
-        <form id="sns-form" method="POST" action="{{ route('admin.store.sns.update') }}" class="flex h-full flex-col space-y-5">
-            @csrf @method('PUT')
+    <form id="sns-form" method="POST" action="{{ route('admin.store.sns.update') }}" class="space-y-5">
+        @csrf @method('PUT')
 
+        <div class="admin-card space-y-5">
             <div>
-                <label for="instagram_url" class="admin-label">Instagram URL</label>
-                <input type="url" name="instagram_url" id="instagram_url" value="{{ old('instagram_url', $setting->instagram_url) }}" class="admin-input" placeholder="https://www.instagram.com/...">
+                <h2 class="text-base font-medium text-admin-text">SNSアカウント</h2>
+                <p class="mt-1 text-sm text-admin-muted">公開サイトで表示するSNSアカウントを設定します。</p>
             </div>
 
-            {{-- Future: LINE / TikTok / YouTube / Facebook URL fields --}}
-        </form>
-    </div>
+            <div class="space-y-6">
+                <x-admin.sns-service
+                    name="Instagram"
+                    field="instagram_url"
+                    field-label="プロフィールURL"
+                    :value="old('instagram_url', $setting->instagram_url)"
+                    placeholder="https://www.instagram.com/..."
+                    help="公開サイトのInstagramアイコンから遷移するURLです。"
+                >
+                    <x-slot:icon>
+                        <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5">
+                            <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="currentColor" stroke-width="1.5"/>
+                            <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.5"/>
+                            <circle cx="17.25" cy="6.75" r="1" fill="currentColor"/>
+                        </svg>
+                    </x-slot:icon>
+                </x-admin.sns-service>
+
+                {{-- Future: LINE / TikTok / YouTube / Facebook / X via x-admin.sns-service --}}
+            </div>
+        </div>
+    </form>
 @endsection

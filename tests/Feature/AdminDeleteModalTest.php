@@ -11,6 +11,8 @@ use App\Models\SalonSetting;
 use App\Models\StaffMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminDeleteModalTest extends TestCase
@@ -168,7 +170,7 @@ class AdminDeleteModalTest extends TestCase
         );
     }
 
-    public function test_hero_image_delete_messages_without_save_confirm(): void
+    public function test_hero_defers_delete_to_bulk_save_without_delete_modal_trigger(): void
     {
         $setting = SalonSetting::current();
         HeroImage::query()->create([
@@ -183,11 +185,35 @@ class AdminDeleteModalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('data-delete-message="メインビジュアル画像を削除しますか？"', $html);
-        $this->assertStringNotContainsString(
-            "return confirm('店舗情報を保存します。公開サイトに反映されます。よろしいですか？')",
-            $html
-        );
+        $this->assertStringContainsString('data-hero-remove', $html);
+        $this->assertStringContainsString('admin-icon-btn-delete', $html);
+        $this->assertStringContainsString('id="hero-deleted-ids"', $html);
+        $this->assertStringContainsString("hidden.name = 'deleted_ids[]'", $html);
+        $this->assertStringNotContainsString('data-delete-message="メインビジュアル画像を削除しますか？"', $html);
+        $this->assertStringNotContainsString('name="_method" value="DELETE"', $html);
+        $this->assertStringNotContainsString('return confirm(', $html);
+    }
+
+    public function test_hero_bulk_delete_via_save_works(): void
+    {
+        Storage::fake('public');
+        $setting = SalonSetting::current();
+        $path = UploadedFile::fake()->image('hero-delete.jpg')->store('settings', 'public');
+        $image = HeroImage::query()->create([
+            'salon_setting_id' => $setting->id,
+            'image_path' => $path,
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.home.hero.update'), [
+                'deleted_ids' => [$image->id],
+            ])
+            ->assertRedirect(route('admin.home.hero'));
+
+        $this->assertDatabaseMissing('hero_images', ['id' => $image->id]);
+        Storage::disk('public')->assertMissing($path);
     }
 
     public function test_news_bulk_delete_via_save_works(): void

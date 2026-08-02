@@ -30,6 +30,8 @@
     <form id="hero-form" method="POST" action="{{ route('admin.home.hero.update') }}" enctype="multipart/form-data">
         @csrf @method('PUT')
 
+        <div id="hero-deleted-ids"></div>
+
         {{-- メインビジュアル画像一覧（将来: キャッチコピー / リンク等の per-image フィールドを各ブロックへ追加） --}}
         @include('admin.home.partials.hero-images', [
             'heroImages' => $heroImages,

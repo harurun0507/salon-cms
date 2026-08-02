@@ -160,27 +160,76 @@ class HeroImageTest extends TestCase
         $response->assertSee('bg-gradient-to-br', false);
     }
 
-    public function test_deleting_hero_image_removes_db_row_and_file(): void
+    public function test_deleting_hero_image_via_bulk_save_removes_db_row_and_file(): void
     {
         Storage::fake('public');
         $setting = SalonSetting::current();
-        $path = UploadedFile::fake()->image('delete-me.jpg')->store('settings', 'public');
+        $keepPath = UploadedFile::fake()->image('keep.jpg')->store('settings', 'public');
+        $removePath = UploadedFile::fake()->image('delete-me.jpg')->store('settings', 'public');
 
-        $image = HeroImage::query()->create([
+        $keep = HeroImage::query()->create([
             'salon_setting_id' => $setting->id,
-            'image_path' => $path,
+            'image_path' => $keepPath,
+            'sort_order' => 1,
+            'alt_text' => '残す',
+            'is_published' => true,
+        ]);
+        $remove = HeroImage::query()->create([
+            'salon_setting_id' => $setting->id,
+            'image_path' => $removePath,
+            'sort_order' => 2,
+            'is_published' => true,
+        ]);
+
+        Storage::disk('public')->assertExists($removePath);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.home.hero.update'), [
+                'hero_images' => [
+                    $keep->id => [
+                        'sort_order' => 3,
+                        'alt_text' => '更新後',
+                        'is_published' => '1',
+                    ],
+                ],
+                'deleted_ids' => [$remove->id],
+            ])
+            ->assertRedirect(route('admin.home.hero'));
+
+        $this->assertDatabaseMissing('hero_images', ['id' => $remove->id]);
+        Storage::disk('public')->assertMissing($removePath);
+
+        $keep->refresh();
+        $this->assertSame(3, $keep->sort_order);
+        $this->assertSame('更新後', $keep->alt_text);
+        Storage::disk('public')->assertExists($keepPath);
+    }
+
+    public function test_hero_page_defers_delete_to_bulk_save_without_nested_delete_form(): void
+    {
+        Storage::fake('public');
+        $setting = SalonSetting::current();
+        HeroImage::query()->create([
+            'salon_setting_id' => $setting->id,
+            'image_path' => 'settings/exists.jpg',
             'sort_order' => 1,
             'is_published' => true,
         ]);
 
-        Storage::disk('public')->assertExists($path);
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.home.hero'))
+            ->assertOk()
+            ->getContent();
 
-        $this->actingAs($this->admin())
-            ->delete(route('admin.home.hero.destroy', $image))
-            ->assertRedirect(route('admin.home.hero'));
-
-        $this->assertDatabaseMissing('hero_images', ['id' => $image->id]);
-        Storage::disk('public')->assertMissing($path);
+        $this->assertStringContainsString('id="hero-form"', $html);
+        $this->assertStringContainsString('name="_method" value="PUT"', $html);
+        $this->assertStringContainsString('id="hero-deleted-ids"', $html);
+        $this->assertStringContainsString('data-hero-remove', $html);
+        $this->assertStringContainsString("hidden.name = 'deleted_ids[]'", $html);
+        $this->assertStringContainsString('markHeroBlockRemoved', $html);
+        $this->assertStringNotContainsString('data-delete-message="メインビジュアル画像を削除しますか？"', $html);
+        $this->assertStringNotContainsString('name="_method" value="DELETE"', $html);
+        $this->assertStringNotContainsString('/admin/home/hero/images/', $html);
     }
 
     public function test_cannot_upload_more_than_max_hero_images(): void
@@ -389,7 +438,6 @@ class HeroImageTest extends TestCase
         $this->assertStringNotContainsString('id="hero-image-add-card"', $html);
         $this->assertStringNotContainsString('createHeroSlot', $html);
         $this->assertStringNotContainsString('メインビジュアル画像', $html);
-        $this->assertStringNotContainsString('lg:grid-cols-2', $html);
         $this->assertStringContainsString('id="settings-form"', $html);
         $this->assertStringContainsString('name="shop_name"', $html);
     }

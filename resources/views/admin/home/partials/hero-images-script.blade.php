@@ -14,6 +14,7 @@
         const heroAddCard = document.getElementById('hero-image-add-card');
         const heroCountEl = document.getElementById('hero-image-count');
         const heroAddBtn = document.getElementById('hero-image-add-card-btn');
+        const deletedIdsWrap = document.getElementById('hero-deleted-ids');
         let heroSlotSeq = 0;
 
         function clearImageError(errorEl) {
@@ -111,10 +112,30 @@
             reader.readAsDataURL(file);
         }
 
+        function markHeroBlockRemoved(block) {
+            const existingId = block.getAttribute('data-hero-id');
+            if (existingId && deletedIdsWrap) {
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = 'deleted_ids[]';
+                hidden.value = existingId;
+                deletedIdsWrap.appendChild(hidden);
+            }
+            block.remove();
+            renumberHeroBlocks();
+            clearImageError(heroErrorEl);
+        }
+
+        function bindHeroRemove(block) {
+            const removeBtn = block.querySelector('[data-hero-remove]');
+            removeBtn?.addEventListener('click', function () {
+                markHeroBlockRemoved(block);
+            });
+        }
+
         function bindHeroSlot(block) {
             const dropzone = block.querySelector('[data-hero-slot-dropzone]');
             const input = block.querySelector('input[type="file"]');
-            const removeBtn = block.querySelector('[data-hero-slot-remove]');
 
             function applyFile(file) {
                 clearImageError(heroErrorEl);
@@ -151,11 +172,7 @@
             dropzone?.addEventListener('drop', function (e) {
                 applyFile(e.dataTransfer.files[0]);
             });
-            removeBtn?.addEventListener('click', function () {
-                block.remove();
-                renumberHeroBlocks();
-                clearImageError(heroErrorEl);
-            });
+            bindHeroRemove(block);
         }
 
         function createHeroSlot() {
@@ -174,7 +191,7 @@
             block.innerHTML =
                 '<div class="mb-3 flex items-center justify-between gap-3">' +
                     '<p class="hero-image-label text-sm font-medium text-gray-800">画像</p>' +
-                    '<button type="button" class="admin-icon-btn admin-icon-btn-delete" data-hero-slot-remove aria-label="削除" title="削除">' +
+                    '<button type="button" class="admin-icon-btn admin-icon-btn-delete" data-hero-remove aria-label="削除" title="削除">' +
                         '<span aria-hidden="true">&times;</span>' +
                     '</button>' +
                 '</div>' +
@@ -222,6 +239,10 @@
         }
 
         heroAddBtn?.addEventListener('click', createHeroSlot);
+
+        heroList?.querySelectorAll('[data-hero-existing]').forEach(function (block) {
+            bindHeroRemove(block);
+        });
 
         function syncPublishedLabel(checkbox) {
             const control = checkbox.closest('[data-published-control]');

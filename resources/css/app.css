@@ -112,6 +112,48 @@
         white-space: nowrap;
     }
 
+    .sns-service {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .sns-service__header {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+    }
+
+    .sns-service__icon {
+        display: inline-flex;
+        height: 2.25rem;
+        width: 2.25rem;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.5rem;
+        border: 1px solid #E5E0D7;
+        background-color: #F7F5F0;
+        color: #8A847A;
+    }
+
+    .sns-service__name {
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: #3D3833;
+    }
+
+    .sns-service__body {
+        min-width: 0;
+    }
+
+    .sns-service__help {
+        margin-top: 0.375rem;
+        font-size: 0.75rem;
+        line-height: 1.4;
+        color: #8A847A;
+    }
+
     .admin-btn {
         @apply inline-flex items-center justify-center rounded-lg bg-admin-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-admin-accent-dark focus:outline-none focus:ring-2 focus:ring-admin-accent/40 focus:ring-offset-1 focus:ring-offset-admin-bg disabled:cursor-not-allowed disabled:opacity-60;
     }

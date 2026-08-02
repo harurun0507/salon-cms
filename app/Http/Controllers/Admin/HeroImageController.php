@@ -32,15 +32,30 @@ class HeroImageController extends AdminController
             'new_hero_meta.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'new_hero_meta.*.alt_text' => ['nullable', 'string', 'max:255'],
             'new_hero_meta.*.is_published' => ['nullable', 'boolean'],
+            'deleted_ids' => ['nullable', 'array'],
+            'deleted_ids.*' => ['integer', 'exists:hero_images,id'],
         ]);
 
         $setting = SalonSetting::current();
         $newFiles = collect($request->file('new_hero_images', []))->filter();
         $newMeta = $validated['new_hero_meta'] ?? [];
+        $deletedIds = collect($validated['deleted_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->all();
 
-        $this->assertHeroImageLimit($setting, $newFiles->count());
+        $this->assertHeroImageLimit($setting, $newFiles->count(), $deletedIds);
+
+        if ($deletedIds !== []) {
+            $toDelete = $setting->heroImages()->whereIn('id', $deletedIds)->get();
+            foreach ($toDelete as $heroImage) {
+                $this->deleteImage($heroImage->image_path);
+                $heroImage->delete();
+            }
+        }
 
         foreach ($validated['hero_images'] ?? [] as $id => $data) {
+            if (in_array((int) $id, $deletedIds, true)) {
+                continue;
+            }
+
             $heroImage = $setting->heroImages()->whereKey($id)->first();
             if (! $heroImage) {
                 continue;
@@ -115,17 +130,24 @@ class HeroImageController extends AdminController
         return $attributes;
     }
 
-    private function assertHeroImageLimit(SalonSetting $setting, int $newCount): void
+    /**
+     * @param  list<int>  $deletedIds
+     */
+    private function assertHeroImageLimit(SalonSetting $setting, int $newCount, array $deletedIds = []): void
     {
         if ($newCount <= 0) {
             return;
         }
 
         $currentCount = $setting->heroImages()->count();
+        $deletingCount = $deletedIds === []
+            ? 0
+            : $setting->heroImages()->whereIn('id', $deletedIds)->count();
+        $effectiveCount = $currentCount - $deletingCount;
 
-        if ($currentCount + $newCount > HeroImage::MAX_COUNT) {
+        if ($effectiveCount + $newCount > HeroImage::MAX_COUNT) {
             throw ValidationException::withMessages([
-                'new_hero_images' => 'メインビジュアル画像は最大'.HeroImage::MAX_COUNT.'枚まで登録できます。（現在'.$currentCount.'枚）',
+                'new_hero_images' => 'メインビジュアル画像は最大'.HeroImage::MAX_COUNT.'枚まで登録できます。（現在'.$effectiveCount.'枚）',
             ]);
         }
     }
