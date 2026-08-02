@@ -16,6 +16,22 @@ class AdminSidebarNavTest extends TestCase
         return User::factory()->create();
     }
 
+    public function test_sidebar_brand_links_to_dashboard(): void
+    {
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->getContent();
+
+        $dashboardUrl = route('admin.dashboard');
+        $this->assertMatchesRegularExpression(
+            '/<a[^>]*href="'.preg_quote($dashboardUrl, '/').'"[^>]*class="[^"]*hover:opacity-80[^"]*"[^>]*>/u',
+            $html
+        );
+        $this->assertStringContainsString('Sun ＆ Me', $html);
+        $this->assertStringContainsString('管理画面', $html);
+    }
+
     public function test_sidebar_shows_hierarchical_labels_and_not_old_menu_label(): void
     {
         $html = $this->actingAs($this->admin())

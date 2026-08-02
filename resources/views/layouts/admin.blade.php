@@ -237,7 +237,7 @@
 <body class="bg-admin-bg font-sans text-admin-text antialiased">
     <div class="flex min-h-screen">
         <aside class="relative sticky top-0 hidden h-screen w-64 shrink-0 overflow-hidden border-r border-[#E5E0D7] bg-[#F6F2EA] text-admin-text md:flex md:flex-col">
-            <div class="relative z-10 flex items-center gap-3.5 px-7 py-7">
+            <a href="{{ route('admin.dashboard') }}" class="relative z-10 flex items-center gap-3.5 px-7 py-7 hover:opacity-80">
                     <div
                         class="pointer-events-none shrink-0 text-[#A79D87]"
                         aria-hidden="true"
@@ -378,7 +378,7 @@
                     <div class="font-serif text-xl leading-tight tracking-wide text-[#3D3833]">Sun ＆ Me</div>
                     <div class="mt-1 text-xs tracking-wide text-[#736D65]">管理画面</div>
                 </div>
-            </div>
+            </a>
             <x-admin.sidebar-nav />
             <div
                 class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[330px] overflow-hidden text-[#B8AE98]"
