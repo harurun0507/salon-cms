@@ -45,8 +45,8 @@
                 role="status"
                 aria-live="polite"
             >
-                <p class="text-xs font-medium text-admin-muted">状態</p>
-                <div class="mt-1.5">
+                <div class="analytics-status-heading">
+                    <span class="analytics-status-label">状態</span>
                     <span
                         class="analytics-status-badge {{ $isConfigured ? 'is-set' : 'is-unset' }}"
                         data-analytics-status-badge
@@ -66,7 +66,7 @@
                     </span>
                 </div>
                 <div
-                    class="mt-1.5 text-xs leading-relaxed {{ $isConfigured ? 'text-[#5F7A52]' : 'text-admin-muted' }}"
+                    class="text-xs leading-relaxed {{ $isConfigured ? 'text-[#5F7A52]' : 'text-admin-muted' }}"
                     data-analytics-status-text
                 >
                     @if ($isConfigured)
@@ -133,8 +133,8 @@
 
             const emptyBadgeClass = 'analytics-status-badge is-unset';
             const filledBadgeClass = 'analytics-status-badge is-set';
-            const emptyTextClass = 'mt-1.5 text-xs leading-relaxed text-admin-muted';
-            const filledTextClass = 'mt-1.5 text-xs leading-relaxed text-[#5F7A52]';
+            const emptyTextClass = 'text-xs leading-relaxed text-admin-muted';
+            const filledTextClass = 'text-xs leading-relaxed text-[#5F7A52]';
             const warnIcon = '<svg class="analytics-status-badge-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 5.5V8.5M8 11h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M7.14 2.9 1.7 12.2A1 1 0 0 0 2.56 13.7h10.88a1 1 0 0 0 .86-1.5L8.86 2.9a1 1 0 0 0-1.72 0Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/></svg>';
             const checkIcon = '<svg class="analytics-status-badge-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5 6.5 11.5 12.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 

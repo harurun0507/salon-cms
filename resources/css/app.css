@@ -740,6 +740,21 @@
 }
 
 /* Analytics admin: measurement ID status badge */
+.analytics-status-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.analytics-status-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    color: var(--color-admin-text, #3D3833);
+}
+
 .analytics-status-badge {
     display: inline-flex;
     align-items: center;
