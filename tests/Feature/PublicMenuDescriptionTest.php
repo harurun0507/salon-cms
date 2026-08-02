@@ -20,7 +20,7 @@ class PublicMenuDescriptionTest extends TestCase
         Menu::query()->create([
             'menu_category_id' => $category->id,
             'name' => 'カットベーシック',
-            'price' => 5000,
+            'price' => '¥5,000',
             'description' => "1行目\n2行目",
             'sort_order' => 1,
             'is_published' => true,
@@ -30,6 +30,7 @@ class PublicMenuDescriptionTest extends TestCase
 
         $this->assertStringContainsString('whitespace-pre-line', $html);
         $this->assertStringContainsString("1行目\n2行目", $html);
+        $this->assertStringContainsString('¥5,000', $html);
         $this->assertStringNotContainsString('<br', $html);
     }
 
@@ -41,7 +42,7 @@ class PublicMenuDescriptionTest extends TestCase
         Menu::query()->create([
             'menu_category_id' => $category->id,
             'name' => 'カットベーシック',
-            'price' => 5000,
+            'price' => '¥5,000',
             'description' => "説明A\n説明B",
             'sort_order' => 1,
             'is_published' => true,
@@ -51,5 +52,6 @@ class PublicMenuDescriptionTest extends TestCase
 
         $this->assertStringContainsString('whitespace-pre-line', $html);
         $this->assertStringContainsString("説明A\n説明B", $html);
+        $this->assertStringContainsString('¥5,000', $html);
     }
 }

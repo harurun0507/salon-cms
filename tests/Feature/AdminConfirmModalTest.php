@@ -38,7 +38,7 @@ class AdminConfirmModalTest extends TestCase
         Menu::query()->create([
             'menu_category_id' => $category->id,
             'name' => 'カットベーシック',
-            'price' => 5000,
+            'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);

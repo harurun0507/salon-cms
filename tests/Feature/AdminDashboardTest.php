@@ -72,14 +72,14 @@ class AdminDashboardTest extends TestCase
         Menu::query()->create([
             'menu_category_id' => $category->id,
             'name' => 'カットA',
-            'price' => 5000,
+            'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
         Menu::query()->create([
             'menu_category_id' => $category->id,
             'name' => 'カットB',
-            'price' => 6000,
+            'price' => '¥6,000',
             'sort_order' => 2,
             'is_published' => false,
         ]);
@@ -205,7 +205,7 @@ class AdminDashboardTest extends TestCase
         Menu::query()->create([
             'menu_category_id' => $category->id,
             'name' => '完了メニュー',
-            'price' => 3000,
+            'price' => '¥3,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
@@ -304,7 +304,7 @@ class AdminDashboardTest extends TestCase
         $menu = Menu::query()->create([
             'menu_category_id' => $category->id,
             'name' => '中間メニュー',
-            'price' => 8000,
+            'price' => '¥8,000',
             'sort_order' => 1,
             'is_published' => false,
         ]);

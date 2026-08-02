@@ -446,9 +446,9 @@
                             <colgroup>
                                 <col class="menu-col-handle">
                                 <col class="menu-col-name">
+                                <col class="menu-col-desc">
                                 <col class="menu-col-price">
                                 <col class="menu-col-pub">
-                                <col class="menu-col-desc">
                                 <col class="menu-col-sort">
                                 <col class="menu-col-actions">
                             </colgroup>
@@ -456,9 +456,9 @@
                                 <tr>
                                     <th class="!pb-3 !pr-1" aria-label="並び替え"></th>
                                     <th class="!pb-3 !pr-3">メニュー名</th>
-                                    <th class="!pb-3 !pr-3">料金（円）</th>
-                                    <th class="!pb-3 !pr-3">公開</th>
                                     <th class="!pb-3 !pr-3">説明</th>
+                                    <th class="!pb-3 !pr-3">料金表示</th>
+                                    <th class="!pb-3 !pr-3">公開</th>
                                     <th class="!pb-3 !pl-1 !pr-3 text-center whitespace-nowrap">表示順</th>
                                     <th class="!pb-3 !pl-0 !pr-4 text-center whitespace-nowrap">操作</th>
                                 </tr>
@@ -468,7 +468,7 @@
                                     @if($row['kind'] === 'existing')
                                         @php $menu = $row['menu']; @endphp
                                         <tr class="align-top menu-list-row" data-menu-row="{{ $menu->id }}">
-                                            <td class="!py-3 !pr-1">
+                                            <td class="menu-cell-middle !py-3 !pr-1">
                                                 <span
                                                     class="menu-drag-handle"
                                                     data-menu-drag-handle
@@ -490,12 +490,26 @@
                                                 </span>
                                             </td>
                                             <td class="!py-3 !pr-3 min-w-0">
-                                                <input type="text" name="menus[{{ $menu->id }}][name]" value="{{ old('menus.'.$menu->id.'.name', $menu->name) }}" required class="admin-input min-w-0 py-1.5">
+                                                <textarea
+                                                    name="menus[{{ $menu->id }}][name]"
+                                                    rows="3"
+                                                    required
+                                                    class="admin-input menu-name-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
+                                                >{{ old('menus.'.$menu->id.'.name', $menu->name) }}</textarea>
                                             </td>
-                                            <td class="!py-3 !pr-3">
-                                                <input type="number" name="menus[{{ $menu->id }}][price]" value="{{ old('menus.'.$menu->id.'.price', $menu->price) }}" min="0" required class="admin-input py-1.5">
+                                            <td class="!py-3 !pr-3 min-w-0">
+                                                <textarea
+                                                    name="menus[{{ $menu->id }}][description]"
+                                                    id="menu-description-{{ $menu->id }}"
+                                                    rows="3"
+                                                    class="admin-input menu-description-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
+                                                    placeholder="説明（任意）"
+                                                >{{ old('menus.'.$menu->id.'.description', $menu->description) }}</textarea>
                                             </td>
-                                            <td class="!py-3 !pr-3">
+                                            <td class="!py-3 !pr-3 min-w-0">
+                                                <input type="text" name="menus[{{ $menu->id }}][price]" value="{{ old('menus.'.$menu->id.'.price', $menu->price) }}" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。">
+                                            </td>
+                                            <td class="menu-cell-middle !py-3 !pr-3">
                                                 @php
                                                     $menuPublished = old('menus.'.$menu->id.'.is_published', $menu->is_published ? '1' : '0') == '1';
                                                 @endphp
@@ -519,16 +533,7 @@
                                                     </span>
                                                 </label>
                                             </td>
-                                            <td class="!py-3 !pr-3 min-w-0">
-                                                <textarea
-                                                    name="menus[{{ $menu->id }}][description]"
-                                                    id="menu-description-{{ $menu->id }}"
-                                                    rows="3"
-                                                    class="admin-input menu-description-textarea min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
-                                                    placeholder="説明（任意）"
-                                                >{{ old('menus.'.$menu->id.'.description', $menu->description) }}</textarea>
-                                            </td>
-                                            <td class="!py-3 !pl-1 !pr-2 text-center">
+                                            <td class="menu-cell-middle !py-3 !pl-1 !pr-2 text-center">
                                                 <input
                                                     type="number"
                                                     name="menus[{{ $menu->id }}][sort_order]"
@@ -544,7 +549,7 @@
                                                     <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
                                                 @enderror
                                             </td>
-                                            <td class="!py-3 !pl-0 !pr-4 text-left">
+                                            <td class="menu-cell-middle !py-3 !pl-0 !pr-4 text-left">
                                                 <button
                                                     type="button"
                                                     class="category-delete-x"
@@ -564,7 +569,7 @@
                                             $newMenuData = $row['data'];
                                         @endphp
                                         <tr class="align-top menu-list-row" data-menu-row="{{ $newMenuKey }}" data-new-menu="{{ $newMenuKey }}">
-                                            <td class="!py-3 !pr-1">
+                                            <td class="menu-cell-middle !py-3 !pr-1">
                                                 <span
                                                     class="menu-drag-handle"
                                                     data-menu-drag-handle
@@ -587,15 +592,29 @@
                                             </td>
                                             <td class="!py-3 !pr-3 min-w-0">
                                                 <input type="hidden" name="menus[{{ $newMenuKey }}][category_id]" value="{{ $category->id }}">
-                                                <input type="text" name="menus[{{ $newMenuKey }}][name]" value="{{ $newMenuData['name'] ?? '' }}" required class="admin-input min-w-0 py-1.5" data-menu-name-input>
+                                                <textarea
+                                                    name="menus[{{ $newMenuKey }}][name]"
+                                                    rows="3"
+                                                    required
+                                                    class="admin-input menu-name-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
+                                                    data-menu-name-input
+                                                >{{ $newMenuData['name'] ?? '' }}</textarea>
                                                 @error('menus.'.$newMenuKey.'.name')
                                                     <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
                                                 @enderror
                                             </td>
-                                            <td class="!py-3 !pr-3">
-                                                <input type="number" name="menus[{{ $newMenuKey }}][price]" value="{{ $newMenuData['price'] ?? 0 }}" min="0" required class="admin-input py-1.5">
+                                            <td class="!py-3 !pr-3 min-w-0">
+                                                <textarea
+                                                    name="menus[{{ $newMenuKey }}][description]"
+                                                    rows="3"
+                                                    class="admin-input menu-description-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
+                                                    placeholder="説明（任意）"
+                                                >{{ $newMenuData['description'] ?? '' }}</textarea>
                                             </td>
-                                            <td class="!py-3 !pr-3">
+                                            <td class="!py-3 !pr-3 min-w-0">
+                                                <input type="text" name="menus[{{ $newMenuKey }}][price]" value="{{ $newMenuData['price'] ?? '' }}" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。">
+                                            </td>
+                                            <td class="menu-cell-middle !py-3 !pr-3">
                                                 @php
                                                     $newMenuPublished = ($newMenuData['is_published'] ?? '1') == '1';
                                                 @endphp
@@ -619,15 +638,7 @@
                                                     </span>
                                                 </label>
                                             </td>
-                                            <td class="!py-3 !pr-3 min-w-0">
-                                                <textarea
-                                                    name="menus[{{ $newMenuKey }}][description]"
-                                                    rows="3"
-                                                    class="admin-input menu-description-textarea min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
-                                                    placeholder="説明（任意）"
-                                                >{{ $newMenuData['description'] ?? '' }}</textarea>
-                                            </td>
-                                            <td class="!py-3 !pl-1 !pr-2 text-center">
+                                            <td class="menu-cell-middle !py-3 !pl-1 !pr-2 text-center">
                                                 <input
                                                     type="number"
                                                     name="menus[{{ $newMenuKey }}][sort_order]"
@@ -643,7 +654,7 @@
                                                     <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
                                                 @enderror
                                             </td>
-                                            <td class="!py-3 !pl-0 !pr-4 text-left">
+                                            <td class="menu-cell-middle !py-3 !pl-0 !pr-4 text-left">
                                                 <button
                                                     type="button"
                                                     class="category-delete-x"
@@ -718,9 +729,9 @@
                             <colgroup>
                                 <col class="menu-col-handle">
                                 <col class="menu-col-name">
+                                <col class="menu-col-desc">
                                 <col class="menu-col-price">
                                 <col class="menu-col-pub">
-                                <col class="menu-col-desc">
                                 <col class="menu-col-sort">
                                 <col class="menu-col-actions">
                             </colgroup>
@@ -728,9 +739,9 @@
                                 <tr>
                                     <th class="!pb-3 !pr-1" aria-label="並び替え"></th>
                                     <th class="!pb-3 !pr-3">メニュー名</th>
-                                    <th class="!pb-3 !pr-3">料金（円）</th>
-                                    <th class="!pb-3 !pr-3">公開</th>
                                     <th class="!pb-3 !pr-3">説明</th>
+                                    <th class="!pb-3 !pr-3">料金表示</th>
+                                    <th class="!pb-3 !pr-3">公開</th>
                                     <th class="!pb-3 !pl-1 !pr-3 text-center whitespace-nowrap">表示順</th>
                                     <th class="!pb-3 !pl-0 !pr-4 text-center whitespace-nowrap">操作</th>
                                 </tr>
@@ -742,7 +753,7 @@
                                         $newMenuData = $row['data'];
                                     @endphp
                                     <tr class="align-top menu-list-row" data-menu-row="{{ $newMenuKey }}" data-new-menu="{{ $newMenuKey }}">
-                                        <td class="!py-3 !pr-1">
+                                        <td class="menu-cell-middle !py-3 !pr-1">
                                             <span
                                                 class="menu-drag-handle"
                                                 data-menu-drag-handle
@@ -765,15 +776,29 @@
                                         </td>
                                         <td class="!py-3 !pr-3 min-w-0">
                                             <input type="hidden" name="menus[{{ $newMenuKey }}][category_id]" value="{{ $newKey }}">
-                                            <input type="text" name="menus[{{ $newMenuKey }}][name]" value="{{ $newMenuData['name'] ?? '' }}" required class="admin-input min-w-0 py-1.5" data-menu-name-input>
+                                            <textarea
+                                                name="menus[{{ $newMenuKey }}][name]"
+                                                rows="3"
+                                                required
+                                                class="admin-input menu-name-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
+                                                data-menu-name-input
+                                            >{{ $newMenuData['name'] ?? '' }}</textarea>
                                             @error('menus.'.$newMenuKey.'.name')
                                                 <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
                                             @enderror
                                         </td>
-                                        <td class="!py-3 !pr-3">
-                                            <input type="number" name="menus[{{ $newMenuKey }}][price]" value="{{ $newMenuData['price'] ?? 0 }}" min="0" required class="admin-input py-1.5">
+                                        <td class="!py-3 !pr-3 min-w-0">
+                                            <textarea
+                                                name="menus[{{ $newMenuKey }}][description]"
+                                                rows="3"
+                                                class="admin-input menu-description-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
+                                                placeholder="説明（任意）"
+                                            >{{ $newMenuData['description'] ?? '' }}</textarea>
                                         </td>
-                                        <td class="!py-3 !pr-3">
+                                        <td class="!py-3 !pr-3 min-w-0">
+                                            <input type="text" name="menus[{{ $newMenuKey }}][price]" value="{{ $newMenuData['price'] ?? '' }}" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。">
+                                        </td>
+                                        <td class="menu-cell-middle !py-3 !pr-3">
                                             @php
                                                 $newMenuPublished = ($newMenuData['is_published'] ?? '1') == '1';
                                             @endphp
@@ -797,15 +822,7 @@
                                                 </span>
                                             </label>
                                         </td>
-                                        <td class="!py-3 !pr-3 min-w-0">
-                                            <textarea
-                                                name="menus[{{ $newMenuKey }}][description]"
-                                                rows="3"
-                                                class="admin-input menu-description-textarea min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
-                                                placeholder="説明（任意）"
-                                            >{{ $newMenuData['description'] ?? '' }}</textarea>
-                                        </td>
-                                        <td class="!py-3 !pl-1 !pr-2 text-center">
+                                        <td class="menu-cell-middle !py-3 !pl-1 !pr-2 text-center">
                                             <input
                                                 type="number"
                                                 name="menus[{{ $newMenuKey }}][sort_order]"
@@ -821,7 +838,7 @@
                                                 <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
                                             @enderror
                                         </td>
-                                        <td class="!py-3 !pl-0 !pr-4 text-left">
+                                        <td class="menu-cell-middle !py-3 !pl-0 !pr-4 text-left">
                                             <button
                                                 type="button"
                                                 class="category-delete-x"
@@ -1007,9 +1024,9 @@
                 <colgroup>
                     <col class="menu-col-handle">
                     <col class="menu-col-name">
+                    <col class="menu-col-desc">
                     <col class="menu-col-price">
                     <col class="menu-col-pub">
-                    <col class="menu-col-desc">
                     <col class="menu-col-sort">
                     <col class="menu-col-actions">
                 </colgroup>
@@ -1017,9 +1034,9 @@
                     <tr>
                         <th class="!pb-3 !pr-1" aria-label="並び替え"></th>
                         <th class="!pb-3 !pr-3">メニュー名</th>
-                        <th class="!pb-3 !pr-3">料金（円）</th>
-                        <th class="!pb-3 !pr-3">公開</th>
                         <th class="!pb-3 !pr-3">説明</th>
+                        <th class="!pb-3 !pr-3">料金表示</th>
+                        <th class="!pb-3 !pr-3">公開</th>
                         <th class="!pb-3 !pl-1 !pr-3 text-center whitespace-nowrap">表示順</th>
                         <th class="!pb-3 !pl-0 !pr-4 text-center whitespace-nowrap">操作</th>
                     </tr>
@@ -1031,7 +1048,7 @@
 
     <template id="new-menu-row-template">
         <tr class="align-top menu-list-row" data-menu-row="__MENU_ID__" data-new-menu="__MENU_ID__">
-            <td class="!py-3 !pr-1">
+            <td class="menu-cell-middle !py-3 !pr-1">
                 <span
                     class="menu-drag-handle"
                     data-menu-drag-handle
@@ -1054,12 +1071,26 @@
             </td>
             <td class="!py-3 !pr-3 min-w-0">
                 <input type="hidden" name="menus[__MENU_ID__][category_id]" value="__CATEGORY_ID__">
-                <input type="text" name="menus[__MENU_ID__][name]" value="" required class="admin-input min-w-0 py-1.5" data-menu-name-input>
+                <textarea
+                    name="menus[__MENU_ID__][name]"
+                    rows="3"
+                    required
+                    class="admin-input menu-name-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
+                    data-menu-name-input
+                ></textarea>
             </td>
-            <td class="!py-3 !pr-3">
-                <input type="number" name="menus[__MENU_ID__][price]" value="0" min="0" required class="admin-input py-1.5">
+            <td class="!py-3 !pr-3 min-w-0">
+                <textarea
+                    name="menus[__MENU_ID__][description]"
+                    rows="3"
+                    class="admin-input menu-description-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
+                    placeholder="説明（任意）"
+                ></textarea>
             </td>
-            <td class="!py-3 !pr-3">
+            <td class="!py-3 !pr-3 min-w-0">
+                <input type="text" name="menus[__MENU_ID__][price]" value="" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。">
+            </td>
+            <td class="menu-cell-middle !py-3 !pr-3">
                 <label class="menu-published-control" data-published-control>
                     <input type="hidden" name="menus[__MENU_ID__][is_published]" value="0">
                     <input
@@ -1077,15 +1108,7 @@
                     </span>
                 </label>
             </td>
-            <td class="!py-3 !pr-3 min-w-0">
-                <textarea
-                    name="menus[__MENU_ID__][description]"
-                    rows="3"
-                    class="admin-input menu-description-textarea min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
-                    placeholder="説明（任意）"
-                ></textarea>
-            </td>
-            <td class="!py-3 !pl-1 !pr-2 text-center">
+            <td class="menu-cell-middle !py-3 !pl-1 !pr-2 text-center">
                 <input
                     type="number"
                     name="menus[__MENU_ID__][sort_order]"
@@ -1098,7 +1121,7 @@
                     aria-label="表示順"
                 >
             </td>
-            <td class="!py-3 !pl-0 !pr-4 text-left">
+            <td class="menu-cell-middle !py-3 !pl-0 !pr-4 text-left">
                 <button
                     type="button"
                     class="category-delete-x"
@@ -1120,9 +1143,9 @@
 
         .menu-list-table .menu-col-handle { width: 28px; }
         .menu-list-table .menu-col-name { width: 20%; }
-        .menu-list-table .menu-col-price { width: 11%; }
-        .menu-list-table .menu-col-pub { width: 118px; }
-        .menu-list-table .menu-col-desc { width: auto; }
+        .menu-list-table .menu-col-desc { width: 40%; }
+        .menu-list-table .menu-col-price { width: 13%; }
+        .menu-list-table .menu-col-pub { width: 10%; min-width: 5.5rem; }
         /* sort: 2.5rem input + pl-1 + pr-2; wide enough for nowrap「表示順」 */
         .menu-list-table .menu-col-sort { width: 5.5rem; }
         /* actions: 2rem × + pr-4; room for nowrap「操作」(2 chars) without vertical wrap */
@@ -1150,22 +1173,35 @@
             box-sizing: border-box;
         }
 
+        .menu-list-table td.menu-cell-middle {
+            vertical-align: middle;
+        }
+
+        .menu-list-table td.min-w-0 {
+            overflow: hidden;
+        }
+
         .menu-list-table .menu-col-actions,
         .menu-list-table th:last-child,
         .menu-list-table td:last-child {
             overflow: visible;
         }
 
+        .menu-name-textarea,
         .menu-description-textarea {
             display: block;
             width: 100%;
+            max-width: 100%;
             height: 76px;
             min-height: 76px;
             max-height: 76px;
+            overflow-x: hidden;
             overflow-y: auto;
             resize: none;
             line-height: 1.4;
             box-sizing: border-box;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
         }
 
         .menu-list-row {

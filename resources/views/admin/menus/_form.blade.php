@@ -1,10 +1,19 @@
 <div>
     <label for="name" class="admin-label">メニュー名</label>
-    <input type="text" name="name" id="name" value="{{ old('name', $menu->name ?? '') }}" required class="admin-input">
+    <textarea name="name" id="name" rows="4" required class="admin-input">{{ old('name', $menu->name ?? '') }}</textarea>
 </div>
 <div>
-    <label for="price" class="admin-label">料金（円）</label>
-    <input type="number" name="price" id="price" value="{{ old('price', $menu->price ?? '') }}" min="0" required class="admin-input">
+    <label for="price" class="admin-label">料金表示</label>
+    <input
+        type="text"
+        name="price"
+        id="price"
+        value="{{ old('price', $menu->price ?? '') }}"
+        maxlength="100"
+        placeholder="例: ¥5,500 / ¥8,800〜"
+        class="admin-input"
+    >
+    <p class="mt-1 text-xs text-admin-muted">公開サイトへそのまま表示されます。</p>
 </div>
 <div>
     <label for="description" class="admin-label">説明</label>

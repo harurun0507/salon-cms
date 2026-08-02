@@ -22,7 +22,9 @@ class MenuController extends AdminController
     {
         $request->merge([
             'categories' => $this->normalizeCategorySortOrders($request->input('categories')),
-            'menus' => $this->normalizeMenuSortOrders($request->input('menus')),
+            'menus' => $this->normalizeMenuSortOrders(
+                $this->normalizeMenuPrices($request->input('menus'))
+            ),
         ]);
 
         $validated = $request->validate([
@@ -31,7 +33,7 @@ class MenuController extends AdminController
             'categories.*.sort_order' => ['nullable', 'integer', 'min:1'],
             'menus' => ['nullable', 'array'],
             'menus.*.name' => ['required', 'string', 'max:255'],
-            'menus.*.price' => ['required', 'integer', 'min:0'],
+            'menus.*.price' => ['nullable', 'string', 'max:100'],
             'menus.*.sort_order' => ['nullable', 'integer', 'min:1'],
             'menus.*.is_published' => ['nullable', 'in:0,1'],
             'menus.*.description' => ['nullable', 'string'],
@@ -307,9 +309,13 @@ class MenuController extends AdminController
 
     public function store(Request $request, MenuCategory $category): RedirectResponse
     {
+        $request->merge([
+            'price' => $this->normalizePrice($request->input('price')),
+        ]);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'price' => ['required', 'integer', 'min:0'],
+            'price' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'is_published' => ['sometimes', 'boolean'],
@@ -317,7 +323,7 @@ class MenuController extends AdminController
 
         $category->menus()->create([
             'name' => $validated['name'],
-            'price' => $validated['price'],
+            'price' => $validated['price'] ?? null,
             'description' => $validated['description'] ?? null,
             'sort_order' => $validated['sort_order'] ?? 0,
             'is_published' => $request->boolean('is_published', true),
@@ -336,10 +342,14 @@ class MenuController extends AdminController
 
     public function update(Request $request, Menu $menu): RedirectResponse
     {
+        $request->merge([
+            'price' => $this->normalizePrice($request->input('price')),
+        ]);
+
         $validated = $request->validate([
             'menu_category_id' => ['required', 'exists:menu_categories,id'],
             'name' => ['required', 'string', 'max:255'],
-            'price' => ['required', 'integer', 'min:0'],
+            'price' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'is_published' => ['sometimes', 'boolean'],
@@ -358,5 +368,43 @@ class MenuController extends AdminController
         $menu->delete();
 
         return redirect()->route('admin.menus.index')->with('success', 'メニューを削除しました。');
+    }
+
+    /**
+     * @param  mixed  $menus
+     * @return array<string, array<string, mixed>>|mixed
+     */
+    private function normalizeMenuPrices(mixed $menus): mixed
+    {
+        if (! is_array($menus)) {
+            return $menus;
+        }
+
+        foreach ($menus as $key => $data) {
+            if (! is_array($data) || ! array_key_exists('price', $data)) {
+                continue;
+            }
+
+            $menus[$key]['price'] = $this->normalizePrice(
+                is_scalar($data['price']) ? (string) $data['price'] : null
+            );
+        }
+
+        return $menus;
+    }
+
+    private function normalizePrice(mixed $price): ?string
+    {
+        if ($price === null) {
+            return null;
+        }
+
+        if (! is_scalar($price)) {
+            return null;
+        }
+
+        $trimmed = trim((string) $price);
+
+        return $trimmed === '' ? null : $trimmed;
     }
 }

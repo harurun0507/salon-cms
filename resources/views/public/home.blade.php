@@ -261,7 +261,7 @@
                                                         <p class="mt-1 text-xs text-salon-muted whitespace-pre-line">{{ $menu->description }}</p>
                                                     @endif
                                                 </div>
-                                                <p class="shrink-0 font-medium">¥{{ number_format($menu->price) }}</p>
+                                                <p class="shrink-0 font-medium">{{ $menu->price }}</p>
                                             </li>
                                         @endforeach
                                     </ul>

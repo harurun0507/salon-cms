@@ -26,7 +26,7 @@ class AdminMenusTwoColumnTest extends TestCase
         Menu::query()->create([
             'menu_category_id' => $first->id,
             'name' => 'カットベーシック',
-            'price' => 5000,
+            'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
@@ -103,7 +103,7 @@ class AdminMenusTwoColumnTest extends TestCase
         $menu = Menu::query()->create([
             'menu_category_id' => $category->id,
             'name' => 'カットベーシック',
-            'price' => 5000,
+            'price' => '¥5,000',
             'description' => $longDescription,
             'sort_order' => 1,
             'is_published' => true,
@@ -155,7 +155,7 @@ class AdminMenusTwoColumnTest extends TestCase
         Menu::query()->create([
             'menu_category_id' => $withMenus->id,
             'name' => 'カットベーシック',
-            'price' => 5000,
+            'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
@@ -244,7 +244,7 @@ class AdminMenusTwoColumnTest extends TestCase
         $response = $this->actingAs($this->admin())
             ->post(route('admin.menus.store', $category), [
                 'name' => 'カットスペシャル',
-                'price' => 7000,
+                'price' => '¥7,000',
                 'sort_order' => 1,
                 'is_published' => '1',
             ]);
@@ -261,7 +261,7 @@ class AdminMenusTwoColumnTest extends TestCase
         $menu = Menu::query()->create([
             'menu_category_id' => $second->id,
             'name' => 'カラーベーシック',
-            'price' => 8000,
+            'price' => '¥8,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
@@ -288,7 +288,7 @@ class AdminMenusTwoColumnTest extends TestCase
         $menu = Menu::query()->create([
             'menu_category_id' => $second->id,
             'name' => 'カラーベーシック',
-            'price' => 8000,
+            'price' => '¥8,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
@@ -316,7 +316,7 @@ class AdminMenusTwoColumnTest extends TestCase
         $menu = Menu::query()->create([
             'menu_category_id' => $category->id,
             'name' => 'カットベーシック',
-            'price' => 5000,
+            'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
             'description' => '旧説明',
@@ -334,7 +334,7 @@ class AdminMenusTwoColumnTest extends TestCase
                 'menus' => [
                     $menu->id => [
                         'name' => 'カット更新メニュー',
-                        'price' => 5500,
+                        'price' => '¥5,500',
                         'sort_order' => 2,
                         'is_published' => '0',
                         'description' => '新説明',
@@ -353,7 +353,7 @@ class AdminMenusTwoColumnTest extends TestCase
         $this->assertDatabaseHas('menus', [
             'id' => $menu->id,
             'name' => 'カット更新メニュー',
-            'price' => 5500,
+            'price' => '¥5,500',
             'sort_order' => 2,
             'is_published' => false,
             'description' => '新説明',
@@ -516,7 +516,7 @@ class AdminMenusTwoColumnTest extends TestCase
         $menu = Menu::query()->create([
             'menu_category_id' => $category->id,
             'name' => 'カットベーシック',
-            'price' => 5000,
+            'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
@@ -557,7 +557,7 @@ class AdminMenusTwoColumnTest extends TestCase
                     'new_menu_1' => [
                         'category_id' => $category->id,
                         'name' => 'カット新規',
-                        'price' => 6000,
+                        'price' => '¥6,000',
                         'sort_order' => 1,
                         'is_published' => '1',
                         'description' => '説明',
@@ -570,7 +570,7 @@ class AdminMenusTwoColumnTest extends TestCase
         $this->assertDatabaseHas('menus', [
             'menu_category_id' => $category->id,
             'name' => 'カット新規',
-            'price' => 6000,
+            'price' => '¥6,000',
             'sort_order' => 1,
             'is_published' => true,
             'description' => '説明',
@@ -592,7 +592,7 @@ class AdminMenusTwoColumnTest extends TestCase
                     'new_menu_1' => [
                         'category_id' => 'new_1',
                         'name' => 'デジタルパーマ',
-                        'price' => 12000,
+                        'price' => '¥12,000',
                         'sort_order' => 1,
                         'is_published' => '1',
                         'description' => '',
@@ -610,7 +610,7 @@ class AdminMenusTwoColumnTest extends TestCase
         $this->assertDatabaseHas('menus', [
             'menu_category_id' => $created->id,
             'name' => 'デジタルパーマ',
-            'price' => 12000,
+            'price' => '¥12,000',
             'sort_order' => 1,
         ]);
     }
@@ -633,7 +633,7 @@ class AdminMenusTwoColumnTest extends TestCase
                     'new_menu_1' => [
                         'category_id' => $category->id,
                         'name' => '',
-                        'price' => 1000,
+                        'price' => '¥1,000',
                         'sort_order' => 1,
                         'is_published' => '1',
                         'description' => '復元確認',
@@ -658,7 +658,7 @@ class AdminMenusTwoColumnTest extends TestCase
                         'new_menu_1' => [
                             'category_id' => $category->id,
                             'name' => '',
-                            'price' => 1000,
+                            'price' => '¥1,000',
                             'sort_order' => 1,
                             'is_published' => '1',
                             'description' => '復元確認',
@@ -782,7 +782,7 @@ class AdminMenusTwoColumnTest extends TestCase
         $menu = Menu::query()->create([
             'menu_category_id' => $category->id,
             'name' => 'カットベーシック',
-            'price' => 5000,
+            'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
@@ -796,14 +796,14 @@ class AdminMenusTwoColumnTest extends TestCase
                     'menus' => [
                         $menu->id => [
                             'name' => 'カットベーシック',
-                            'price' => 5000,
+                            'price' => '¥5,000',
                             'sort_order' => 1,
                             'is_published' => '1',
                         ],
                         'new_menu_1' => [
                             'category_id' => $category->id,
                             'name' => '新規',
-                            'price' => 1000,
+                            'price' => '¥1,000',
                             'sort_order' => 2,
                             'is_published' => '1',
                             'description' => '',
@@ -877,14 +877,14 @@ class AdminMenusTwoColumnTest extends TestCase
         $first = Menu::query()->create([
             'menu_category_id' => $category->id,
             'name' => '先頭だった',
-            'price' => 1000,
+            'price' => '¥1,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
         $second = Menu::query()->create([
             'menu_category_id' => $category->id,
             'name' => '二番目だった',
-            'price' => 2000,
+            'price' => '¥2,000',
             'sort_order' => 2,
             'is_published' => true,
         ]);
@@ -898,13 +898,13 @@ class AdminMenusTwoColumnTest extends TestCase
                     'menus' => [
                         $first->id => [
                             'name' => '先頭だった',
-                            'price' => 1000,
+                            'price' => '¥1,000',
                             'sort_order' => 2,
                             'is_published' => '1',
                         ],
                         $second->id => [
                             'name' => '二番目だった',
-                            'price' => 2000,
+                            'price' => '¥2,000',
                             'sort_order' => 1,
                             'is_published' => '1',
                         ],
@@ -980,14 +980,14 @@ class AdminMenusTwoColumnTest extends TestCase
         $menuA = Menu::query()->create([
             'menu_category_id' => $first->id,
             'name' => 'A',
-            'price' => 1000,
+            'price' => '¥1,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
         $menuB = Menu::query()->create([
             'menu_category_id' => $first->id,
             'name' => 'B',
-            'price' => 2000,
+            'price' => '¥2,000',
             'sort_order' => 2,
             'is_published' => true,
         ]);
@@ -1002,13 +1002,13 @@ class AdminMenusTwoColumnTest extends TestCase
                 'menus' => [
                     $menuA->id => [
                         'name' => 'A',
-                        'price' => 1000,
+                        'price' => '¥1,000',
                         'sort_order' => 1,
                         'is_published' => '1',
                     ],
                     $menuB->id => [
                         'name' => 'B',
-                        'price' => 2000,
+                        'price' => '¥2,000',
                         'sort_order' => 2,
                         'is_published' => '1',
                     ],
@@ -1031,13 +1031,13 @@ class AdminMenusTwoColumnTest extends TestCase
                 'menus' => [
                     $menuA->id => [
                         'name' => 'A',
-                        'price' => 1000,
+                        'price' => '¥1,000',
                         'sort_order' => 2,
                         'is_published' => '1',
                     ],
                     $menuB->id => [
                         'name' => 'B',
-                        'price' => 2000,
+                        'price' => '¥2,000',
                         'sort_order' => 2,
                         'is_published' => '1',
                     ],
@@ -1058,14 +1058,14 @@ class AdminMenusTwoColumnTest extends TestCase
         $menuA = Menu::query()->create([
             'menu_category_id' => $first->id,
             'name' => 'カットベーシック',
-            'price' => 5000,
+            'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
         $menuB = Menu::query()->create([
             'menu_category_id' => $first->id,
             'name' => 'カットスペシャル',
-            'price' => 7000,
+            'price' => '¥7,000',
             'sort_order' => 2,
             'is_published' => true,
         ]);
@@ -1080,13 +1080,13 @@ class AdminMenusTwoColumnTest extends TestCase
                 'menus' => [
                     $menuA->id => [
                         'name' => 'カットベーシック',
-                        'price' => 5000,
+                        'price' => '¥5,000',
                         'sort_order' => '',
                         'is_published' => '1',
                     ],
                     $menuB->id => [
                         'name' => 'カットスペシャル',
-                        'price' => 7000,
+                        'price' => '¥7,000',
                         'sort_order' => 0,
                         'is_published' => '1',
                     ],
@@ -1109,14 +1109,14 @@ class AdminMenusTwoColumnTest extends TestCase
         $menuA = Menu::query()->create([
             'menu_category_id' => $first->id,
             'name' => 'A',
-            'price' => 1000,
+            'price' => '¥1,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
         $menuB = Menu::query()->create([
             'menu_category_id' => $first->id,
             'name' => 'B',
-            'price' => 2000,
+            'price' => '¥2,000',
             'sort_order' => 2,
             'is_published' => true,
         ]);
@@ -1131,13 +1131,13 @@ class AdminMenusTwoColumnTest extends TestCase
                 'menus' => [
                     $menuA->id => [
                         'name' => 'A',
-                        'price' => 1000,
+                        'price' => '¥1,000',
                         'sort_order' => 1,
                         'is_published' => '1',
                     ],
                     $menuB->id => [
                         'name' => 'B',
-                        'price' => 2000,
+                        'price' => '¥2,000',
                         'sort_order' => 2,
                         'is_published' => '1',
                     ],

@@ -53,15 +53,15 @@ class DatabaseSeeder extends Seeder
 
         Menu::query()->updateOrCreate(
             ['menu_category_id' => $cut->id, 'name' => 'カット'],
-            ['price' => 5500, 'description' => 'シャンプー・ブロー込み', 'sort_order' => 1, 'is_published' => true]
+            ['price' => '¥5,500', 'description' => 'シャンプー・ブロー込み', 'sort_order' => 1, 'is_published' => true]
         );
         Menu::query()->updateOrCreate(
             ['menu_category_id' => $cut->id, 'name' => 'カット + トリートメント'],
-            ['price' => 7700, 'description' => 'ダメージケア込み', 'sort_order' => 2, 'is_published' => true]
+            ['price' => '¥7,700', 'description' => 'ダメージケア込み', 'sort_order' => 2, 'is_published' => true]
         );
         Menu::query()->updateOrCreate(
             ['menu_category_id' => $color->id, 'name' => 'カラー'],
-            ['price' => 8800, 'description' => 'カット・シャンプー・ブロー込み', 'sort_order' => 1, 'is_published' => true]
+            ['price' => '¥8,800', 'description' => 'カット・シャンプー・ブロー込み', 'sort_order' => 1, 'is_published' => true]
         );
 
         StaffMember::query()->updateOrCreate(
