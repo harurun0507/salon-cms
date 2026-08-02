@@ -707,9 +707,18 @@
 
         <div class="flex min-w-0 flex-1 flex-col">
             <header class="sticky top-0 z-20 flex items-center justify-between border-b border-admin-border/60 bg-admin-card/95 px-4 py-4 backdrop-blur-sm md:px-8">
+                @php
+                    $pageIcon = \App\Support\AdminNav::currentPageIcon(
+                        trim($__env->yieldContent('icon'))
+                    );
+                @endphp
                 <h1 class="admin-page-title flex items-center gap-3">
                     <span class="admin-page-title-icon hidden sm:inline-flex" aria-hidden="true">
-                        <x-admin.leaf-icon />
+                        @if ($pageIcon)
+                            <x-admin.nav-icon :name="$pageIcon" class="h-[18px] w-[18px]" />
+                        @else
+                            <x-admin.leaf-icon />
+                        @endif
                     </span>
                     @yield('heading', '管理画面')
                 </h1>

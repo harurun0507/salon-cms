@@ -34,6 +34,50 @@ class AdminConfirmModalTest extends TestCase
         $this->assertStringContainsString('admin-leaf-icon-circle', $html);
     }
 
+    public function test_dashboard_page_title_uses_sidebar_dashboard_icon_not_leaf(): void
+    {
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertTrue(
+            (bool) preg_match('/admin-page-title-icon[^>]*>.*?<\/span>/s', $html, $matches),
+            'Expected admin-page-title-icon markup'
+        );
+
+        $titleIcon = $matches[0];
+        // Lucide Home path used by nav-icon name="dashboard"
+        $this->assertStringContainsString('m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', $titleIcon);
+        $this->assertStringNotContainsString(
+            'M12 21c-4.5-2.5-7.5-6.2-7.5-10.2C4.5 6.2 7.8 3 12 3c4.2 0 7.5 3.2 7.5 7.8 0 4-3 7.7-7.5 10.2Z',
+            $titleIcon
+        );
+        $this->assertStringContainsString('admin-leaf-icon-circle', $html);
+    }
+
+    public function test_news_page_title_uses_sidebar_bell_icon_not_leaf(): void
+    {
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.news.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertTrue(
+            (bool) preg_match('/admin-page-title-icon[^>]*>.*?<\/span>/s', $html, $matches),
+            'Expected admin-page-title-icon markup'
+        );
+
+        $titleIcon = $matches[0];
+        // Lucide Bell path used by nav-icon name="bell"
+        $this->assertStringContainsString('M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9', $titleIcon);
+        $this->assertStringNotContainsString(
+            'M12 21c-4.5-2.5-7.5-6.2-7.5-10.2C4.5 6.2 7.8 3 12 3c4.2 0 7.5 3.2 7.5 7.8 0 4-3 7.7-7.5 10.2Z',
+            $titleIcon
+        );
+        $this->assertStringContainsString('admin-leaf-icon-circle', $html);
+    }
+
     public function test_menus_bulk_save_uses_confirm_modal_without_browser_confirm(): void
     {
         $category = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
