@@ -33,7 +33,12 @@
                         <td class="staff-name">{{ $member->name }}</td>
                         <td class="staff-role">{{ $member->role }}</td>
                         <td class="staff-sort-order">{{ $member->sort_order }}</td>
-                        <td class="staff-status">{{ $member->is_published ? '公開' : '非公開' }}</td>
+                        <td class="staff-status">
+                            <span class="menu-published-label {{ $member->is_published ? 'is-published' : 'is-unpublished' }}">
+                                <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
+                                <span data-published-text>{{ $member->is_published ? '公開' : '非公開' }}</span>
+                            </span>
+                        </td>
                         <td class="text-right">
                             <x-admin.action-group>
                                 <x-admin.edit-button
@@ -73,12 +78,16 @@
             <td class="staff-name"></td>
             <td class="staff-role"></td>
             <td class="staff-sort-order"></td>
-            <td class="staff-status"></td>
+            <td class="staff-status">
+                <span class="menu-published-label is-unpublished">
+                    <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
+                    <span data-published-text></span>
+                </span>
+            </td>
             <td class="text-right">
                 <div class="admin-action-group">
-                    <button type="button" class="btn-admin-edit" data-open-staff-edit data-staff-id="">
-                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M2.695 14.763l-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343Z"/></svg>
-                        <span>編集</span>
+                    <button type="button" class="admin-icon-btn admin-icon-btn-edit" data-open-staff-edit data-staff-id="" aria-label="編集" title="編集">
+                        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.829-2.828Z"/></svg>
                     </button>
                     <form action="" method="POST" class="inline" data-admin-delete-form>
                         <input type="hidden" name="_token" value="">
@@ -87,10 +96,11 @@
                             type="button"
                             data-admin-delete-trigger
                             data-delete-message=""
-                            class="btn-admin-delete"
+                            class="admin-icon-btn admin-icon-btn-delete"
+                            aria-label="削除"
+                            title="削除"
                         >
-                            <svg class="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.5 3a1.5 1.5 0 0 0-1.415 1H4a1 1 0 0 0 0 2h.293l.72 9.364A2.5 2.5 0 0 0 7.505 18h4.99a2.5 2.5 0 0 0 2.492-2.636L15.707 6H16a1 1 0 1 0 0-2h-3.085A1.5 1.5 0 0 0 11.5 3h-3Zm1 1a.5.5 0 0 0-.5.5V5h2v-.5a.5.5 0 0 0-.5-.5h-1ZM7.3 6l.69 8.97a.5.5 0 0 0 .498.53h3.024a.5.5 0 0 0 .498-.53L12.7 6H7.3Z" clip-rule="evenodd"/></svg>
-                            <span>削除</span>
+                            <span aria-hidden="true">&times;</span>
                         </button>
                     </form>
                 </div>
@@ -193,9 +203,22 @@
                     </div>
 
                     <div>
-                        <label class="flex items-center gap-2 text-sm">
-                            <input type="checkbox" name="is_published" id="create-staff-is_published" value="1" checked>
-                            公開する
+                        <label class="menu-published-control" data-published-control>
+                            <input type="hidden" name="is_published" value="0">
+                            <input
+                                type="checkbox"
+                                name="is_published"
+                                id="create-staff-is_published"
+                                value="1"
+                                class="menu-published-checkbox"
+                                data-published-checkbox
+                                checked
+                                aria-label="公開状態"
+                            >
+                            <span class="menu-published-label is-published" data-published-label>
+                                <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
+                                <span data-published-text>公開</span>
+                            </span>
                         </label>
                         <p class="mt-1 hidden text-sm text-red-600" data-error-for="is_published"></p>
                     </div>
@@ -285,9 +308,21 @@
                     </div>
 
                     <div>
-                        <label class="flex items-center gap-2 text-sm">
-                            <input type="checkbox" name="is_published" id="modal-staff-is_published" value="1">
-                            公開する
+                        <label class="menu-published-control" data-published-control>
+                            <input type="hidden" name="is_published" value="0">
+                            <input
+                                type="checkbox"
+                                name="is_published"
+                                id="modal-staff-is_published"
+                                value="1"
+                                class="menu-published-checkbox"
+                                data-published-checkbox
+                                aria-label="公開状態"
+                            >
+                            <span class="menu-published-label is-unpublished" data-published-label>
+                                <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
+                                <span data-published-text>非公開</span>
+                            </span>
                         </label>
                         <p class="mt-1 hidden text-sm text-red-600" data-error-for="is_published"></p>
                     </div>
@@ -333,6 +368,52 @@
             const photoPreview = document.getElementById('modal-staff-photo-preview');
             const photoEmpty = document.getElementById('modal-staff-photo-empty');
             const photoReselectHint = document.getElementById('modal-staff-photo-reselect-hint');
+
+            function syncPublishedLabel(checkbox) {
+                const control = checkbox.closest('[data-published-control]');
+                if (!control) {
+                    return;
+                }
+                const label = control.querySelector('[data-published-label]');
+                const text = control.querySelector('[data-published-text]');
+                if (!label) {
+                    return;
+                }
+                const published = !!checkbox.checked;
+                label.classList.toggle('is-published', published);
+                label.classList.toggle('is-unpublished', !published);
+                if (text) {
+                    text.textContent = published ? '公開' : '非公開';
+                }
+            }
+
+            function setPublishedStatusCell(statusCell, published) {
+                if (!statusCell) {
+                    return;
+                }
+                let label = statusCell.querySelector('.menu-published-label');
+                if (!label) {
+                    statusCell.innerHTML =
+                        '<span class="menu-published-label">' +
+                            '<span class="menu-published-dot" data-published-dot aria-hidden="true"></span>' +
+                            '<span data-published-text></span>' +
+                        '</span>';
+                    label = statusCell.querySelector('.menu-published-label');
+                }
+                label.classList.toggle('is-published', !!published);
+                label.classList.toggle('is-unpublished', !published);
+                const text = statusCell.querySelector('[data-published-text]');
+                if (text) {
+                    text.textContent = published ? '公開' : '非公開';
+                }
+            }
+
+            document.addEventListener('change', function (e) {
+                const checkbox = e.target.closest('[data-published-checkbox]');
+                if (checkbox) {
+                    syncPublishedLabel(checkbox);
+                }
+            });
 
             function setPhotoPreview(url) {
                 if (url) {
@@ -390,6 +471,7 @@
                 profileInput.value = item.profile || '';
                 sortOrderInput.value = item.sort_order != null ? item.sort_order : 0;
                 isPublishedInput.checked = !!item.is_published;
+                syncPublishedLabel(isPublishedInput);
                 savedPhotoUrl = item.photo_url || null;
                 setPhotoPreview(savedPhotoUrl);
             }
@@ -478,9 +560,7 @@
                 if (sortCell) {
                     sortCell.textContent = staff.sort_order != null ? String(staff.sort_order) : '0';
                 }
-                if (statusCell) {
-                    statusCell.textContent = staff.is_published ? '公開' : '非公開';
-                }
+                setPublishedStatusCell(statusCell, !!staff.is_published);
             }
 
             document.addEventListener('click', function (e) {
@@ -684,6 +764,7 @@
                 createPhotoInput.value = '';
                 createSortOrderInput.value = '0';
                 createIsPublishedInput.checked = true;
+                syncPublishedLabel(createIsPublishedInput);
                 clearCreateErrors();
                 setCreatePhotoPreview(null);
                 createSubmitBtn.disabled = false;
@@ -811,10 +892,7 @@
                     sortEl.textContent = String(sortOrder);
                 }
 
-                const statusEl = node.querySelector('.staff-status');
-                if (statusEl) {
-                    statusEl.textContent = staff.is_published ? '公開' : '非公開';
-                }
+                setPublishedStatusCell(node.querySelector('.staff-status'), !!staff.is_published);
 
                 const editBtn = node.querySelector('[data-open-staff-edit]');
                 if (editBtn) {

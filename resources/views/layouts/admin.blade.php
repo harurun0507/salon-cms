@@ -54,9 +54,17 @@
                 .admin-btn { @apply inline-flex items-center justify-center rounded-lg bg-admin-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-admin-accent-dark focus:outline-none focus:ring-2 focus:ring-admin-accent/40 focus:ring-offset-1 focus:ring-offset-admin-bg disabled:cursor-not-allowed disabled:opacity-60; }
                 .admin-btn-secondary { @apply inline-flex items-center justify-center rounded-lg border border-admin-border bg-admin-card px-4 py-2 text-sm font-medium text-admin-text transition hover:bg-admin-hover focus:outline-none focus:ring-2 focus:ring-admin-accent/30 focus:ring-offset-1 focus:ring-offset-admin-bg; }
                 .admin-btn-danger { @apply inline-flex items-center justify-center rounded-lg bg-admin-danger px-4 py-2 text-sm font-medium text-white transition hover:bg-admin-danger-dark focus:outline-none focus:ring-2 focus:ring-admin-danger/40 focus:ring-offset-1; }
-                .admin-action-group { @apply flex flex-wrap items-center justify-end gap-2; }
+                .admin-action-group { @apply flex flex-wrap items-center justify-end gap-1.5; }
                 .btn-admin-create { @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-admin-accent px-4 text-sm font-medium text-white shadow-[0_2px_10px_rgba(0,0,0,0.04)] transition duration-150 hover:-translate-y-0.5 hover:bg-admin-accent-dark hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-admin-accent/40 focus:ring-offset-1 focus:ring-offset-admin-bg disabled:pointer-events-none disabled:opacity-50; }
-                .btn-admin-edit { @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-admin-accent/70 bg-admin-card px-3 text-sm font-medium text-admin-accent shadow-[0_2px_10px_rgba(0,0,0,0.04)] transition duration-150 hover:-translate-y-0.5 hover:bg-admin-accent hover:text-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-admin-accent/40 focus:ring-offset-1 focus:ring-offset-admin-bg; }
+                .admin-icon-btn { display: inline-flex; height: 2rem; width: 2rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px; border: 1px solid #E5E0D7; background-color: #fff; font-size: 1rem; line-height: 1; color: #A89D8C; box-shadow: none; transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease; }
+                .admin-icon-btn:hover { background-color: #F7F5F0; border-color: #D8D2C7; color: #736D65; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
+                .admin-icon-btn:active { background-color: #EEF1E8; color: #697A55; }
+                .admin-icon-btn:focus, .admin-icon-btn:focus-visible { outline: none; background-color: #F7F5F0; border-color: #D8D2C7; color: #736D65; box-shadow: 0 0 0 3px rgba(105, 122, 85, 0.15); }
+                .admin-icon-btn-edit { border-color: #D1D5C9; color: #6B7355; }
+                .admin-icon-btn-edit:hover { background-color: #F5F6F1; border-color: #C4C9B8; color: #5A6248; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
+                .admin-icon-btn-edit:active { background-color: #EEF1E8; border-color: #B8BFA8; color: #4F5640; }
+                .admin-icon-btn-edit:focus, .admin-icon-btn-edit:focus-visible { outline: none; background-color: #F5F6F1; border-color: #C4C9B8; color: #5A6248; box-shadow: 0 0 0 3px rgba(107, 115, 85, 0.15); }
+                .admin-icon-btn-edit svg { height: 0.875rem; width: 0.875rem; flex-shrink: 0; }
                 .btn-admin-delete { @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-admin-danger/70 bg-admin-card px-3 text-sm font-medium text-admin-danger shadow-[0_2px_10px_rgba(0,0,0,0.04)] transition duration-150 hover:-translate-y-0.5 hover:border-admin-danger-dark hover:bg-admin-danger hover:text-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-admin-danger/40 focus:ring-offset-1 focus:ring-offset-admin-bg; }
                 .admin-nav-link { @apply flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-admin-text/90 transition-colors duration-150 hover:bg-admin-hover hover:text-admin-text; }
                 .admin-nav-link svg { @apply text-admin-icon; }
@@ -106,6 +114,33 @@
             .menu-published-label.is-published .menu-published-dot { background-color: #8FA57B; }
             .menu-published-label.is-unpublished { color: #77736D; }
             .menu-published-label.is-unpublished .menu-published-dot { background-color: #B8B5AF; }
+            /* Gallery card meta: equal 50% cols without Tailwind arbitrary values */
+            .gallery-card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+            .admin-input.gallery-sort-input,
+            .gallery-sort-input { width: 100%; max-width: 100%; }
+            .gallery-card-published { display: flex; align-items: center; min-height: 2.625rem; }
+            @media (max-width: 639px) {
+                .gallery-card-meta { grid-template-columns: 1fr; }
+            }
+            .admin-radio-group { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+            .admin-radio-control { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; min-height: 2.5rem; }
+            .admin-radio {
+                appearance: none; -webkit-appearance: none; -moz-appearance: none;
+                position: relative; width: 18px; height: 18px; flex-shrink: 0; margin: 0;
+                border-radius: 9999px; border: 1px solid #E5E0D7; background-color: #fff;
+                cursor: pointer; accent-color: transparent;
+            }
+            .admin-radio::after {
+                content: ''; position: absolute; top: 50%; left: 50%; width: 8px; height: 8px;
+                border-radius: 9999px; background-color: #697A55; opacity: 0; transform: translate(-50%, -50%);
+            }
+            .admin-radio:hover { background-color: #EEF1E8; border-color: #C5D0B8; }
+            .admin-radio:focus,
+            .admin-radio:focus-visible { outline: none; border-color: #697A55; box-shadow: 0 0 0 3px rgba(105, 122, 85, 0.25); }
+            .admin-radio:checked { border-color: #697A55; background-color: #fff; }
+            .admin-radio:checked::after { opacity: 1; }
+            .admin-radio:checked:hover { background-color: #EEF1E8; border-color: #556344; }
+            .admin-radio:checked:hover::after { background-color: #556344; }
         </style>
     @endif
 </head>

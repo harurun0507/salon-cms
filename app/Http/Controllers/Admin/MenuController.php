@@ -20,14 +20,19 @@ class MenuController extends AdminController
 
     public function bulkUpdate(Request $request): RedirectResponse
     {
+        $request->merge([
+            'categories' => $this->normalizeCategorySortOrders($request->input('categories')),
+            'menus' => $this->normalizeMenuSortOrders($request->input('menus')),
+        ]);
+
         $validated = $request->validate([
             'categories' => ['nullable', 'array'],
             'categories.*.name' => ['required', 'string', 'max:255'],
-            'categories.*.sort_order' => ['nullable', 'integer', 'min:0'],
+            'categories.*.sort_order' => ['nullable', 'integer', 'min:1'],
             'menus' => ['nullable', 'array'],
             'menus.*.name' => ['required', 'string', 'max:255'],
             'menus.*.price' => ['required', 'integer', 'min:0'],
-            'menus.*.sort_order' => ['nullable', 'integer', 'min:0'],
+            'menus.*.sort_order' => ['nullable', 'integer', 'min:1'],
             'menus.*.is_published' => ['nullable', 'in:0,1'],
             'menus.*.description' => ['nullable', 'string'],
             'menus.*.category_id' => ['nullable'],
@@ -73,7 +78,7 @@ class MenuController extends AdminController
 
                 MenuCategory::query()->whereKey($key)->update([
                     'name' => $data['name'],
-                    'sort_order' => $data['sort_order'] ?? 0,
+                    'sort_order' => $data['sort_order'] ?? 1,
                 ]);
             }
 
@@ -84,7 +89,7 @@ class MenuController extends AdminController
 
                 $cat = MenuCategory::query()->create([
                     'name' => $data['name'],
-                    'sort_order' => $data['sort_order'] ?? 0,
+                    'sort_order' => $data['sort_order'] ?? 1,
                 ]);
                 $newCategoryMap[(string) $key] = (int) $cat->id;
                 $lastCreatedId = (int) $cat->id;
@@ -98,7 +103,7 @@ class MenuController extends AdminController
                 Menu::query()->whereKey($id)->update([
                     'name' => $data['name'],
                     'price' => $data['price'],
-                    'sort_order' => $data['sort_order'] ?? 0,
+                    'sort_order' => $data['sort_order'] ?? 1,
                     'is_published' => ($data['is_published'] ?? '0') === '1',
                     'description' => $data['description'] ?? null,
                 ]);
@@ -120,7 +125,7 @@ class MenuController extends AdminController
                     'menu_category_id' => $resolvedCategoryId,
                     'name' => $data['name'],
                     'price' => $data['price'],
-                    'sort_order' => $data['sort_order'] ?? 0,
+                    'sort_order' => $data['sort_order'] ?? 1,
                     'is_published' => ($data['is_published'] ?? '0') === '1',
                     'description' => $data['description'] ?? null,
                 ]);
@@ -148,6 +153,101 @@ class MenuController extends AdminController
         }
 
         return $redirect;
+    }
+
+    /**
+     * @param  mixed  $categories
+     * @return array<string, array<string, mixed>>
+     */
+    private function normalizeCategorySortOrders(mixed $categories): array
+    {
+        if (! is_array($categories) || $categories === []) {
+            return [];
+        }
+
+        $needsRenumber = false;
+        $seen = [];
+        foreach ($categories as $data) {
+            if (! is_array($data)) {
+                continue;
+            }
+            $raw = $data['sort_order'] ?? null;
+            if ($raw === null || $raw === '' || ! is_numeric($raw) || (int) $raw < 1 || isset($seen[(int) $raw])) {
+                $needsRenumber = true;
+                break;
+            }
+            $seen[(int) $raw] = true;
+        }
+
+        if (! $needsRenumber) {
+            return $categories;
+        }
+
+        $i = 1;
+        foreach ($categories as $key => $data) {
+            if (! is_array($data)) {
+                continue;
+            }
+            $categories[$key]['sort_order'] = $i++;
+        }
+
+        return $categories;
+    }
+
+    /**
+     * @param  mixed  $menus
+     * @return array<string, array<string, mixed>>
+     */
+    private function normalizeMenuSortOrders(mixed $menus): array
+    {
+        if (! is_array($menus) || $menus === []) {
+            return [];
+        }
+
+        $existingIds = [];
+        foreach (array_keys($menus) as $key) {
+            if (! preg_match('/^new_menu_\d+$/', (string) $key)) {
+                $existingIds[] = $key;
+            }
+        }
+        $categoryByMenuId = $existingIds === []
+            ? collect()
+            : Menu::query()->whereIn('id', $existingIds)->pluck('menu_category_id', 'id');
+
+        $groups = [];
+        foreach ($menus as $key => $data) {
+            if (! is_array($data)) {
+                continue;
+            }
+            if (preg_match('/^new_menu_\d+$/', (string) $key)) {
+                $categoryRef = (string) ($data['category_id'] ?? '');
+            } else {
+                $categoryRef = (string) ($categoryByMenuId[$key] ?? '');
+            }
+            $groups[$categoryRef][] = (string) $key;
+        }
+
+        foreach ($groups as $keys) {
+            $needsRenumber = false;
+            $seen = [];
+            foreach ($keys as $key) {
+                $raw = $menus[$key]['sort_order'] ?? null;
+                if ($raw === null || $raw === '' || ! is_numeric($raw) || (int) $raw < 1 || isset($seen[(int) $raw])) {
+                    $needsRenumber = true;
+                    break;
+                }
+                $seen[(int) $raw] = true;
+            }
+            if (! $needsRenumber) {
+                continue;
+            }
+            $i = 1;
+            foreach ($keys as $key) {
+                $menus[$key]['sort_order'] = $i++;
+            }
+        }
+
+        return $menus;
     }
 
     public function createCategory(): View

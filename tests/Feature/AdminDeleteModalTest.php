@@ -58,15 +58,10 @@ class AdminDeleteModalTest extends TestCase
         $this->assertStringContainsString('id="admin-delete-modal"', $html);
     }
 
-    public function test_staff_and_gallery_delete_messages(): void
+    public function test_staff_delete_messages(): void
     {
         StaffMember::query()->create([
             'name' => '山田 花子',
-            'sort_order' => 1,
-            'is_published' => true,
-        ]);
-        Gallery::query()->create([
-            'image_path' => 'galleries/a.jpg',
             'sort_order' => 1,
             'is_published' => true,
         ]);
@@ -77,12 +72,26 @@ class AdminDeleteModalTest extends TestCase
             ->getContent();
         $this->assertStringContainsString('data-delete-message="「山田 花子」を削除しますか？"', $staffHtml);
         $this->assertStringNotContainsString('return confirm(', $staffHtml);
+    }
+
+    public function test_gallery_defers_delete_to_bulk_save_without_delete_modal_trigger(): void
+    {
+        Gallery::query()->create([
+            'image_path' => 'galleries/a.jpg',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
 
         $galleryHtml = $this->actingAs($this->admin())
             ->get(route('admin.galleries.index'))
             ->assertOk()
             ->getContent();
-        $this->assertStringContainsString('data-delete-message="ギャラリー画像を削除しますか？"', $galleryHtml);
+
+        $this->assertStringContainsString('data-gallery-remove', $galleryHtml);
+        $this->assertStringContainsString('admin-icon-btn-delete', $galleryHtml);
+        $this->assertStringContainsString('id="gallery-deleted-ids"', $galleryHtml);
+        $this->assertStringContainsString("hidden.name = 'deleted_ids[]'", $galleryHtml);
+        $this->assertStringNotContainsString('data-delete-message="ギャラリー画像を削除しますか？"', $galleryHtml);
         $this->assertStringNotContainsString('return confirm(', $galleryHtml);
     }
 

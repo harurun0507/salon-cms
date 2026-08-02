@@ -142,4 +142,23 @@ class ShopNameLogoTest extends TestCase
         $this->assertNull(SalonSetting::current()->fresh()->logo_image);
         Storage::disk('public')->assertMissing($path);
     }
+
+    public function test_settings_page_uses_custom_shop_name_display_radios(): void
+    {
+        SalonSetting::current();
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.settings.edit'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('admin-radio-group', $html);
+        $this->assertStringContainsString('admin-radio-control', $html);
+        $this->assertStringContainsString('class="admin-radio"', $html);
+        $this->assertStringContainsString('name="shop_name_display_type"', $html);
+        $this->assertStringContainsString('value="text"', $html);
+        $this->assertStringContainsString('value="logo"', $html);
+        $this->assertStringContainsString('文字で表示', $html);
+        $this->assertStringContainsString('ロゴ画像で表示', $html);
+    }
 }

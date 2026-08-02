@@ -13,6 +13,7 @@ Route::middleware('web')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::resource('news', NewsController::class)->except(['show']);
+        Route::put('galleries/bulk', [GalleryController::class, 'bulkUpdate'])->name('galleries.bulk-update');
         Route::resource('galleries', GalleryController::class)->except(['show']);
 
         Route::get('menus', [MenuController::class, 'index'])->name('menus.index');

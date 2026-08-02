@@ -48,16 +48,21 @@ class SalonSettingController extends AdminController
             'hero_images.*.alt_text' => ['nullable', 'string', 'max:255'],
             'hero_images.*.is_published' => ['nullable', 'boolean'],
             'new_hero_images' => ['nullable', 'array'],
-            'new_hero_images.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'new_hero_images.*' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'new_hero_meta' => ['nullable', 'array'],
+            'new_hero_meta.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'new_hero_meta.*.alt_text' => ['nullable', 'string', 'max:255'],
+            'new_hero_meta.*.is_published' => ['nullable', 'boolean'],
         ]);
 
         $setting = SalonSetting::current();
         $newFiles = collect($request->file('new_hero_images', []))->filter();
+        $newMeta = $validated['new_hero_meta'] ?? [];
 
         $this->assertHeroImageLimit($setting, $newFiles->count());
 
         $setting->update([
-            ...collect($validated)->except(['hero_images', 'new_hero_images', 'logo_image'])->all(),
+            ...collect($validated)->except(['hero_images', 'new_hero_images', 'new_hero_meta', 'logo_image'])->all(),
             'logo_image' => $this->storeImage($request->file('logo_image'), 'settings/logos', $setting->logo_image),
         ]);
 
@@ -76,12 +81,22 @@ class SalonSettingController extends AdminController
 
         $nextSort = (int) ($setting->heroImages()->max('sort_order') ?? 0);
 
-        foreach ($newFiles as $file) {
+        foreach ($newFiles as $key => $file) {
+            $meta = $newMeta[$key] ?? [];
+            if (array_key_exists('sort_order', $meta) && $meta['sort_order'] !== null && $meta['sort_order'] !== '') {
+                $sortOrder = (int) $meta['sort_order'];
+                $nextSort = max($nextSort, $sortOrder);
+            } else {
+                $sortOrder = ++$nextSort;
+            }
+
             $setting->heroImages()->create([
                 'image_path' => $this->storeImage($file, 'settings'),
-                'alt_text' => null,
-                'sort_order' => ++$nextSort,
-                'is_published' => true,
+                'alt_text' => $meta['alt_text'] ?? null,
+                'sort_order' => $sortOrder,
+                'is_published' => array_key_exists('is_published', $meta)
+                    ? filter_var($meta['is_published'], FILTER_VALIDATE_BOOLEAN)
+                    : true,
             ]);
         }
 

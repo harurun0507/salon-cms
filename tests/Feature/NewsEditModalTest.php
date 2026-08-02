@@ -45,10 +45,38 @@ class NewsEditModalTest extends TestCase
         $this->assertStringContainsString('お知らせ編集', $html);
         $this->assertStringContainsString('元のタイトル', $html);
         $this->assertStringContainsString('複数行もあります。', $html);
+        $this->assertStringContainsString('menu-published-label is-published', $html);
+        $this->assertStringContainsString('menu-published-dot', $html);
+        $this->assertStringContainsString('data-published-text>公開</span>', $html);
+        $this->assertStringContainsString('menu-published-control', $html);
+        $this->assertStringContainsString('menu-published-checkbox', $html);
+        $this->assertStringContainsString('syncPublishedLabel', $html);
+        $this->assertStringContainsString('setPublishedStatusCell', $html);
+        $this->assertStringNotContainsString('公開する', $html);
+        $this->assertStringNotContainsString('news-status rounded-full', $html);
         $this->assertStringNotContainsString(
             'href="'.route('admin.news.edit', $news).'"',
             $html
         );
+    }
+
+    public function test_news_index_shows_unpublished_status_label(): void
+    {
+        $this->createNews([
+            'title' => '非公開お知らせ',
+            'slug' => 'unpublished-news',
+            'is_published' => false,
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.news.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('menu-published-label is-unpublished', $html);
+        $this->assertStringContainsString('data-published-text>非公開</span>', $html);
+        $this->assertStringNotContainsString('公開する', $html);
+        $this->assertStringNotContainsString('news-status rounded-full', $html);
     }
 
     public function test_edit_page_still_available_as_fallback(): void

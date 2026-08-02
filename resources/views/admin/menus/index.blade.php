@@ -111,11 +111,15 @@
                 'kind' => 'new',
                 'id' => (string) $newKey,
                 'data' => $newData,
-                'sort' => (int) ($newData['sort_order'] ?? 0),
+                'sort' => (int) ($newData['sort_order'] ?? 1),
                 'menu_count' => count($restoredNewMenusByCategory[(string) $newKey] ?? []),
             ];
         }
         usort($displayCategories, fn ($a, $b) => $a['sort'] <=> $b['sort']);
+        foreach ($displayCategories as $i => &$displayEntry) {
+            $displayEntry['sort'] = $i + 1;
+        }
+        unset($displayEntry);
 
         // カテゴリ内メニューを old() sort_order で並べ直し（既存・new_menu_* 混在）
         $orderedMenusByCategory = [];
@@ -133,10 +137,14 @@
                     'kind' => 'new',
                     'key' => $newMenuKey,
                     'data' => $newMenuData,
-                    'sort' => (int) ($newMenuData['sort_order'] ?? 0),
+                    'sort' => (int) ($newMenuData['sort_order'] ?? 1),
                 ];
             }
             usort($rows, fn ($a, $b) => $a['sort'] <=> $b['sort']);
+            foreach ($rows as $i => &$menuRow) {
+                $menuRow['sort'] = $i + 1;
+            }
+            unset($menuRow);
             $orderedMenusByCategory[(string) $category->id] = $rows;
         }
         foreach ($restoredNewCategories as $newKey => $newData) {
@@ -146,15 +154,19 @@
                     'kind' => 'new',
                     'key' => $newMenuKey,
                     'data' => $newMenuData,
-                    'sort' => (int) ($newMenuData['sort_order'] ?? 0),
+                    'sort' => (int) ($newMenuData['sort_order'] ?? 1),
                 ];
             }
             usort($rows, fn ($a, $b) => $a['sort'] <=> $b['sort']);
+            foreach ($rows as $i => &$menuRow) {
+                $menuRow['sort'] = $i + 1;
+            }
+            unset($menuRow);
             $orderedMenusByCategory[(string) $newKey] = $rows;
         }
     @endphp
 
-    <div class="sticky top-[4.5rem] z-10 -mx-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:px-8">
+    <div class="sticky top-[4.5rem] z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8">
         <div class="flex min-w-0 flex-wrap items-center gap-3">
             <button
                 type="button"
@@ -243,7 +255,7 @@
                                     <button
                                         type="button"
                                         data-select-category="{{ $category->id }}"
-                                        class="menu-category-nav flex min-w-0 flex-1 items-center gap-2 py-3 pr-3 text-left transition"
+                                        class="menu-category-nav flex min-w-0 flex-1 items-center gap-2 py-3 pr-2 text-left transition"
                                         aria-pressed="false"
                                     >
                                         <span class="min-w-0 flex-1">
@@ -251,18 +263,38 @@
                                             <span class="mt-0.5 block text-xs text-admin-muted">メニュー <span data-category-count="{{ $category->id }}">{{ $entry['menu_count'] }}</span>件</span>
                                         </span>
                                     </button>
-                                    <div class="flex items-center px-1.5">
-                                        <button
-                                            type="button"
-                                            class="category-delete-x"
-                                            data-admin-delete-trigger
-                                            data-delete-form="delete-category-{{ $category->id }}"
-                                            data-delete-message="「{{ $category->name }}」カテゴリと配下のメニューを削除しますか？"
-                                            aria-label="カテゴリを削除"
-                                            title="カテゴリを削除"
-                                        >
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>
+                                    <div class="flex shrink-0 flex-col items-end justify-center gap-0.5 py-2 pl-1.5 pr-3" data-category-sort-wrap>
+                                        <div class="flex flex-col items-start gap-0.5">
+                                            <label for="category-sort-{{ $category->id }}" class="text-left text-xs leading-none text-admin-muted whitespace-nowrap">表示順</label>
+                                            <div class="flex items-center gap-2.5">
+                                                <input
+                                                    type="number"
+                                                    id="category-sort-{{ $category->id }}"
+                                                    name="categories[{{ $category->id }}][sort_order]"
+                                                    value="{{ $entry['sort'] }}"
+                                                    min="1"
+                                                    step="1"
+                                                    required
+                                                    class="admin-input category-sort-order-input w-10 py-1 text-center"
+                                                    data-category-sort-order
+                                                    aria-label="表示順"
+                                                >
+                                                <button
+                                                    type="button"
+                                                    class="category-delete-x"
+                                                    data-admin-delete-trigger
+                                                    data-delete-form="delete-category-{{ $category->id }}"
+                                                    data-delete-message="「{{ $category->name }}」カテゴリと配下のメニューを削除しますか？"
+                                                    aria-label="カテゴリを削除"
+                                                    title="カテゴリを削除"
+                                                >
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        @error('categories.'.$category->id.'.sort_order')
+                                            <p class="max-w-[7.5rem] text-right text-[10px] leading-tight text-admin-danger">{{ $message }}</p>
+                                        @enderror
                                     </div>
                                 </li>
                             @else
@@ -289,7 +321,7 @@
                                     <button
                                         type="button"
                                         data-select-category="{{ $entry['id'] }}"
-                                        class="menu-category-nav flex min-w-0 flex-1 items-center gap-2 py-3 pr-3 text-left transition"
+                                        class="menu-category-nav flex min-w-0 flex-1 items-center gap-2 py-3 pr-2 text-left transition"
                                         aria-pressed="false"
                                     >
                                         <span class="min-w-0 flex-1">
@@ -297,16 +329,36 @@
                                             <span class="mt-0.5 block text-xs text-admin-muted">メニュー <span data-category-count="{{ $entry['id'] }}">{{ $entry['menu_count'] }}</span>件</span>
                                         </span>
                                     </button>
-                                    <div class="flex items-center px-1.5">
-                                        <button
-                                            type="button"
-                                            class="category-delete-x"
-                                            data-discard-category="{{ $entry['id'] }}"
-                                            aria-label="カテゴリを削除"
-                                            title="カテゴリを削除"
-                                        >
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>
+                                    <div class="flex shrink-0 flex-col items-end justify-center gap-0.5 py-2 pl-1.5 pr-3" data-category-sort-wrap>
+                                        <div class="flex flex-col items-start gap-0.5">
+                                            <label for="category-sort-{{ $entry['id'] }}" class="text-left text-xs leading-none text-admin-muted whitespace-nowrap">表示順</label>
+                                            <div class="flex items-center gap-2.5">
+                                                <input
+                                                    type="number"
+                                                    id="category-sort-{{ $entry['id'] }}"
+                                                    name="categories[{{ $entry['id'] }}][sort_order]"
+                                                    value="{{ $entry['sort'] }}"
+                                                    min="1"
+                                                    step="1"
+                                                    required
+                                                    class="admin-input category-sort-order-input w-10 py-1 text-center"
+                                                    data-category-sort-order
+                                                    aria-label="表示順"
+                                                >
+                                                <button
+                                                    type="button"
+                                                    class="category-delete-x"
+                                                    data-discard-category="{{ $entry['id'] }}"
+                                                    aria-label="カテゴリを削除"
+                                                    title="カテゴリを削除"
+                                                >
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        @error('categories.'.$entry['id'].'.sort_order')
+                                            <p class="max-w-[7.5rem] text-right text-[10px] leading-tight text-admin-danger">{{ $message }}</p>
+                                        @enderror
                                     </div>
                                 </li>
                             @endif
@@ -359,12 +411,6 @@
                                     class="admin-input font-medium"
                                     data-category-name-input="{{ $category->id }}"
                                 >
-                                <input
-                                    type="hidden"
-                                    name="categories[{{ $category->id }}][sort_order]"
-                                    value="{{ old('categories.'.$category->id.'.sort_order', $category->sort_order) }}"
-                                    data-category-sort-order
-                                >
                             </div>
                             <div class="md:hidden">
                                 <button
@@ -403,6 +449,7 @@
                                 <col class="menu-col-price">
                                 <col class="menu-col-pub">
                                 <col class="menu-col-desc">
+                                <col class="menu-col-sort">
                                 <col class="menu-col-actions">
                             </colgroup>
                             <thead>
@@ -412,7 +459,8 @@
                                     <th class="!pb-3 !pr-3">料金（円）</th>
                                     <th class="!pb-3 !pr-3">公開</th>
                                     <th class="!pb-3 !pr-3">説明</th>
-                                    <th class="!pb-3 !px-1 text-center">操作</th>
+                                    <th class="!pb-3 !pl-1 !pr-3 text-center whitespace-nowrap">表示順</th>
+                                    <th class="!pb-3 !pl-0 !pr-4 text-center whitespace-nowrap">操作</th>
                                 </tr>
                             </thead>
                             <tbody data-menu-tbody>
@@ -440,7 +488,6 @@
                                                         <circle cx="13" cy="15" r="1.25"/>
                                                     </svg>
                                                 </span>
-                                                <input type="hidden" name="menus[{{ $menu->id }}][sort_order]" value="{{ old('menus.'.$menu->id.'.sort_order', $menu->sort_order) }}" data-menu-sort-order>
                                             </td>
                                             <td class="!py-3 !pr-3 min-w-0">
                                                 <input type="text" name="menus[{{ $menu->id }}][name]" value="{{ old('menus.'.$menu->id.'.name', $menu->name) }}" required class="admin-input min-w-0 py-1.5">
@@ -481,10 +528,26 @@
                                                     placeholder="説明（任意）"
                                                 >{{ old('menus.'.$menu->id.'.description', $menu->description) }}</textarea>
                                             </td>
-                                            <td class="!py-3 !px-1 text-center">
+                                            <td class="!py-3 !pl-1 !pr-2 text-center">
+                                                <input
+                                                    type="number"
+                                                    name="menus[{{ $menu->id }}][sort_order]"
+                                                    value="{{ $row['sort'] }}"
+                                                    min="1"
+                                                    step="1"
+                                                    required
+                                                    class="admin-input menu-sort-order-input w-10 py-1.5 text-center"
+                                                    data-menu-sort-order
+                                                    aria-label="表示順"
+                                                >
+                                                @error('menus.'.$menu->id.'.sort_order')
+                                                    <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
+                                                @enderror
+                                            </td>
+                                            <td class="!py-3 !pl-0 !pr-4 text-left">
                                                 <button
                                                     type="button"
-                                                    class="category-delete-x !opacity-100"
+                                                    class="category-delete-x"
                                                     data-admin-delete-trigger
                                                     data-delete-form="delete-menu-{{ $menu->id }}"
                                                     data-delete-message="「{{ $menu->name }}」を削除しますか？"
@@ -521,7 +584,6 @@
                                                         <circle cx="13" cy="15" r="1.25"/>
                                                     </svg>
                                                 </span>
-                                                <input type="hidden" name="menus[{{ $newMenuKey }}][sort_order]" value="{{ $newMenuData['sort_order'] ?? 0 }}" data-menu-sort-order>
                                             </td>
                                             <td class="!py-3 !pr-3 min-w-0">
                                                 <input type="hidden" name="menus[{{ $newMenuKey }}][category_id]" value="{{ $category->id }}">
@@ -565,10 +627,26 @@
                                                     placeholder="説明（任意）"
                                                 >{{ $newMenuData['description'] ?? '' }}</textarea>
                                             </td>
-                                            <td class="!py-3 !px-1 text-center">
+                                            <td class="!py-3 !pl-1 !pr-2 text-center">
+                                                <input
+                                                    type="number"
+                                                    name="menus[{{ $newMenuKey }}][sort_order]"
+                                                    value="{{ $row['sort'] }}"
+                                                    min="1"
+                                                    step="1"
+                                                    required
+                                                    class="admin-input menu-sort-order-input w-10 py-1.5 text-center"
+                                                    data-menu-sort-order
+                                                    aria-label="表示順"
+                                                >
+                                                @error('menus.'.$newMenuKey.'.sort_order')
+                                                    <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
+                                                @enderror
+                                            </td>
+                                            <td class="!py-3 !pl-0 !pr-4 text-left">
                                                 <button
                                                     type="button"
-                                                    class="category-delete-x !opacity-100"
+                                                    class="category-delete-x"
                                                     data-discard-menu="{{ $newMenuKey }}"
                                                     aria-label="メニュー追加を取り消す"
                                                     title="メニュー追加を取り消す"
@@ -610,12 +688,6 @@
                                 @error('categories.'.$newKey.'.name')
                                     <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
                                 @enderror
-                                <input
-                                    type="hidden"
-                                    name="categories[{{ $newKey }}][sort_order]"
-                                    value="{{ $newData['sort_order'] ?? 0 }}"
-                                    data-category-sort-order
-                                >
                             </div>
                             <div class="md:hidden">
                                 <button
@@ -649,6 +721,7 @@
                                 <col class="menu-col-price">
                                 <col class="menu-col-pub">
                                 <col class="menu-col-desc">
+                                <col class="menu-col-sort">
                                 <col class="menu-col-actions">
                             </colgroup>
                             <thead>
@@ -658,7 +731,8 @@
                                     <th class="!pb-3 !pr-3">料金（円）</th>
                                     <th class="!pb-3 !pr-3">公開</th>
                                     <th class="!pb-3 !pr-3">説明</th>
-                                    <th class="!pb-3 !px-1 text-center">操作</th>
+                                    <th class="!pb-3 !pl-1 !pr-3 text-center whitespace-nowrap">表示順</th>
+                                    <th class="!pb-3 !pl-0 !pr-4 text-center whitespace-nowrap">操作</th>
                                 </tr>
                             </thead>
                             <tbody data-menu-tbody>
@@ -688,7 +762,6 @@
                                                     <circle cx="13" cy="15" r="1.25"/>
                                                 </svg>
                                             </span>
-                                            <input type="hidden" name="menus[{{ $newMenuKey }}][sort_order]" value="{{ $newMenuData['sort_order'] ?? 0 }}" data-menu-sort-order>
                                         </td>
                                         <td class="!py-3 !pr-3 min-w-0">
                                             <input type="hidden" name="menus[{{ $newMenuKey }}][category_id]" value="{{ $newKey }}">
@@ -732,10 +805,26 @@
                                                 placeholder="説明（任意）"
                                             >{{ $newMenuData['description'] ?? '' }}</textarea>
                                         </td>
-                                        <td class="!py-3 !px-1 text-center">
+                                        <td class="!py-3 !pl-1 !pr-2 text-center">
+                                            <input
+                                                type="number"
+                                                name="menus[{{ $newMenuKey }}][sort_order]"
+                                                value="{{ $row['sort'] }}"
+                                                min="1"
+                                                step="1"
+                                                required
+                                                class="admin-input menu-sort-order-input w-10 py-1.5 text-center"
+                                                data-menu-sort-order
+                                                aria-label="表示順"
+                                            >
+                                            @error('menus.'.$newMenuKey.'.sort_order')
+                                                <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
+                                            @enderror
+                                        </td>
+                                        <td class="!py-3 !pl-0 !pr-4 text-left">
                                             <button
                                                 type="button"
-                                                class="category-delete-x !opacity-100"
+                                                class="category-delete-x"
                                                 data-discard-menu="{{ $newMenuKey }}"
                                                 aria-label="メニュー追加を取り消す"
                                                 title="メニュー追加を取り消す"
@@ -802,7 +891,7 @@
             <button
                 type="button"
                 data-select-category="__ID__"
-                class="menu-category-nav flex min-w-0 flex-1 items-center gap-2 py-3 pr-3 text-left transition"
+                class="menu-category-nav flex min-w-0 flex-1 items-center gap-2 py-3 pr-2 text-left transition"
                 aria-pressed="false"
             >
                 <span class="min-w-0 flex-1">
@@ -810,16 +899,33 @@
                     <span class="mt-0.5 block text-xs text-admin-muted">メニュー <span data-category-count="__ID__">0</span>件</span>
                 </span>
             </button>
-            <div class="flex items-center px-1.5">
-                <button
-                    type="button"
-                    class="category-delete-x"
-                    data-discard-category="__ID__"
-                    aria-label="カテゴリを削除"
-                    title="カテゴリを削除"
-                >
-                    <span aria-hidden="true">&times;</span>
-                </button>
+            <div class="flex shrink-0 flex-col items-end justify-center gap-0.5 py-2 pl-1.5 pr-3" data-category-sort-wrap>
+                <div class="flex flex-col items-start gap-0.5">
+                    <label for="category-sort-__ID__" class="text-left text-xs leading-none text-admin-muted whitespace-nowrap">表示順</label>
+                    <div class="flex items-center gap-2.5">
+                        <input
+                            type="number"
+                            id="category-sort-__ID__"
+                            name="categories[__ID__][sort_order]"
+                            value="1"
+                            min="1"
+                            step="1"
+                            required
+                            class="admin-input category-sort-order-input w-10 py-1 text-center"
+                            data-category-sort-order
+                            aria-label="表示順"
+                        >
+                        <button
+                            type="button"
+                            class="category-delete-x"
+                            data-discard-category="__ID__"
+                            aria-label="カテゴリを削除"
+                            title="カテゴリを削除"
+                        >
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </li>
     </template>
@@ -850,12 +956,6 @@
                         class="admin-input font-medium"
                         data-category-name-input="__ID__"
                         placeholder="カテゴリ名を入力"
-                    >
-                    <input
-                        type="hidden"
-                        name="categories[__ID__][sort_order]"
-                        value="0"
-                        data-category-sort-order
                     >
                 </div>
                 <div class="md:hidden">
@@ -910,6 +1010,7 @@
                     <col class="menu-col-price">
                     <col class="menu-col-pub">
                     <col class="menu-col-desc">
+                    <col class="menu-col-sort">
                     <col class="menu-col-actions">
                 </colgroup>
                 <thead>
@@ -919,7 +1020,8 @@
                         <th class="!pb-3 !pr-3">料金（円）</th>
                         <th class="!pb-3 !pr-3">公開</th>
                         <th class="!pb-3 !pr-3">説明</th>
-                        <th class="!pb-3 !px-1 text-center">操作</th>
+                        <th class="!pb-3 !pl-1 !pr-3 text-center whitespace-nowrap">表示順</th>
+                        <th class="!pb-3 !pl-0 !pr-4 text-center whitespace-nowrap">操作</th>
                     </tr>
                 </thead>
                 <tbody data-menu-tbody></tbody>
@@ -949,7 +1051,6 @@
                         <circle cx="13" cy="15" r="1.25"/>
                     </svg>
                 </span>
-                <input type="hidden" name="menus[__MENU_ID__][sort_order]" value="__SORT__" data-menu-sort-order>
             </td>
             <td class="!py-3 !pr-3 min-w-0">
                 <input type="hidden" name="menus[__MENU_ID__][category_id]" value="__CATEGORY_ID__">
@@ -984,10 +1085,23 @@
                     placeholder="説明（任意）"
                 ></textarea>
             </td>
-            <td class="!py-3 !px-1 text-center">
+            <td class="!py-3 !pl-1 !pr-2 text-center">
+                <input
+                    type="number"
+                    name="menus[__MENU_ID__][sort_order]"
+                    value="__SORT__"
+                    min="1"
+                    step="1"
+                    required
+                    class="admin-input menu-sort-order-input w-10 py-1.5 text-center"
+                    data-menu-sort-order
+                    aria-label="表示順"
+                >
+            </td>
+            <td class="!py-3 !pl-0 !pr-4 text-left">
                 <button
                     type="button"
-                    class="category-delete-x !opacity-100"
+                    class="category-delete-x"
                     data-discard-menu="__MENU_ID__"
                     aria-label="メニュー追加を取り消す"
                     title="メニュー追加を取り消す"
@@ -1005,15 +1119,41 @@
         }
 
         .menu-list-table .menu-col-handle { width: 28px; }
-        .menu-list-table .menu-col-name { width: 22%; }
-        .menu-list-table .menu-col-price { width: 12%; }
+        .menu-list-table .menu-col-name { width: 20%; }
+        .menu-list-table .menu-col-price { width: 11%; }
         .menu-list-table .menu-col-pub { width: 118px; }
         .menu-list-table .menu-col-desc { width: auto; }
-        .menu-list-table .menu-col-actions { width: 48px; }
+        /* sort: 2.5rem input + pl-1 + pr-2; wide enough for nowrap「表示順」 */
+        .menu-list-table .menu-col-sort { width: 5.5rem; }
+        /* actions: 2rem × + pr-4; room for nowrap「操作」(2 chars) without vertical wrap */
+        .menu-list-table .menu-col-actions { width: 4.25rem; }
+
+        .menu-list-table th:nth-last-child(2),
+        .menu-list-table th:last-child {
+            white-space: nowrap;
+            writing-mode: horizontal-tb;
+        }
+
+        .menu-sort-order-input,
+        .category-sort-order-input {
+            width: 2.5rem; /* w-10: 2-digit fit */
+            min-width: 2.5rem;
+            max-width: 2.5rem;
+            padding-left: 0.25rem;
+            padding-right: 0.25rem;
+            box-sizing: border-box;
+        }
 
         .menu-list-table th,
         .menu-list-table td {
             vertical-align: top;
+            box-sizing: border-box;
+        }
+
+        .menu-list-table .menu-col-actions,
+        .menu-list-table th:last-child,
+        .menu-list-table td:last-child {
+            overflow: visible;
         }
 
         .menu-description-textarea {
@@ -1031,6 +1171,14 @@
         .menu-list-row {
             position: relative;
             transition: background-color 0.15s ease;
+        }
+
+        .menu-list-row:hover {
+            background-color: #EEF1E8;
+        }
+
+        .menu-list-row.is-selected {
+            background-color: #E5EADD;
         }
 
         .menu-list-row.is-dragging {
@@ -1222,6 +1370,8 @@
 
         .menu-category-row:hover .category-delete-x,
         .menu-category-row.is-selected .category-delete-x,
+        .menu-list-row:hover .category-delete-x,
+        .menu-list-row.is-selected .category-delete-x,
         .category-delete-x:focus,
         .category-delete-x:focus-visible {
             opacity: 1;
@@ -1240,6 +1390,7 @@
     <script>
         (function () {
             let selectedCategoryId = null;
+            let selectedMenuId = null;
             let pendingDiscardId = null;
 
             const workspace = document.querySelector('[data-menus-workspace]');
@@ -1352,6 +1503,13 @@
                 }
             }
 
+            function selectMenu(menuId) {
+                selectedMenuId = menuId ? String(menuId) : null;
+                document.querySelectorAll('[data-menu-row]').forEach(function (row) {
+                    row.classList.toggle('is-selected', selectedMenuId && row.getAttribute('data-menu-row') === selectedMenuId);
+                });
+            }
+
             function syncCategoryLabel(categoryId, value) {
                 const label = value && value.trim() ? value : '新しいカテゴリ';
                 document.querySelectorAll('[data-category-label="' + categoryId + '"]').forEach(function (el) {
@@ -1448,9 +1606,9 @@
             function nextSortOrderForPanel(panel) {
                 const tbody = panel.querySelector('[data-menu-tbody]');
                 if (!tbody) {
-                    return 0;
+                    return 1;
                 }
-                return tbody.querySelectorAll('[data-menu-row]').length;
+                return tbody.querySelectorAll('[data-menu-row]').length + 1;
             }
 
             function renumberMenuSortOrders(panel) {
@@ -1464,7 +1622,7 @@
                 tbody.querySelectorAll('[data-menu-row]').forEach(function (row, index) {
                     const input = row.querySelector('[data-menu-sort-order]');
                     if (input) {
-                        input.value = String(index);
+                        input.value = String(index + 1);
                     }
                 });
             }
@@ -1505,6 +1663,7 @@
                 if (nameInput) {
                     nameInput.focus();
                 }
+                selectMenu(menuId);
             }
 
             function discardNewMenu(menuId) {
@@ -1514,6 +1673,9 @@
                 }
                 const panel = row.closest('[data-category-panel]');
                 const categoryId = panel ? panel.getAttribute('data-category-panel') : null;
+                if (selectedMenuId && selectedMenuId === String(menuId)) {
+                    selectedMenuId = null;
+                }
                 row.remove();
                 if (panel) {
                     renumberMenuSortOrders(panel);
@@ -1543,10 +1705,7 @@
                 const panel = cloneTemplate(panelTemplate, id);
                 panelsWrap.appendChild(panel);
 
-                const sortInput = panel.querySelector('[data-category-sort-order]');
-                if (sortInput) {
-                    sortInput.value = String(Math.max(0, categoryList.querySelectorAll('[data-category-row]').length - 1));
-                }
+                renumberCategorySortOrders();
 
                 bindSelectButtons(row);
                 bindSelectButtons(tabsInner);
@@ -1567,12 +1726,18 @@
             }
 
             function renumberCategorySortOrders() {
-                getCategoryIdsInOrder().forEach(function (id, index) {
-                    const panel = document.querySelector('[data-category-panel="' + id + '"]');
-                    const input = panel ? panel.querySelector('[data-category-sort-order]') : null;
+                document.querySelectorAll('[data-category-list] > [data-category-row]').forEach(function (row, index) {
+                    const input = row.querySelector('[data-category-sort-order]');
                     if (input) {
-                        input.value = String(index);
+                        input.value = String(index + 1);
                     }
+                });
+            }
+
+            function syncAllSortOrdersFromDom() {
+                renumberCategorySortOrders();
+                document.querySelectorAll('[data-category-panel]').forEach(function (panel) {
+                    renumberMenuSortOrders(panel);
                 });
             }
 
@@ -1898,6 +2063,12 @@
                 initCategoryDragDrop();
                 initMenuDragDrop();
 
+                if (bulkSaveBtn) {
+                    bulkSaveBtn.addEventListener('click', function () {
+                        syncAllSortOrdersFromDom();
+                    }, true);
+                }
+
                 document.querySelectorAll('[data-add-category]').forEach(function (btn) {
                     btn.addEventListener('click', function (e) {
                         e.preventDefault();
@@ -1956,6 +2127,11 @@
                     e.preventDefault();
                     discardNewMenu(discardMenuBtn.getAttribute('data-discard-menu'));
                     return;
+                }
+
+                const menuRow = e.target.closest('[data-menu-row]');
+                if (menuRow) {
+                    selectMenu(menuRow.getAttribute('data-menu-row'));
                 }
 
                 const menuAddTrigger = e.target.closest('[data-menu-add-btn]');

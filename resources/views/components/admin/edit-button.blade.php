@@ -3,17 +3,22 @@
 ])
 
 @php
-    $icon = '<svg class="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M2.695 14.763l-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343Z"/></svg>';
+    $label = $slot->isEmpty() ? '編集' : (string) $slot;
+    $icon = '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.829-2.828Z"/></svg>';
 @endphp
 
 @if ($href)
-    <a href="{{ $href }}" {{ $attributes->class('btn-admin-edit') }}>
+    <a
+        href="{{ $href }}"
+        {{ $attributes->class(['admin-icon-btn', 'admin-icon-btn-edit'])->merge(['aria-label' => $label, 'title' => $label]) }}
+    >
         {!! $icon !!}
-        <span>{{ $slot->isEmpty() ? '編集' : $slot }}</span>
     </a>
 @else
-    <button type="button" {{ $attributes->class('btn-admin-edit') }}>
+    <button
+        type="button"
+        {{ $attributes->class(['admin-icon-btn', 'admin-icon-btn-edit'])->merge(['aria-label' => $label, 'title' => $label]) }}
+    >
         {!! $icon !!}
-        <span>{{ $slot->isEmpty() ? '編集' : $slot }}</span>
     </button>
 @endif

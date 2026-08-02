@@ -30,6 +30,13 @@ class StaffCreateModalTest extends TestCase
         $this->assertStringContainsString('id="staff-row-template"', $html);
         $this->assertStringContainsString('role="dialog"', $html);
         $this->assertStringContainsString('スタッフ追加', $html);
+        $this->assertStringContainsString('menu-published-control', $html);
+        $this->assertStringContainsString('menu-published-checkbox', $html);
+        $this->assertStringContainsString('data-published-control', $html);
+        $this->assertStringContainsString('menu-published-label is-published', $html);
+        $this->assertStringContainsString('menu-published-dot', $html);
+        $this->assertStringContainsString('syncPublishedLabel', $html);
+        $this->assertStringNotContainsString('公開する', $html);
 
         $this->assertDoesNotMatchRegularExpression(
             '/data-open-staff-create[^>]*(?:href\s*=\s*["\'][^"\']*staff\/create|href\s*=\s*["\'][^"\']*'.preg_quote(parse_url(route('admin.staff.create'), PHP_URL_PATH), '/').')/',

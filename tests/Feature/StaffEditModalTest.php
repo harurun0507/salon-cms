@@ -48,10 +48,34 @@ class StaffEditModalTest extends TestCase
         $this->assertStringContainsString('スタッフ編集', $html);
         $this->assertStringContainsString('山田 花子', $html);
         $this->assertStringContainsString('よろしくお願いします。', $html);
+        $this->assertStringContainsString('menu-published-label is-published', $html);
+        $this->assertStringContainsString('menu-published-dot', $html);
+        $this->assertStringContainsString('data-published-text>公開</span>', $html);
+        $this->assertStringContainsString('menu-published-control', $html);
+        $this->assertStringContainsString('menu-published-checkbox', $html);
+        $this->assertStringContainsString('syncPublishedLabel', $html);
+        $this->assertStringNotContainsString('公開する', $html);
         $this->assertStringNotContainsString(
             'href="'.route('admin.staff.edit', $staff).'"',
             $html
         );
+    }
+
+    public function test_staff_index_shows_unpublished_status_badge(): void
+    {
+        $this->createStaff([
+            'name' => '非公開スタッフ',
+            'is_published' => false,
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.staff.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('menu-published-label is-unpublished', $html);
+        $this->assertStringContainsString('data-published-text>非公開</span>', $html);
+        $this->assertStringNotContainsString('公開する', $html);
     }
 
     public function test_edit_page_still_available_as_fallback(): void

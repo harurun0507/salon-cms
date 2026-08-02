@@ -223,6 +223,156 @@ class HeroImageTest extends TestCase
         $response = $this->actingAs($this->admin())->get(route('admin.settings.edit'));
         $response->assertOk();
         $response->assertDontSee('storage/settings/legacy-only.png', false);
-        $response->assertSee('現在登録されている画像はありません', false);
+        $response->assertDontSee('現在登録されている画像はありません', false);
+        $response->assertSee('id="hero-image-add-card"', false);
+        $response->assertSee('カードを追加し、「保存する」で登録できます。', false);
+    }
+
+    public function test_settings_page_uses_add_button_instead_of_permanent_dropzone(): void
+    {
+        SalonSetting::current();
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.settings.edit'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('id="hero-image-add-card"', $html);
+        $this->assertStringContainsString('id="hero-image-add-card-btn"', $html);
+        $this->assertStringContainsString('data-hero-add', $html);
+        $this->assertStringContainsString('admin-empty-state-icon', $html);
+        $this->assertStringContainsString('min-h-[22rem]', $html);
+        $this->assertStringContainsString('カードを追加し、「保存する」で登録できます。', $html);
+        $this->assertDoesNotMatchRegularExpression('/id="hero-image-add-card"\s[^>]*\bhidden\b/', $html);
+        $this->assertStringContainsString('画像を追加', $html);
+        $this->assertStringContainsString('id="hero-images-list"', $html);
+        $this->assertStringContainsString('createHeroSlot', $html);
+        $this->assertStringContainsString('heroAddCard.before(block)', $html);
+        $this->assertStringContainsString('syncHeroAddUi', $html);
+        $this->assertStringContainsString('lg:items-start', $html);
+        $this->assertStringContainsString('menu-published-checkbox', $html);
+        $this->assertStringContainsString('data-published-control', $html);
+        $this->assertStringContainsString('menu-published-label is-published', $html);
+        $this->assertStringContainsString('data-published-text>公開', $html);
+        $this->assertStringContainsString('syncPublishedLabel', $html);
+        $this->assertStringNotContainsString('id="hero-image-add-footer"', $html);
+        $this->assertStringNotContainsString('id="hero-image-add-btn"', $html);
+        $this->assertStringNotContainsString('空の枠はプレビュー欄から画像を選択できます。', $html);
+        $this->assertStringNotContainsString('mt-6 border-t border-gray-200 pt-4', $html);
+        $this->assertStringNotContainsString('現在登録されている画像はありません', $html);
+        $this->assertStringNotContainsString('公開する', $html);
+        $this->assertStringNotContainsString('mt-2 text-xs text-gray-500">JPEG / PNG / WebP、5MBまで（合計最大', $html);
+        $this->assertStringNotContainsString('mt-auto border-t border-gray-200 pt-4', $html);
+        $this->assertStringNotContainsString('id="hero-image-dropzone"', $html);
+        $this->assertStringNotContainsString('name="new_hero_images[]"', $html);
+    }
+
+    public function test_settings_page_keeps_add_card_after_existing_hero_images(): void
+    {
+        Storage::fake('public');
+        $setting = SalonSetting::current();
+        HeroImage::query()->create([
+            'salon_setting_id' => $setting->id,
+            'image_path' => 'settings/exists.jpg',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.settings.edit'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertDoesNotMatchRegularExpression('/id="hero-image-add-card"\s[^>]*\bhidden\b/', $html);
+        $this->assertStringContainsString('id="hero-image-add-card"', $html);
+        $this->assertStringContainsString('id="hero-image-add-card-btn"', $html);
+        $this->assertStringContainsString('heroAddCard.before(block)', $html);
+        $this->assertStringContainsString('syncHeroAddUi', $html);
+        $this->assertStringNotContainsString('id="hero-image-add-footer"', $html);
+        $this->assertStringNotContainsString('id="hero-image-add-btn"', $html);
+        $this->assertStringNotContainsString('空の枠はプレビュー欄から画像を選択できます。', $html);
+        $this->assertStringNotContainsString('現在登録されている画像はありません', $html);
+
+        $existingPos = strpos($html, 'data-hero-existing');
+        $addCardPos = strpos($html, 'id="hero-image-add-card"');
+        $this->assertNotFalse($existingPos);
+        $this->assertNotFalse($addCardPos);
+        $this->assertGreaterThan($existingPos, $addCardPos);
+    }
+
+    public function test_settings_page_hides_add_card_when_hero_images_at_max(): void
+    {
+        Storage::fake('public');
+        $setting = SalonSetting::current();
+        for ($i = 0; $i < HeroImage::MAX_COUNT; $i++) {
+            HeroImage::query()->create([
+                'salon_setting_id' => $setting->id,
+                'image_path' => 'settings/max-'.$i.'.jpg',
+                'sort_order' => $i + 1,
+                'is_published' => true,
+            ]);
+        }
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.settings.edit'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertMatchesRegularExpression('/id="hero-image-add-card"\s[^>]*\bhidden\b/', $html);
+        $this->assertStringContainsString('syncHeroAddUi', $html);
+        $this->assertStringNotContainsString('id="hero-image-add-footer"', $html);
+    }
+
+    public function test_settings_page_styles_hero_publish_checkbox_like_menus(): void
+    {
+        Storage::fake('public');
+        $setting = SalonSetting::current();
+        HeroImage::query()->create([
+            'salon_setting_id' => $setting->id,
+            'image_path' => 'settings/styled.jpg',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.settings.edit'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('menu-published-control', $html);
+        $this->assertStringContainsString('menu-published-checkbox', $html);
+        $this->assertStringContainsString('data-published-control', $html);
+        $this->assertStringContainsString('menu-published-label is-published', $html);
+        $this->assertStringContainsString('menu-published-dot', $html);
+        $this->assertStringContainsString('data-published-text>公開</span>', $html);
+        $this->assertStringContainsString('syncPublishedLabel', $html);
+        $this->assertStringNotContainsString('公開する', $html);
+    }
+
+    public function test_admin_can_upload_new_hero_image_with_meta(): void
+    {
+        Storage::fake('public');
+        $setting = SalonSetting::current();
+
+        $this->actingAs($this->admin())->put(route('admin.settings.update'), [
+            'shop_name' => 'Test Salon',
+            'shop_name_display_type' => 'text',
+            'new_hero_images' => [
+                'new_1' => UploadedFile::fake()->image('with-meta.jpg'),
+            ],
+            'new_hero_meta' => [
+                'new_1' => [
+                    'sort_order' => 7,
+                    'alt_text' => '新規alt',
+                    'is_published' => '0',
+                ],
+            ],
+        ])->assertRedirect(route('admin.settings.edit'));
+
+        $image = $setting->heroImages()->first();
+        $this->assertNotNull($image);
+        $this->assertSame(7, $image->sort_order);
+        $this->assertSame('新規alt', $image->alt_text);
+        $this->assertFalse($image->is_published);
     }
 }

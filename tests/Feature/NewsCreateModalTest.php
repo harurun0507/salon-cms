@@ -28,6 +28,15 @@ class NewsCreateModalTest extends TestCase
         $this->assertStringContainsString('id="news-row-template"', $html);
         $this->assertStringContainsString('role="dialog"', $html);
         $this->assertStringContainsString('お知らせ登録', $html);
+        $this->assertStringContainsString('menu-published-control', $html);
+        $this->assertStringContainsString('menu-published-checkbox', $html);
+        $this->assertStringContainsString('data-published-control', $html);
+        $this->assertStringContainsString('menu-published-label is-unpublished', $html);
+        $this->assertStringContainsString('menu-published-dot', $html);
+        $this->assertStringContainsString('syncPublishedLabel', $html);
+        $this->assertStringContainsString('setPublishedStatusCell', $html);
+        $this->assertStringNotContainsString('公開する', $html);
+        $this->assertStringNotContainsString('news-status rounded-full', $html);
 
         $this->assertDoesNotMatchRegularExpression(
             '/data-open-news-create[^>]*(?:href\s*=\s*["\'][^"\']*news\/create|href\s*=\s*["\'][^"\']*'.preg_quote(parse_url(route('admin.news.create'), PHP_URL_PATH), '/').')/',
