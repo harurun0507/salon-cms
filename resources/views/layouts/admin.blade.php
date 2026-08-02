@@ -1036,20 +1036,16 @@
         hidden
     >
         <div class="admin-modal-panel w-full max-w-md rounded-xl border border-admin-border/50 bg-admin-card p-6" data-admin-confirm-panel>
-            <div class="mb-4 flex items-start justify-between gap-3">
-                <div class="flex items-start gap-3">
-                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E8EFE2] text-[#6F8258]" aria-hidden="true">
-                        <x-admin.leaf-icon class="h-[18px] w-[18px]" />
-                    </span>
-                    <div>
-                        <h2 id="admin-confirm-modal-title" class="text-lg font-semibold text-admin-text">確認</h2>
-                        <p id="admin-confirm-modal-message" class="mt-2 whitespace-pre-line text-sm text-admin-text/90"></p>
-                        <p id="admin-confirm-modal-note" class="mt-2 hidden text-sm text-admin-muted"></p>
-                    </div>
+            <div class="mb-4 flex items-start gap-3">
+                <x-admin.leaf-icon-circle />
+                <div class="min-w-0 flex-1">
+                    <h2 id="admin-confirm-modal-title" class="text-lg font-semibold text-admin-text">確認</h2>
+                    <p id="admin-confirm-modal-message" class="mt-2 whitespace-pre-line text-sm text-admin-text/90"></p>
+                    <p id="admin-confirm-modal-note" class="mt-2 hidden text-sm text-admin-muted"></p>
                 </div>
                 <button
                     type="button"
-                    class="rounded-md p-1 text-admin-muted transition hover:bg-admin-hover hover:text-admin-text focus:outline-none focus:ring-2 focus:ring-admin-accent/40"
+                    class="shrink-0 rounded-md p-1 text-admin-muted transition hover:bg-admin-hover hover:text-admin-text focus:outline-none focus:ring-2 focus:ring-admin-accent/40"
                     aria-label="閉じる"
                     data-admin-confirm-cancel
                 >

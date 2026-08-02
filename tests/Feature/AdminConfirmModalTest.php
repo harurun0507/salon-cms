@@ -31,8 +31,7 @@ class AdminConfirmModalTest extends TestCase
         $this->assertStringContainsString('data-admin-confirm-cancel', $html);
         $this->assertStringContainsString('id="admin-delete-modal"', $html);
         $this->assertStringContainsString('M12 21c-4.5-2.5-7.5-6.2-7.5-10.2C4.5 6.2 7.8 3 12 3c4.2 0 7.5 3.2 7.5 7.8 0 4-3 7.7-7.5 10.2Z', $html);
-        $this->assertStringContainsString('bg-[#E8EFE2] text-[#6F8258]', $html);
-        $this->assertStringContainsString('inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E8EFE2]', $html);
+        $this->assertStringContainsString('admin-leaf-icon-circle', $html);
     }
 
     public function test_menus_bulk_save_uses_confirm_modal_without_browser_confirm(): void

@@ -367,6 +367,19 @@
         @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E8EDE3] text-admin-accent;
     }
 
+    /* Explicit colors — arbitrary Tailwind bg/text often purged from Blade components */
+    .admin-leaf-icon-circle {
+        display: inline-flex;
+        height: 2.5rem; /* 40px */
+        width: 2.5rem;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        background: #E8EFE2;
+        color: #6F8258;
+    }
+
     .admin-brand-title {
         @apply font-serif text-lg font-medium tracking-wide text-admin-text;
     }
