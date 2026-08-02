@@ -513,24 +513,21 @@
                                                 @php
                                                     $menuPublished = old('menus.'.$menu->id.'.is_published', $menu->is_published ? '1' : '0') == '1';
                                                 @endphp
-                                                <label class="menu-published-control" data-published-control>
+                                                <label class="admin-switch admin-switch--compact" data-published-control>
                                                     <input type="hidden" name="menus[{{ $menu->id }}][is_published]" value="0">
                                                     <input
                                                         type="checkbox"
                                                         name="menus[{{ $menu->id }}][is_published]"
                                                         value="1"
-                                                        class="menu-published-checkbox"
+                                                        class="admin-switch-input"
                                                         data-published-checkbox
                                                         @checked($menuPublished)
                                                         aria-label="公開状態"
                                                     >
-                                                    <span
-                                                        class="menu-published-label {{ $menuPublished ? 'is-published' : 'is-unpublished' }}"
-                                                        data-published-label
-                                                    >
-                                                        <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
-                                                        <span data-published-text>{{ $menuPublished ? '公開' : '非公開' }}</span>
+                                                    <span class="admin-switch-track" aria-hidden="true">
+                                                        <span class="admin-switch-thumb"></span>
                                                     </span>
+                                                    <span class="admin-switch-text" data-published-text>{{ $menuPublished ? '公開' : '非公開' }}</span>
                                                 </label>
                                             </td>
                                             <td class="!py-3 !pl-1 !pr-2 text-center">
@@ -618,24 +615,21 @@
                                                 @php
                                                     $newMenuPublished = ($newMenuData['is_published'] ?? '1') == '1';
                                                 @endphp
-                                                <label class="menu-published-control" data-published-control>
+                                                <label class="admin-switch admin-switch--compact" data-published-control>
                                                     <input type="hidden" name="menus[{{ $newMenuKey }}][is_published]" value="0">
                                                     <input
                                                         type="checkbox"
                                                         name="menus[{{ $newMenuKey }}][is_published]"
                                                         value="1"
-                                                        class="menu-published-checkbox"
+                                                        class="admin-switch-input"
                                                         data-published-checkbox
                                                         @checked($newMenuPublished)
                                                         aria-label="公開状態"
                                                     >
-                                                    <span
-                                                        class="menu-published-label {{ $newMenuPublished ? 'is-published' : 'is-unpublished' }}"
-                                                        data-published-label
-                                                    >
-                                                        <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
-                                                        <span data-published-text>{{ $newMenuPublished ? '公開' : '非公開' }}</span>
+                                                    <span class="admin-switch-track" aria-hidden="true">
+                                                        <span class="admin-switch-thumb"></span>
                                                     </span>
+                                                    <span class="admin-switch-text" data-published-text>{{ $newMenuPublished ? '公開' : '非公開' }}</span>
                                                 </label>
                                             </td>
                                             <td class="!py-3 !pl-1 !pr-2 text-center">
@@ -802,24 +796,21 @@
                                             @php
                                                 $newMenuPublished = ($newMenuData['is_published'] ?? '1') == '1';
                                             @endphp
-                                            <label class="menu-published-control" data-published-control>
+                                            <label class="admin-switch admin-switch--compact" data-published-control>
                                                 <input type="hidden" name="menus[{{ $newMenuKey }}][is_published]" value="0">
                                                 <input
                                                     type="checkbox"
                                                     name="menus[{{ $newMenuKey }}][is_published]"
                                                     value="1"
-                                                    class="menu-published-checkbox"
+                                                    class="admin-switch-input"
                                                     data-published-checkbox
                                                     @checked($newMenuPublished)
                                                     aria-label="公開状態"
                                                 >
-                                                <span
-                                                    class="menu-published-label {{ $newMenuPublished ? 'is-published' : 'is-unpublished' }}"
-                                                    data-published-label
-                                                >
-                                                    <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
-                                                    <span data-published-text>{{ $newMenuPublished ? '公開' : '非公開' }}</span>
+                                                <span class="admin-switch-track" aria-hidden="true">
+                                                    <span class="admin-switch-thumb"></span>
                                                 </span>
+                                                <span class="admin-switch-text" data-published-text>{{ $newMenuPublished ? '公開' : '非公開' }}</span>
                                             </label>
                                         </td>
                                         <td class="!py-3 !pl-1 !pr-2 text-center">
@@ -1091,21 +1082,21 @@
                 <input type="text" name="menus[__MENU_ID__][price]" value="" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。">
             </td>
             <td class="!py-3 !pr-3">
-                <label class="menu-published-control" data-published-control>
+                <label class="admin-switch admin-switch--compact" data-published-control>
                     <input type="hidden" name="menus[__MENU_ID__][is_published]" value="0">
                     <input
                         type="checkbox"
                         name="menus[__MENU_ID__][is_published]"
                         value="1"
-                        class="menu-published-checkbox"
+                        class="admin-switch-input"
                         data-published-checkbox
                         checked
                         aria-label="公開状態"
                     >
-                    <span class="menu-published-label is-published" data-published-label>
-                        <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
-                        <span data-published-text>公開</span>
+                    <span class="admin-switch-track" aria-hidden="true">
+                        <span class="admin-switch-thumb"></span>
                     </span>
+                    <span class="admin-switch-text" data-published-text>公開</span>
                 </label>
             </td>
             <td class="!py-3 !pl-1 !pr-2 text-center">
@@ -1143,9 +1134,9 @@
 
         .menu-list-table .menu-col-handle { width: 28px; }
         .menu-list-table .menu-col-name { width: 20%; }
-        .menu-list-table .menu-col-desc { width: 40%; }
+        .menu-list-table .menu-col-desc { width: 38%; }
         .menu-list-table .menu-col-price { width: 13%; }
-        .menu-list-table .menu-col-pub { width: 10%; min-width: 5.5rem; }
+        .menu-list-table .menu-col-pub { width: 11%; min-width: 7rem; }
         /* sort: 2.5rem input + pl-1 + pr-2; wide enough for nowrap「表示順」 */
         .menu-list-table .menu-col-sort { width: 5.5rem; }
         /* actions: 2rem × + pr-4; room for nowrap「操作」(2 chars) without vertical wrap */
@@ -1451,16 +1442,9 @@
                 if (!control) {
                     return;
                 }
-                const label = control.querySelector('[data-published-label]');
                 const text = control.querySelector('[data-published-text]');
-                if (!label) {
-                    return;
-                }
-                const published = !!checkbox.checked;
-                label.classList.toggle('is-published', published);
-                label.classList.toggle('is-unpublished', !published);
                 if (text) {
-                    text.textContent = published ? '公開' : '非公開';
+                    text.textContent = checkbox.checked ? '公開' : '非公開';
                 }
             }
 

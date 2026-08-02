@@ -23,7 +23,7 @@ class AdminMenusTwoColumnTest extends TestCase
     {
         $first = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
         $second = MenuCategory::query()->create(['name' => 'カラー', 'sort_order' => 2]);
-        Menu::query()->create([
+        $menu = Menu::query()->create([
             'menu_category_id' => $first->id,
             'name' => 'カットベーシック',
             'price' => '¥5,000',
@@ -63,9 +63,16 @@ class AdminMenusTwoColumnTest extends TestCase
         $this->assertStringContainsString('.menu-col-actions { width: 4.25rem; }', $html);
         $this->assertStringContainsString('name="menus[', $html);
         $this->assertStringContainsString('[is_published]"', $html);
+        $this->assertStringContainsString('admin-switch--compact', $html);
+        $this->assertStringContainsString('admin-switch-input', $html);
         $this->assertStringContainsString('data-published-checkbox', $html);
-        $this->assertStringContainsString('data-published-label', $html);
-        $this->assertStringContainsString('menu-published-checkbox', $html);
+        $this->assertStringContainsString('data-published-text', $html);
+        $this->assertStringContainsString('name="menus['.$menu->id.'][is_published]"', $html);
+        $this->assertStringNotContainsString('menu-published-checkbox', $html);
+        $this->assertDoesNotMatchRegularExpression(
+            '/name="menus\['.$menu->id.'\]\[is_published\]"[^>]*type="radio"|type="radio"[^>]*name="menus\['.$menu->id.'\]\[is_published\]"/',
+            $html
+        );
         $this->assertDoesNotMatchRegularExpression('/<select[^>]*name="menus\[[^\]]+\]\[is_published\]"/', $html);
         $this->assertStringNotContainsString('>公開</option>', $html);
         $this->assertStringNotContainsString('>非公開</option>', $html);

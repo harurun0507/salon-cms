@@ -167,6 +167,40 @@
             .admin-segmented-input:checked + .admin-segmented-face:hover,
             .admin-segmented-option:hover .admin-segmented-input:checked + .admin-segmented-face { background-color: #DDE5D2; }
             .admin-segmented-input:focus-visible + .admin-segmented-face { box-shadow: inset 0 0 0 2px rgba(105, 122, 85, 0.35); }
+            .admin-segmented--compact .admin-segmented-face {
+                min-height: 2.25rem; padding: 0.25rem 0.375rem; gap: 0.25rem; font-size: 0.8125rem;
+            }
+            .admin-segmented--compact .admin-segmented-icon { width: 0.875rem; height: 0.875rem; }
+            .admin-segmented--compact .admin-segmented-input:checked + .admin-segmented-face::after {
+                width: 0.625rem; height: 0.625rem;
+            }
+            .admin-switch {
+                display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; user-select: none; min-height: 2.5rem;
+            }
+            .admin-switch-input {
+                position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+                clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+            }
+            .admin-switch-track {
+                position: relative; width: 2.75rem; height: 1.5rem; flex-shrink: 0; border-radius: 9999px;
+                background-color: #D8D2C7; transition: background-color 0.15s ease, box-shadow 0.15s ease;
+            }
+            .admin-switch-thumb {
+                position: absolute; top: 2px; left: 2px; width: 1.25rem; height: 1.25rem; border-radius: 9999px;
+                background-color: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); transition: transform 0.15s ease;
+            }
+            .admin-switch-input:checked + .admin-switch-track { background-color: #697A55; }
+            .admin-switch-input:checked + .admin-switch-track .admin-switch-thumb { transform: translateX(1.25rem); }
+            .admin-switch-input:focus-visible + .admin-switch-track { box-shadow: 0 0 0 3px rgba(105, 122, 85, 0.25); }
+            .admin-switch-text { min-width: 2rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em; color: #77736D; }
+            .admin-switch-input:checked ~ .admin-switch-text { color: #5F7351; }
+            .admin-switch--compact { min-height: 0; align-items: center; gap: 0.5rem; }
+            .admin-switch--compact .admin-switch-track { width: 2.75rem; height: 1.375rem; }
+            .admin-switch--compact .admin-switch-thumb { top: 2px; left: 2px; width: 1.125rem; height: 1.125rem; }
+            .admin-switch--compact .admin-switch-input:checked + .admin-switch-track .admin-switch-thumb { transform: translateX(1.375rem); }
+            .admin-switch--compact .admin-switch-text {
+                min-width: 3em; font-size: 0.8125rem; font-weight: 500; letter-spacing: 0; line-height: 1.25; white-space: nowrap;
+            }
             .admin-required-badge {
                 display: inline-flex; align-items: center; justify-content: center; margin-left: 0.375rem;
                 padding: 0.1rem 0.45rem; border-radius: 9999px; border: 1px solid #E8D9C8;
