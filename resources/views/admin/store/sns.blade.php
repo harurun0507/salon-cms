@@ -31,7 +31,7 @@
             </div>
 
             <div class="space-y-6">
-                <x-admin.sns-service
+                <x-admin.service-field
                     name="Instagram"
                     field="instagram_url"
                     field-label="プロフィールURL"
@@ -40,15 +40,15 @@
                     help="公開サイトのInstagramアイコンから遷移するURLです。"
                 >
                     <x-slot:icon>
-                        <svg viewBox="0 0 24 24" fill="none" class="sns-account-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" class="admin-service-icon" aria-hidden="true">
                             <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="currentColor" stroke-width="1.5"/>
                             <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.5"/>
                             <circle cx="17.25" cy="6.75" r="1" fill="currentColor"/>
                         </svg>
                     </x-slot:icon>
-                </x-admin.sns-service>
+                </x-admin.service-field>
 
-                {{-- Future: LINE / TikTok / YouTube / Facebook / X via x-admin.sns-service --}}
+                {{-- Future: LINE / TikTok / YouTube / Facebook / X via x-admin.service-field --}}
             </div>
         </div>
     </form>

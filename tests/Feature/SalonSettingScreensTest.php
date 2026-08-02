@@ -168,9 +168,9 @@ class SalonSettingScreensTest extends TestCase
 
         $this->assertStringContainsString('name="instagram_url"', $html);
         $this->assertStringContainsString('SNSアカウント', $html);
-        $this->assertStringContainsString('sns-account-heading', $html);
-        $this->assertStringContainsString('sns-account-icon', $html);
-        $this->assertStringContainsString('sns-account-name', $html);
+        $this->assertStringContainsString('admin-service-heading', $html);
+        $this->assertStringContainsString('admin-service-icon', $html);
+        $this->assertStringContainsString('admin-service-name', $html);
         $this->assertStringContainsString('>Instagram</span>', $html);
         $this->assertStringContainsString('プロフィールURL', $html);
         $this->assertStringContainsString('公開サイトのInstagramアイコンから遷移するURLです。', $html);
@@ -202,6 +202,14 @@ class SalonSettingScreensTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('name="hot_pepper_url"', $html);
+        $this->assertStringContainsString('予約サービス', $html);
+        $this->assertStringContainsString('admin-service-heading', $html);
+        $this->assertStringContainsString('admin-service-icon', $html);
+        $this->assertStringContainsString('admin-service-name', $html);
+        $this->assertStringContainsString('>Hot Pepper Beauty</span>', $html);
+        $this->assertStringContainsString('予約URL', $html);
+        $this->assertStringContainsString('公開サイトの「予約する」ボタンから遷移するURLです。', $html);
+        $this->assertStringNotContainsString('Hot Pepper 予約URL', $html);
         $this->assertStringNotContainsString('name="instagram_url"', $html);
         $this->assertStringNotContainsString('name="hero_label"', $html);
 

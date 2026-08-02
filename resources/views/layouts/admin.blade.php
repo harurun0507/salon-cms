@@ -226,10 +226,10 @@
             .banner-dropzone.is-drag-active [data-staff-preview] { opacity: 0.35; }
             .banner-dropzone.is-drag-active.is-empty .banner-dropzone-text,
             .banner-dropzone.is-drag-active.is-empty .banner-dropzone-hint { opacity: 0.35; }
-            .sns-account-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-            .sns-account-icon { width: 18px; height: 18px; flex-shrink: 0; color: #697A55; }
-            .sns-account-name { font-size: 15px; font-weight: 500; color: #3D3833; }
-            .sns-account-help { margin-top: 0.375rem; font-size: 0.75rem; line-height: 1.4; color: #8A847A; }
+            .admin-service-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+            .admin-service-icon { width: 18px; height: 18px; flex-shrink: 0; color: #697A55; }
+            .admin-service-name { font-size: 15px; font-weight: 500; color: #3D3833; }
+            .admin-service-help { margin-top: 0.375rem; font-size: 0.75rem; line-height: 1.4; color: #8A847A; }
         </style>
     @endif
 </head>
