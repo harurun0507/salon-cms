@@ -103,8 +103,14 @@ return [
                 [
                     'label' => 'SEO',
                     'route' => 'admin.system.seo',
-                    'active' => 'admin.system.seo',
+                    'active' => 'admin.system.seo*',
                     'icon' => 'search',
+                ],
+                [
+                    'label' => 'Analytics（GA4）',
+                    'route' => 'admin.system.analytics',
+                    'active' => 'admin.system.analytics*',
+                    'icon' => 'chart',
                 ],
                 [
                     'label' => '管理ユーザー',

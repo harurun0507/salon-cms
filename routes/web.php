@@ -7,6 +7,8 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MenuPageController;
 use App\Http\Controllers\NewsPageController;
 use App\Http\Controllers\PrivacyPageController;
+use App\Http\Controllers\RobotsTxtController;
+use App\Http\Controllers\SitemapXmlController;
 use App\Http\Controllers\StaffPageController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,3 +33,5 @@ Route::get('/access', [AccessPageController::class, 'index'])->name('access');
 Route::get('/news', [NewsPageController::class, 'index'])->name('news.index');
 Route::get('/news/{slug}', [NewsPageController::class, 'show'])->name('news.show');
 Route::get('/privacy', [PrivacyPageController::class, 'index'])->name('privacy');
+Route::get('/robots.txt', RobotsTxtController::class)->name('robots');
+Route::get('/sitemap.xml', SitemapXmlController::class)->name('sitemap');

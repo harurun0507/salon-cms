@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AnalyticsSettingController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GalleryController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\ReservationSettingController;
 use App\Http\Controllers\Admin\SalonSettingController;
+use App\Http\Controllers\Admin\SeoSettingController;
 use App\Http\Controllers\Admin\SnsSettingController;
 use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Admin\TopPageSettingController;
@@ -58,8 +60,13 @@ Route::middleware('web')->prefix('admin')->name('admin.')->group(function () {
         Route::get('store/reservations', [ReservationSettingController::class, 'edit'])->name('store.reservations');
         Route::put('store/reservations', [ReservationSettingController::class, 'update'])->name('store.reservations.update');
 
+        Route::get('system/seo', [SeoSettingController::class, 'edit'])->name('system.seo');
+        Route::put('system/seo', [SeoSettingController::class, 'update'])->name('system.seo.update');
+
+        Route::get('system/analytics', [AnalyticsSettingController::class, 'edit'])->name('system.analytics');
+        Route::put('system/analytics', [AnalyticsSettingController::class, 'update'])->name('system.analytics.update');
+
         // Placeholder screens (navigation only; features not implemented yet)
-        Route::view('system/seo', 'admin.placeholder', ['title' => 'SEO'])->name('system.seo');
         Route::view('system/users', 'admin.placeholder', ['title' => '管理ユーザー'])->name('system.users');
         Route::view('system/design', 'admin.placeholder', ['title' => 'デザイン設定'])->name('system.design');
     });

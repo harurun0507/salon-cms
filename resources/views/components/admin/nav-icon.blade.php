@@ -140,6 +140,16 @@
         </svg>
         @break
 
+    @case('chart')
+        {{-- Lucide: BarChart3 --}}
+        <svg {{ $attributes->merge(['class' => $class]) }} {!! $svgAttrs !!}>
+            <path d="M3 3v18h18" />
+            <path d="M18 17V9" />
+            <path d="M13 17V5" />
+            <path d="M8 17v-3" />
+        </svg>
+        @break
+
     @case('palette')
         {{-- Lucide: Palette --}}
         <svg {{ $attributes->merge(['class' => $class]) }} {!! $svgAttrs !!}>

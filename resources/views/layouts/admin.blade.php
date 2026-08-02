@@ -223,6 +223,7 @@
             .banner-dropzone.is-drag-active [data-banner-preview],
             .banner-dropzone.is-drag-active [data-gallery-preview],
             .banner-dropzone.is-drag-active [data-logo-preview],
+            .banner-dropzone.is-drag-active [data-og-preview],
             .banner-dropzone.is-drag-active [data-staff-preview] { opacity: 0.35; }
             .banner-dropzone.is-drag-active.is-empty .banner-dropzone-text,
             .banner-dropzone.is-drag-active.is-empty .banner-dropzone-hint { opacity: 0.35; }

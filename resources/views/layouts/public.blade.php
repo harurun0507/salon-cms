@@ -1,10 +1,63 @@
 <!DOCTYPE html>
 <html lang="ja" class="scroll-smooth">
 <head>
+    @php
+        $setting = $setting ?? \App\Models\SalonSetting::current();
+        $siteTitle = $setting->seoSiteTitle();
+        $pageTitle = trim($__env->yieldContent('title'));
+        $documentTitle = $pageTitle !== '' && $pageTitle !== $siteTitle
+            ? $pageTitle.' | '.$siteTitle
+            : ($pageTitle !== '' ? $pageTitle : $siteTitle);
+        $ogTitle = $setting->seoOgTitle();
+        $ogDescription = $setting->seoOgDescription();
+        $metaDescription = filled($setting->meta_description) ? (string) $setting->meta_description : null;
+        $metaKeywords = filled($setting->meta_keywords) ? (string) $setting->meta_keywords : null;
+        $ogImageUrl = $setting->seoOgImageUrl();
+        $twitterCard = $setting->seoTwitterCard();
+        $faviconUrl = $setting->faviconUrl();
+        $canonicalUrl = url()->current();
+        $gaMeasurementId = $setting->hasGaMeasurementId() ? (string) $setting->ga_measurement_id : null;
+    @endphp
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Sun＆ Me')</title>
+    <title>{{ $documentTitle }}</title>
+    <link rel="icon" href="{{ $faviconUrl }}">
+    <link rel="canonical" href="{{ $canonicalUrl }}">
+    @if($metaDescription)
+        <meta name="description" content="{{ $metaDescription }}">
+    @endif
+    @if($metaKeywords)
+        <meta name="keywords" content="{{ $metaKeywords }}">
+    @endif
+    <meta name="robots" content="{{ $setting->robotsMetaContent() }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ $siteTitle }}">
+    <meta property="og:title" content="{{ $ogTitle }}">
+    <meta property="og:url" content="{{ $canonicalUrl }}">
+    @if($ogDescription)
+        <meta property="og:description" content="{{ $ogDescription }}">
+    @endif
+    @if($ogImageUrl)
+        <meta property="og:image" content="{{ $ogImageUrl }}">
+    @endif
+    <meta name="twitter:card" content="{{ $twitterCard }}">
+    <meta name="twitter:title" content="{{ $ogTitle }}">
+    @if($ogDescription)
+        <meta name="twitter:description" content="{{ $ogDescription }}">
+    @endif
+    @if($ogImageUrl)
+        <meta name="twitter:image" content="{{ $ogImageUrl }}">
+    @endif
+    @if($gaMeasurementId)
+        <script async src="https://www.googletagmanager.com/gtag/js?id={{ $gaMeasurementId }}"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', @json($gaMeasurementId));
+        </script>
+    @endif
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet">
@@ -49,8 +102,6 @@
     </style>
 </head>
 <body class="font-sans">
-    @php($setting = $setting ?? \App\Models\SalonSetting::current())
-
     <header class="sticky top-0 z-50 border-b border-salon-line bg-salon-bg/95 backdrop-blur">
         <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-6 md:py-3.5">
             <a href="{{ route('home') }}" class="inline-flex min-h-[48px] max-w-[200px] shrink-0 items-center sm:max-w-[240px] md:min-h-[64px] md:max-w-[280px]">

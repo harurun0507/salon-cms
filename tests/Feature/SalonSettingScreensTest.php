@@ -6,6 +6,8 @@ use App\Models\SalonSetting;
 use App\Models\TopPageSection;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SalonSettingScreensTest extends TestCase
@@ -221,5 +223,251 @@ class SalonSettingScreensTest extends TestCase
         $this->assertSame('https://beauty.hotpepper.jp/new', $fresh->hot_pepper_url);
         $this->assertSame('https://instagram.com/keep', $fresh->instagram_url);
         $this->assertSame('Keep Label', $fresh->hero_label);
+    }
+
+    public function test_seo_page_shows_and_saves_fields(): void
+    {
+        SalonSetting::current()->update([
+            'site_title' => 'Old Title',
+            'meta_description' => 'Old description',
+            'meta_keywords' => 'old,keywords',
+            'og_title' => 'Old OG',
+            'og_description' => 'Old OG desc',
+            'twitter_card' => SalonSetting::TWITTER_CARD_SUMMARY,
+            'noindex' => true,
+            'instagram_url' => 'https://instagram.com/keep',
+            'shop_name' => 'Keep Shop',
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.system.seo'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('サイト基本SEO', $html);
+        $this->assertStringContainsString('ファビコン', $html);
+        $this->assertStringContainsString('SNS（OGP）', $html);
+        $this->assertStringContainsString('検索エンジン', $html);
+        $this->assertStringContainsString('Google検索プレビュー', $html);
+        $this->assertStringContainsString('SNSシェアプレビュー', $html);
+        $this->assertStringContainsString('Google検索結果イメージ', $html);
+        $this->assertStringContainsString('Facebook・LINE・X共有イメージ', $html);
+        $this->assertStringContainsString('LINEやFacebookなどで共有された際の表示イメージです。', $html);
+        $this->assertStringContainsString('data-seo-previews', $html);
+        $this->assertStringContainsString('lg:grid-cols-2', $html);
+        $this->assertStringContainsString('xl:grid-cols-2', $html);
+        $this->assertLessThan(
+            strpos($html, 'SNSシェアプレビュー'),
+            strpos($html, 'Google検索プレビュー'),
+            'Google preview should appear before SNS preview in the markup (stacked order on narrow screens).'
+        );
+        $this->assertStringContainsString('data-char-count="site_title"', $html);
+        $this->assertStringContainsString('data-char-count="meta_description"', $html);
+        $this->assertStringContainsString('data-char-count="og_title"', $html);
+        $this->assertStringContainsString('data-char-count="og_description"', $html);
+        $this->assertStringContainsString('data-google-title', $html);
+        $this->assertStringContainsString('data-sns-title', $html);
+        $this->assertStringContainsString('ここにOGP画像をドロップしてください', $html);
+        $this->assertStringContainsString('ここにファビコンをドロップしてください', $html);
+        $this->assertStringContainsString('name="site_title"', $html);
+        $this->assertStringContainsString('name="meta_description"', $html);
+        $this->assertStringContainsString('name="meta_keywords"', $html);
+        $this->assertStringContainsString('name="favicon"', $html);
+        $this->assertStringContainsString('name="og_title"', $html);
+        $this->assertStringContainsString('name="og_description"', $html);
+        $this->assertStringContainsString('name="og_image"', $html);
+        $this->assertStringContainsString('name="twitter_card"', $html);
+        $this->assertStringContainsString('value="summary_large_image"', $html);
+        $this->assertStringContainsString('value="summary"', $html);
+        $this->assertStringContainsString('大きい画像', $html);
+        $this->assertStringContainsString('小さい画像', $html);
+        $this->assertStringContainsString('admin-segmented', $html);
+        $this->assertStringContainsString('X（Twitter）で共有された際のカード表示形式です。通常は「大きい画像」をおすすめします。', $html);
+        $this->assertStringNotContainsString('<select name="twitter_card"', $html);
+        $this->assertMatchesRegularExpression(
+            '/value="summary"[^>]*checked|checked[^>]*value="summary"/',
+            $html
+        );
+        $this->assertStringContainsString('seo-og-placeholder-main', $html);
+        $this->assertStringContainsString('OGP画像未設定', $html);
+        $this->assertStringContainsString('name="noindex"', $html);
+        $this->assertStringContainsString('インデックスする', $html);
+        $this->assertStringContainsString('インデックスしない', $html);
+        $this->assertStringContainsString('この設定では、公開サイトがGoogleなどの検索結果に表示されない可能性があります。', $html);
+        $this->assertStringContainsString('banner-dropzone', $html);
+        $this->assertStringContainsString(url('/sitemap.xml'), $html);
+        $this->assertStringContainsString(url('/robots.txt'), $html);
+        $this->assertStringContainsString('公開後、このsitemap.xml URLをGoogle Search Consoleへ登録してください。', $html);
+        $this->assertStringContainsString('data-copy-target="sitemap-url"', $html);
+        $this->assertStringContainsString('data-copy-target="robots-txt-url"', $html);
+        $this->assertStringContainsString('開く', $html);
+        $this->assertStringContainsString('コピー', $html);
+        $this->assertMatchesRegularExpression('/href="[^"]*sitemap\\.xml"[^>]*target="_blank"/', $html);
+        $this->assertMatchesRegularExpression('/href="[^"]*robots\\.txt"[^>]*target="_blank"/', $html);
+        $this->assertStringNotContainsString('name="instagram_url"', $html);
+        $this->assertStringNotContainsString('name="shop_name"', $html);
+        $this->assertStringNotContainsString('この機能は現在準備中です。', $html);
+
+        $this->actingAs($this->admin())->put(route('admin.system.seo.update'), [
+            'site_title' => 'Sun & Me SEO',
+            'meta_description' => '新しい説明文です。',
+            'meta_keywords' => '美容室,ヘアサロン',
+            'og_title' => 'OG Title',
+            'og_description' => 'OG Description',
+            'twitter_card' => SalonSetting::TWITTER_CARD_SUMMARY_LARGE_IMAGE,
+            'noindex' => '0',
+        ])->assertRedirect(route('admin.system.seo'));
+
+        $fresh = SalonSetting::current()->fresh();
+        $this->assertSame('Sun & Me SEO', $fresh->site_title);
+        $this->assertSame('新しい説明文です。', $fresh->meta_description);
+        $this->assertSame('美容室,ヘアサロン', $fresh->meta_keywords);
+        $this->assertSame('OG Title', $fresh->og_title);
+        $this->assertSame('OG Description', $fresh->og_description);
+        $this->assertSame(SalonSetting::TWITTER_CARD_SUMMARY_LARGE_IMAGE, $fresh->twitter_card);
+        $this->assertFalse($fresh->noindex);
+        $this->assertSame('https://instagram.com/keep', $fresh->instagram_url);
+        $this->assertSame('Keep Shop', $fresh->shop_name);
+    }
+
+    public function test_seo_page_uploads_og_image(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->admin())->put(route('admin.system.seo.update'), [
+            'site_title' => 'With Image',
+            'meta_description' => null,
+            'meta_keywords' => null,
+            'og_title' => null,
+            'og_description' => null,
+            'twitter_card' => SalonSetting::TWITTER_CARD_SUMMARY_LARGE_IMAGE,
+            'noindex' => '0',
+            'og_image' => UploadedFile::fake()->image('og.jpg', 1200, 630),
+        ])->assertRedirect(route('admin.system.seo'));
+
+        $setting = SalonSetting::current()->fresh();
+        $this->assertNotNull($setting->og_image);
+        $this->assertStringStartsWith('settings/og/', $setting->og_image);
+        Storage::disk('public')->assertExists($setting->og_image);
+    }
+
+    public function test_seo_page_uploads_favicon(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->admin())->put(route('admin.system.seo.update'), [
+            'site_title' => 'With Favicon',
+            'meta_description' => null,
+            'meta_keywords' => null,
+            'og_title' => null,
+            'og_description' => null,
+            'twitter_card' => SalonSetting::TWITTER_CARD_SUMMARY_LARGE_IMAGE,
+            'noindex' => '0',
+            'favicon' => UploadedFile::fake()->image('favicon.png', 64, 64),
+        ])->assertRedirect(route('admin.system.seo'));
+
+        $setting = SalonSetting::current()->fresh();
+        $this->assertNotNull($setting->favicon_path);
+        $this->assertStringStartsWith('settings/favicon/', $setting->favicon_path);
+        Storage::disk('public')->assertExists($setting->favicon_path);
+    }
+
+    public function test_analytics_page_shows_and_saves_measurement_id(): void
+    {
+        SalonSetting::current()->update([
+            'ga_measurement_id' => null,
+            'shop_name' => 'Keep Shop',
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.system.analytics'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('Google Analytics 4', $html);
+        $this->assertStringContainsString('name="ga_measurement_id"', $html);
+        $this->assertStringContainsString('analytics-form', $html);
+        $this->assertStringNotContainsString('この機能は現在準備中です。', $html);
+
+        $this->actingAs($this->admin())->put(route('admin.system.analytics.update'), [
+            'ga_measurement_id' => 'g-abc123xyz',
+        ])->assertRedirect(route('admin.system.analytics'));
+
+        $fresh = SalonSetting::current()->fresh();
+        $this->assertSame('G-ABC123XYZ', $fresh->ga_measurement_id);
+        $this->assertSame('Keep Shop', $fresh->shop_name);
+
+        $this->actingAs($this->admin())->put(route('admin.system.analytics.update'), [
+            'ga_measurement_id' => '',
+        ])->assertRedirect(route('admin.system.analytics'));
+
+        $this->assertNull(SalonSetting::current()->fresh()->ga_measurement_id);
+    }
+
+    public function test_analytics_rejects_invalid_measurement_id(): void
+    {
+        $this->actingAs($this->admin())
+            ->from(route('admin.system.analytics'))
+            ->put(route('admin.system.analytics.update'), [
+                'ga_measurement_id' => 'UA-123456-1',
+            ])
+            ->assertRedirect(route('admin.system.analytics'))
+            ->assertSessionHasErrors('ga_measurement_id');
+    }
+
+    public function test_seo_noindex_outputs_robots_meta_on_public_pages(): void
+    {
+        SalonSetting::current()->update([
+            'site_title' => 'Indexable Salon',
+            'noindex' => false,
+        ]);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('<meta name="robots" content="index, follow">', false);
+
+        SalonSetting::current()->update(['noindex' => true]);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('<meta name="robots" content="noindex, nofollow">', false);
+    }
+
+    public function test_public_head_outputs_seo_tags_and_og_fallbacks(): void
+    {
+        Storage::fake('public');
+        $path = UploadedFile::fake()->image('share.jpg', 1200, 630)->store('settings/og', 'public');
+
+        SalonSetting::current()->update([
+            'shop_name' => 'Fallback Shop',
+            'site_title' => 'SEO Site Title',
+            'meta_description' => 'Meta description body',
+            'meta_keywords' => 'cut,color',
+            'og_title' => null,
+            'og_description' => null,
+            'og_image' => $path,
+            'twitter_card' => SalonSetting::TWITTER_CARD_SUMMARY,
+            'noindex' => false,
+        ]);
+
+        $html = $this->get(route('home'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('<title>Fallback Shop | SEO Site Title</title>', $html);
+        $this->assertStringContainsString('<meta name="description" content="Meta description body">', $html);
+        $this->assertStringContainsString('<meta name="keywords" content="cut,color">', $html);
+        $this->assertStringContainsString('<meta property="og:title" content="SEO Site Title">', $html);
+        $this->assertStringContainsString('<meta property="og:description" content="Meta description body">', $html);
+        $this->assertStringContainsString('storage/'.$path, $html);
+        $this->assertStringContainsString('<meta name="twitter:card" content="summary">', $html);
+        $this->assertStringContainsString('<meta name="twitter:title" content="SEO Site Title">', $html);
+        $this->assertStringContainsString('<meta name="twitter:description" content="Meta description body">', $html);
+
+        $menuHtml = $this->get(route('menu'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('<title>メニュー・料金 | SEO Site Title</title>', $menuHtml);
     }
 }
