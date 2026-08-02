@@ -30,7 +30,7 @@ return [
                 [
                     'label' => 'バナー',
                     'route' => 'admin.home.banners',
-                    'active' => 'admin.home.banners',
+                    'active' => 'admin.home.banners*',
                     'icon' => 'megaphone',
                 ],
             ],

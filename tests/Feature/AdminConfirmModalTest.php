@@ -176,4 +176,22 @@ class AdminConfirmModalTest extends TestCase
         $this->assertStringNotContainsString('return confirm(', $html);
         $this->assertSame(1, substr_count($html, 'data-confirm-form="galleries-bulk-form"'));
     }
+
+    public function test_banners_bulk_save_uses_confirm_modal_without_browser_confirm(): void
+    {
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.home.banners'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
+        $this->assertStringContainsString('-mx-4 -mt-4 mb-6', $html);
+        $this->assertStringContainsString('data-admin-confirm-trigger', $html);
+        $this->assertStringContainsString('data-confirm-form="banners-bulk-form"', $html);
+        $this->assertStringContainsString('data-confirm-title="バナー保存の確認"', $html);
+        $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
+        $this->assertStringContainsString('画像、タイトル、リンク、表示場所、公開期間、公開状態、表示順、削除など', $html);
+        $this->assertStringNotContainsString('return confirm(', $html);
+        $this->assertSame(1, substr_count($html, 'data-confirm-form="banners-bulk-form"'));
+    }
 }

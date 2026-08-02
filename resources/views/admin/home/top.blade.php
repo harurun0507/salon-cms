@@ -96,7 +96,7 @@
         <div class="admin-card space-y-5">
             <div>
                 <h2 class="text-base font-medium text-admin-text">トップページ表示件数</h2>
-                <p class="mt-1 text-sm text-admin-muted">各セクションをトップページに何件表示するかを設定します。アクセスは件数設定の対象外です。</p>
+                <p class="mt-1 text-sm text-admin-muted">各セクションをトップページに何件表示するかを設定します。バナー・アクセスは件数設定の対象外です。</p>
             </div>
             <div class="count-fields-grid">
                 @foreach($countSections as $section)

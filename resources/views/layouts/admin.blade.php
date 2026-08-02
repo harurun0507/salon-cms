@@ -149,6 +149,32 @@
             .admin-radio:checked::after { opacity: 1; }
             .admin-radio:checked:hover { background-color: #EEF1E8; border-color: #556344; }
             .admin-radio:checked:hover::after { background-color: #556344; }
+            .admin-segmented { display: inline-flex; width: 100%; max-width: 100%; overflow: hidden; border: 1px solid #E5E0D7; border-radius: 0.5rem; background-color: #fff; }
+            .admin-segmented-option { position: relative; display: block; flex: 1 1 0; min-width: 0; cursor: pointer; margin: 0; }
+            .admin-segmented-option + .admin-segmented-option { border-left: 1px solid #E5E0D7; }
+            .admin-segmented-input {
+                position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+                clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+                appearance: none; -webkit-appearance: none; -moz-appearance: none;
+            }
+            .admin-segmented-face {
+                display: flex; align-items: center; justify-content: center; gap: 0.375rem;
+                min-height: 2.5rem; padding: 0.5rem 0.625rem; background-color: #fff; color: #3D3833;
+                font-size: 0.875rem; line-height: 1.25;
+            }
+            .admin-segmented-icon { width: 0.875rem; height: 0.875rem; flex-shrink: 0; opacity: 0.72; }
+            .admin-segmented-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .admin-segmented-option:hover .admin-segmented-face { background-color: #F7F5F0; }
+            .admin-segmented-input:checked + .admin-segmented-face { background-color: #E5EADD; color: #556344; font-weight: 500; }
+            .admin-segmented-input:checked + .admin-segmented-face .admin-segmented-icon { opacity: 1; }
+            .admin-segmented-input:checked + .admin-segmented-face::after {
+                content: ''; width: 0.7rem; height: 0.7rem; flex-shrink: 0;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 6.2L4.8 8.5L9.5 3.5' stroke='%23556344' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+                background-position: center; background-repeat: no-repeat; background-size: contain;
+            }
+            .admin-segmented-input:checked + .admin-segmented-face:hover,
+            .admin-segmented-option:hover .admin-segmented-input:checked + .admin-segmented-face { background-color: #DDE5D2; }
+            .admin-segmented-input:focus-visible + .admin-segmented-face { box-shadow: inset 0 0 0 2px rgba(105, 122, 85, 0.35); }
         </style>
     @endif
 </head>

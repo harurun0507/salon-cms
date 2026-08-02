@@ -155,6 +155,66 @@
 
     @foreach($topSections as $section)
         @switch($section->section_key)
+            @case('banner')
+                @if(($banners ?? collect())->isNotEmpty())
+                    <section id="banners" class="border-y border-salon-line bg-white/50 py-12 md:py-16">
+                        <div class="mx-auto max-w-5xl px-4 md:px-6">
+                            <div class="space-y-6">
+                                @foreach($banners as $banner)
+                                    @php
+                                        $alt = $banner->altTextOrTitle();
+                                        $imgClass = 'aspect-[3/1] w-full object-cover transition duration-500 ease-out';
+                                    @endphp
+                                    <article class="overflow-hidden rounded-sm">
+                                        @if($banner->hasLink())
+                                            <a
+                                                href="{{ $banner->link_url }}"
+                                                @if($banner->opensInNewTab()) target="_blank" rel="noopener noreferrer" @endif
+                                                class="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-salon-accent focus-visible:ring-offset-2"
+                                            >
+                                                <img
+                                                    src="{{ asset('storage/'.$banner->image_path) }}"
+                                                    alt="{{ $alt }}"
+                                                    class="{{ $imgClass }} group-hover:scale-[1.015]"
+                                                >
+                                                @if($banner->title || $banner->description)
+                                                    <div class="mt-3 text-center">
+                                                        @if($banner->title)
+                                                            <p class="font-medium text-salon-text transition group-hover:text-salon-accent">{{ $banner->title }}</p>
+                                                        @endif
+                                                        @if($banner->description)
+                                                            <p class="mt-1 text-sm leading-relaxed text-salon-muted whitespace-pre-line">{{ $banner->description }}</p>
+                                                        @endif
+                                                    </div>
+                                                @endif
+                                            </a>
+                                        @else
+                                            <div>
+                                                <img
+                                                    src="{{ asset('storage/'.$banner->image_path) }}"
+                                                    alt="{{ $alt }}"
+                                                    class="{{ $imgClass }}"
+                                                >
+                                                @if($banner->title || $banner->description)
+                                                    <div class="mt-3 text-center">
+                                                        @if($banner->title)
+                                                            <p class="font-medium text-salon-text">{{ $banner->title }}</p>
+                                                        @endif
+                                                        @if($banner->description)
+                                                            <p class="mt-1 text-sm leading-relaxed text-salon-muted whitespace-pre-line">{{ $banner->description }}</p>
+                                                        @endif
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endif
+                                    </article>
+                                @endforeach
+                            </div>
+                        </div>
+                    </section>
+                @endif
+                @break
+
             @case('news')
                 <section id="news" class="border-y border-salon-line bg-white/60 py-16 md:py-20">
                     <div class="mx-auto max-w-4xl px-4 md:px-6">

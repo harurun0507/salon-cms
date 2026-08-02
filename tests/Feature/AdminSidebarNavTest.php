@@ -165,7 +165,7 @@ class AdminSidebarNavTest extends TestCase
 
     public function test_placeholder_pages_require_authentication(): void
     {
-        $this->get(route('admin.home.banners'))->assertRedirect();
+        $this->get(route('admin.system.seo'))->assertRedirect();
     }
 
     public static function realSettingScreensProvider(): array
@@ -180,7 +180,6 @@ class AdminSidebarNavTest extends TestCase
     public static function placeholderRoutesProvider(): array
     {
         return [
-            ['admin.home.banners', 'バナー'],
             ['admin.system.seo', 'SEO'],
             ['admin.system.users', '管理ユーザー'],
             ['admin.system.design', 'デザイン設定'],

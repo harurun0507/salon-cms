@@ -26,6 +26,7 @@ class SalonSettingScreensTest extends TestCase
             'concept' => '丁寧なカウンセリングを大切にしています。',
             'section_order' => TopPageSection::KEYS,
             'sections' => [
+                'banner' => ['is_visible' => '1'],
                 'news' => ['display_count' => 3, 'is_visible' => '1'],
                 'menu' => ['display_count' => 6, 'is_visible' => '1'],
                 'gallery' => ['display_count' => 6, 'is_visible' => '1'],
@@ -78,7 +79,9 @@ class SalonSettingScreensTest extends TestCase
         $this->assertStringContainsString('name="sections[gallery][display_count]"', $html);
         $this->assertStringContainsString('name="sections[staff][display_count]"', $html);
         $this->assertStringNotContainsString('name="sections[access][display_count]"', $html);
+        $this->assertStringNotContainsString('name="sections[banner][display_count]"', $html);
         $this->assertStringContainsString('name="section_order[]"', $html);
+        $this->assertStringContainsString('バナー', $html);
         $this->assertStringContainsString('data-top-section-drag-handle', $html);
         $this->assertStringContainsString('admin-switch', $html);
         $this->assertStringNotContainsString('name="shop_name"', $html);
@@ -104,8 +107,9 @@ class SalonSettingScreensTest extends TestCase
 
         $this->actingAs($this->admin())
             ->put(route('admin.home.top.update'), $this->topPagePayload([
-                'section_order' => ['access', 'staff', 'gallery', 'menu', 'news'],
+                'section_order' => ['access', 'staff', 'gallery', 'menu', 'news', 'banner'],
                 'sections' => [
+                    'banner' => ['is_visible' => '0'],
                     'news' => ['display_count' => 5, 'is_visible' => '0'],
                     'menu' => ['display_count' => 8, 'is_visible' => '1'],
                     'gallery' => ['display_count' => 2, 'is_visible' => '0'],
@@ -122,13 +126,16 @@ class SalonSettingScreensTest extends TestCase
         $this->assertSame(3, $byKey['gallery']->display_order);
         $this->assertSame(4, $byKey['menu']->display_order);
         $this->assertSame(5, $byKey['news']->display_order);
+        $this->assertSame(6, $byKey['banner']->display_order);
 
+        $this->assertFalse($byKey['banner']->is_visible);
         $this->assertFalse($byKey['news']->is_visible);
         $this->assertTrue($byKey['menu']->is_visible);
         $this->assertFalse($byKey['gallery']->is_visible);
         $this->assertTrue($byKey['staff']->is_visible);
         $this->assertTrue($byKey['access']->is_visible);
 
+        $this->assertNull($byKey['banner']->display_count);
         $this->assertSame(5, $byKey['news']->display_count);
         $this->assertSame(8, $byKey['menu']->display_count);
         $this->assertSame(2, $byKey['gallery']->display_count);
@@ -138,6 +145,7 @@ class SalonSettingScreensTest extends TestCase
         $home = $this->get(route('home'))->assertOk()->getContent();
         $this->assertStringNotContainsString('id="news"', $home);
         $this->assertStringNotContainsString('id="gallery"', $home);
+        $this->assertStringNotContainsString('id="banners"', $home);
         $this->assertStringContainsString('id="menu"', $home);
         $this->assertStringContainsString('id="staff"', $home);
         $this->assertStringContainsString('id="access"', $home);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Banner;
 use App\Models\Gallery;
 use App\Models\MenuCategory;
 use App\Models\News;
@@ -19,10 +20,19 @@ class HomeController extends Controller
         $topSections = TopPageSection::visibleOrdered();
         $sectionMap = $topSections->keyBy('section_key');
 
+        $banners = collect();
         $newsList = collect();
         $categories = collect();
         $galleries = collect();
         $staffMembers = collect();
+
+        if ($sectionMap->has(TopPageSection::KEY_BANNER)) {
+            $banners = Banner::query()
+                ->currentlyVisible()
+                ->forLocation(Banner::LOCATION_TOP)
+                ->ordered()
+                ->get();
+        }
 
         if ($sectionMap->has(TopPageSection::KEY_NEWS)) {
             $count = max(1, (int) $sectionMap->get(TopPageSection::KEY_NEWS)->display_count);
@@ -48,6 +58,7 @@ class HomeController extends Controller
             'setting' => $setting,
             'heroImages' => $setting->publishedHeroImages()->get(),
             'topSections' => $topSections,
+            'banners' => $banners,
             'newsList' => $newsList,
             'categories' => $categories,
             'galleries' => $galleries,

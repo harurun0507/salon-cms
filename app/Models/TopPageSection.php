@@ -8,6 +8,8 @@ use Illuminate\Support\Collection;
 
 class TopPageSection extends Model
 {
+    public const KEY_BANNER = 'banner';
+
     public const KEY_NEWS = 'news';
 
     public const KEY_MENU = 'menu';
@@ -19,6 +21,7 @@ class TopPageSection extends Model
     public const KEY_ACCESS = 'access';
 
     public const KEYS = [
+        self::KEY_BANNER,
         self::KEY_NEWS,
         self::KEY_MENU,
         self::KEY_GALLERY,
@@ -27,6 +30,7 @@ class TopPageSection extends Model
     ];
 
     public const LABELS = [
+        self::KEY_BANNER => 'バナー',
         self::KEY_NEWS => 'お知らせ',
         self::KEY_MENU => 'メニュー',
         self::KEY_GALLERY => 'ギャラリー',
@@ -35,6 +39,7 @@ class TopPageSection extends Model
     ];
 
     public const DEFAULTS = [
+        self::KEY_BANNER => ['is_visible' => true, 'display_order' => 0, 'display_count' => null],
         self::KEY_NEWS => ['is_visible' => true, 'display_order' => 1, 'display_count' => 3],
         self::KEY_MENU => ['is_visible' => true, 'display_order' => 2, 'display_count' => 6],
         self::KEY_GALLERY => ['is_visible' => true, 'display_order' => 3, 'display_count' => 6],

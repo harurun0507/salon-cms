@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\HeroImageController;
@@ -45,6 +46,9 @@ Route::middleware('web')->prefix('admin')->name('admin.')->group(function () {
         Route::get('home/top', [TopPageSettingController::class, 'edit'])->name('home.top');
         Route::put('home/top', [TopPageSettingController::class, 'update'])->name('home.top.update');
 
+        Route::get('home/banners', [BannerController::class, 'edit'])->name('home.banners');
+        Route::put('home/banners', [BannerController::class, 'update'])->name('home.banners.update');
+
         Route::get('store/sns', [SnsSettingController::class, 'edit'])->name('store.sns');
         Route::put('store/sns', [SnsSettingController::class, 'update'])->name('store.sns.update');
 
@@ -52,7 +56,6 @@ Route::middleware('web')->prefix('admin')->name('admin.')->group(function () {
         Route::put('store/reservations', [ReservationSettingController::class, 'update'])->name('store.reservations.update');
 
         // Placeholder screens (navigation only; features not implemented yet)
-        Route::view('home/banners', 'admin.placeholder', ['title' => 'バナー'])->name('home.banners');
         Route::view('system/seo', 'admin.placeholder', ['title' => 'SEO'])->name('system.seo');
         Route::view('system/users', 'admin.placeholder', ['title' => '管理ユーザー'])->name('system.users');
         Route::view('system/design', 'admin.placeholder', ['title' => 'デザイン設定'])->name('system.design');
