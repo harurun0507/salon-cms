@@ -36,7 +36,7 @@ class AdminDeleteModalTest extends TestCase
         $this->assertStringContainsString('aria-labelledby="admin-delete-modal-title"', $html);
     }
 
-    public function test_news_delete_uses_modal_trigger_with_title_and_no_confirm(): void
+    public function test_news_defers_delete_to_bulk_save_without_delete_modal_trigger(): void
     {
         News::query()->create([
             'title' => '公開お知らせ',
@@ -44,6 +44,7 @@ class AdminDeleteModalTest extends TestCase
             'body' => 'body',
             'is_published' => true,
             'published_at' => now(),
+            'display_order' => 1,
         ]);
 
         $html = $this->actingAs($this->admin())
@@ -51,9 +52,11 @@ class AdminDeleteModalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('data-admin-delete-trigger', $html);
-        $this->assertStringContainsString('data-delete-message="「公開お知らせ」を削除しますか？"', $html);
-        $this->assertStringContainsString('data-admin-delete-form', $html);
+        $this->assertStringContainsString('data-news-remove', $html);
+        $this->assertStringContainsString('admin-icon-btn-delete', $html);
+        $this->assertStringContainsString('id="news-deleted-ids"', $html);
+        $this->assertStringContainsString("hidden.name = 'deleted_ids[]'", $html);
+        $this->assertStringNotContainsString('data-delete-message="「公開お知らせ」を削除しますか？"', $html);
         $this->assertStringNotContainsString('return confirm(', $html);
         $this->assertStringContainsString('id="admin-delete-modal"', $html);
     }
@@ -164,7 +167,7 @@ class AdminDeleteModalTest extends TestCase
         );
     }
 
-    public function test_news_delete_endpoint_still_works(): void
+    public function test_news_bulk_delete_via_save_works(): void
     {
         $news = News::query()->create([
             'title' => '削除対象',
@@ -172,10 +175,13 @@ class AdminDeleteModalTest extends TestCase
             'body' => 'body',
             'is_published' => false,
             'published_at' => null,
+            'display_order' => 1,
         ]);
 
         $this->actingAs($this->admin())
-            ->delete(route('admin.news.destroy', $news))
+            ->put(route('admin.news.update'), [
+                'deleted_ids' => [$news->id],
+            ])
             ->assertRedirect(route('admin.news.index'));
 
         $this->assertDatabaseMissing('news', ['id' => $news->id]);

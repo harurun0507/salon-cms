@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -13,11 +14,13 @@ class News extends Model
         'body',
         'published_at',
         'is_published',
+        'display_order',
     ];
 
     protected $casts = [
         'published_at' => 'datetime',
         'is_published' => 'boolean',
+        'display_order' => 'integer',
     ];
 
     protected static function booted(): void
@@ -29,6 +32,11 @@ class News extends Model
         });
     }
 
+    public function scopeOrdered(Builder $query): Builder
+    {
+        return $query->orderBy('display_order')->orderBy('id');
+    }
+
     public function scopePublished($query)
     {
         return $query->where('is_published', true)
@@ -36,6 +44,8 @@ class News extends Model
                 $q->whereNull('published_at')
                     ->orWhere('published_at', '<=', now());
             })
-            ->orderByDesc('published_at');
+            ->orderBy('display_order')
+            ->orderByDesc('published_at')
+            ->orderByDesc('id');
     }
 }

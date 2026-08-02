@@ -17,7 +17,8 @@ Route::middleware('web')->prefix('admin')->name('admin.')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-        Route::resource('news', NewsController::class)->except(['show']);
+        Route::get('news', [NewsController::class, 'index'])->name('news.index');
+        Route::put('news', [NewsController::class, 'update'])->name('news.update');
         Route::put('galleries/bulk', [GalleryController::class, 'bulkUpdate'])->name('galleries.bulk-update');
         Route::resource('galleries', GalleryController::class)->except(['show']);
 

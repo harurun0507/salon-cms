@@ -21,39 +21,57 @@ class AdminActionButtonsTest extends TestCase
         return User::factory()->create();
     }
 
-    public function test_news_and_staff_lists_use_shared_icon_action_buttons(): void
+    public function test_news_cards_use_add_card_and_delete_icon_without_edit_button(): void
     {
-        $user = $this->admin();
-
         News::query()->create([
             'title' => 'Test',
             'slug' => 'test',
             'body' => 'body',
             'is_published' => true,
             'published_at' => now(),
+            'display_order' => 1,
         ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.news.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('id="news-add-card"', $html);
+        $this->assertStringContainsString('data-news-add', $html);
+        $this->assertStringContainsString('btn-admin-create', $html);
+        $this->assertStringContainsString('admin-icon-btn-delete', $html);
+        $this->assertStringContainsString('data-news-remove', $html);
+        $this->assertStringContainsString('aria-label="削除"', $html);
+        $this->assertStringContainsString('&times;', $html);
+        $this->assertStringNotContainsString('admin-icon-btn-edit', $html);
+        $this->assertStringNotContainsString('admin-action-group', $html);
+        $this->assertStringNotContainsString('btn-admin-edit', $html);
+    }
+
+    public function test_staff_list_uses_shared_icon_action_buttons(): void
+    {
         StaffMember::query()->create([
             'name' => 'Staff',
             'sort_order' => 1,
             'is_published' => true,
         ]);
 
-        foreach ([
-            route('admin.news.index'),
-            route('admin.staff.index'),
-        ] as $url) {
-            $html = $this->actingAs($user)->get($url)->assertOk()->getContent();
-            $this->assertStringContainsString('btn-admin-create', $html);
-            $this->assertStringContainsString('admin-icon-btn', $html);
-            $this->assertStringContainsString('admin-icon-btn-edit', $html);
-            $this->assertStringContainsString('admin-icon-btn-delete', $html);
-            $this->assertStringContainsString('admin-action-group', $html);
-            $this->assertStringContainsString('aria-label="編集"', $html);
-            $this->assertStringContainsString('aria-label="削除"', $html);
-            $this->assertStringContainsString('&times;', $html);
-            $this->assertStringNotContainsString('btn-admin-edit', $html);
-            $this->assertDoesNotMatchRegularExpression('/admin-icon-btn-edit[^>]*>\s*<svg[^>]*>.*?<\/svg>\s*<span>編集<\/span>/s', $html);
-        }
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.staff.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('btn-admin-create', $html);
+        $this->assertStringContainsString('admin-icon-btn', $html);
+        $this->assertStringContainsString('admin-icon-btn-edit', $html);
+        $this->assertStringContainsString('admin-icon-btn-delete', $html);
+        $this->assertStringContainsString('admin-action-group', $html);
+        $this->assertStringContainsString('aria-label="編集"', $html);
+        $this->assertStringContainsString('aria-label="削除"', $html);
+        $this->assertStringContainsString('&times;', $html);
+        $this->assertStringNotContainsString('btn-admin-edit', $html);
+        $this->assertDoesNotMatchRegularExpression('/admin-icon-btn-edit[^>]*>\s*<svg[^>]*>.*?<\/svg>\s*<span>編集<\/span>/s', $html);
     }
 
     public function test_gallery_inline_cards_use_add_card_and_delete_icon_without_edit_button(): void

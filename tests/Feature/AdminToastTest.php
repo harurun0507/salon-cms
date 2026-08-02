@@ -37,22 +37,25 @@ class AdminToastTest extends TestCase
             'slug' => 'to-delete',
             'body' => 'body',
             'is_published' => false,
+            'display_order' => 1,
         ]);
 
         $news = News::query()->first();
 
         $this->actingAs($this->admin())
-            ->delete(route('admin.news.destroy', $news))
+            ->put(route('admin.news.update'), [
+                'deleted_ids' => [$news->id],
+            ])
             ->assertRedirect(route('admin.news.index'))
-            ->assertSessionHas('success', 'お知らせを削除しました。');
+            ->assertSessionHas('success', 'お知らせを保存しました。');
 
         $html = $this->actingAs($this->admin())
-            ->withSession(['success' => 'お知らせを削除しました。'])
+            ->withSession(['success' => 'お知らせを保存しました。'])
             ->get(route('admin.news.index'))
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('お知らせを削除しました。', $html);
+        $this->assertStringContainsString('お知らせを保存しました。', $html);
         $this->assertStringContainsString('id="admin-flash-data"', $html);
         $this->assertStringNotContainsString(
             'mb-6 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800',

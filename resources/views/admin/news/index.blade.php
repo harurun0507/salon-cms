@@ -1,846 +1,589 @@
 @extends('layouts.admin')
 
-@section('heading', 'お知らせ管理')
+@section('heading', 'お知らせ')
 
 @section('content')
-    <div class="mb-6 flex justify-between">
-        <p class="text-sm text-admin-muted">お知らせの一覧・登録・編集・削除</p>
-        <x-admin.create-button type="button" data-open-news-create>新規登録</x-admin.create-button>
+    @php
+        $maxOrder = (int) ($newsList->max('display_order') ?? 0);
+
+        $formatLocal = function ($value) {
+            if (! $value) {
+                return '';
+            }
+            try {
+                return \Illuminate\Support\Carbon::parse($value)->format('Y-m-d\TH:i');
+            } catch (\Throwable) {
+                return '';
+            }
+        };
+
+        $oldNewNews = old('new_news', []);
+        if (! is_array($oldNewNews)) {
+            $oldNewNews = [];
+        }
+        $nextNewIndex = 1;
+        foreach (array_keys($oldNewNews) as $key) {
+            if (preg_match('/^new_(\d+)$/', (string) $key, $m)) {
+                $nextNewIndex = max($nextNewIndex, ((int) $m[1]) + 1);
+            }
+        }
+    @endphp
+
+    <div class="sticky top-[4.5rem] z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8">
+        <div class="flex min-w-0 flex-wrap items-center gap-3">
+            <button
+                type="button"
+                class="admin-btn shadow-md shrink-0"
+                data-admin-confirm-trigger
+                data-confirm-form="news-bulk-form"
+                data-confirm-title="お知らせ保存の確認"
+                data-confirm-message="変更内容を保存します。&#10;よろしいですか？"
+                data-confirm-note="タイトル、本文、公開日時、公開状態、表示順、削除など、現在入力されている内容が反映されます。"
+                data-confirm-submit-label="保存する"
+            >保存する</button>
+            <p class="text-sm text-admin-muted">
+                カードで編集し、「保存する」でまとめて反映できます
+            </p>
+        </div>
     </div>
 
-    <div class="admin-table-wrap">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>タイトル</th>
-                    <th>公開日</th>
-                    <th>状態</th>
-                    <th class="text-right">操作</th>
-                </tr>
-            </thead>
-            <tbody id="news-table-body">
-                @forelse($newsList as $news)
-                    <tr
-                        data-news-row="{{ $news->id }}"
-                        data-published-at="{{ $news->published_at?->format('Y-m-d\TH:i') ?? '' }}"
-                    >
-                        <td class="news-title">{{ $news->title }}</td>
-                        <td class="news-published-at">{{ $news->published_at?->format('Y/m/d') ?? '-' }}</td>
-                        <td class="news-status">
-                            <span class="menu-published-label {{ $news->is_published ? 'is-published' : 'is-unpublished' }}">
-                                <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
-                                <span data-published-text>{{ $news->is_published ? '公開' : '非公開' }}</span>
-                            </span>
-                        </td>
-                        <td class="text-right">
-                            <x-admin.action-group>
-                                <x-admin.edit-button
-                                    type="button"
-                                    data-open-news-edit
-                                    data-news-id="{{ $news->id }}"
-                                />
-                                <x-admin.delete-button
-                                    :action="route('admin.news.destroy', $news)"
-                                    :name="$news->title"
-                                />
-                            </x-admin.action-group>
-                        </td>
-                    </tr>
-                @empty
-                    <tr id="news-empty-row">
-                        <td colspan="4" class="!p-0 hover:!bg-transparent">
-                            <x-admin.empty-state
-                                variant="leaf"
-                                title="お知らせがありません。"
-                                description="新しいお知らせを登録してみましょう。"
+    <div class="mb-6">
+        <p class="text-sm text-admin-muted">公開サイトのお知らせ一覧・詳細・トップページに表示するお知らせを登録します。</p>
+    </div>
+
+    @if ($errors->any())
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <ul class="list-disc space-y-1 pl-5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form
+        method="POST"
+        action="{{ route('admin.news.update') }}"
+        id="news-bulk-form"
+        data-news-workspace
+        data-next-new-index="{{ $nextNewIndex }}"
+        data-max-order="{{ $maxOrder }}"
+    >
+        @csrf
+        @method('PUT')
+
+        <div id="news-deleted-ids"></div>
+
+        <div id="news-grid" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" data-news-grid>
+            @foreach($newsList as $news)
+                @php
+                    $prefix = 'news.'.$news->id;
+                    $publishedOld = old($prefix.'.is_published', $news->is_published ? '1' : '0');
+                    $isPublished = in_array((string) $publishedOld, ['1', 'true', 'on'], true);
+                    $publishedAt = old($prefix.'.published_at', $formatLocal($news->published_at));
+                    $displayOrder = old($prefix.'.display_order', $news->display_order);
+                    $cardTitle = trim((string) old($prefix.'.title', $news->title));
+                    $headingTitle = $cardTitle !== '' ? $cardTitle : '新規お知らせ';
+                @endphp
+                <div
+                    class="admin-card news-card"
+                    data-news-card
+                    data-news-id="{{ $news->id }}"
+                    data-news-existing
+                >
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span
+                                class="news-drag-handle"
+                                data-news-drag-handle
+                                draggable="true"
+                                role="button"
+                                tabindex="0"
+                                aria-label="お知らせを並び替え"
+                                title="ドラッグして並び替え"
                             >
-                                <x-admin.create-button type="button" data-open-news-create>新規登録</x-admin.create-button>
-                            </x-admin.empty-state>
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-    <div class="mt-4">{{ $newsList->links() }}</div>
-
-    <template id="news-row-template">
-        <tr data-news-row="" data-published-at="">
-            <td class="news-title px-4 py-3"></td>
-            <td class="news-published-at px-4 py-3"></td>
-            <td class="news-status px-4 py-3">
-                <span class="menu-published-label is-unpublished">
-                    <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
-                    <span data-published-text></span>
-                </span>
-            </td>
-            <td class="px-4 py-3 text-right">
-                <div class="admin-action-group">
-                    <button type="button" class="admin-icon-btn admin-icon-btn-edit" data-open-news-edit data-news-id="" aria-label="編集" title="編集">
-                        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.829-2.828Z"/></svg>
-                    </button>
-                    <form action="" method="POST" class="inline" data-admin-delete-form>
-                        <input type="hidden" name="_token" value="">
-                        <input type="hidden" name="_method" value="DELETE">
+                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <circle cx="7" cy="5" r="1.25"/>
+                                    <circle cx="13" cy="5" r="1.25"/>
+                                    <circle cx="7" cy="10" r="1.25"/>
+                                    <circle cx="13" cy="10" r="1.25"/>
+                                    <circle cx="7" cy="15" r="1.25"/>
+                                    <circle cx="13" cy="15" r="1.25"/>
+                                </svg>
+                            </span>
+                            <p class="news-card-label truncate text-sm font-medium text-gray-800" data-news-card-title title="{{ $headingTitle }}">{{ $headingTitle }}</p>
+                        </div>
                         <button
                             type="button"
-                            data-admin-delete-trigger
-                            data-delete-message=""
                             class="admin-icon-btn admin-icon-btn-delete"
+                            data-news-remove
                             aria-label="削除"
                             title="削除"
                         >
                             <span aria-hidden="true">&times;</span>
                         </button>
-                    </form>
+                    </div>
+
+                    <input type="hidden" name="news[{{ $news->id }}][display_order]" value="{{ $displayOrder }}" data-news-order>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label for="news_title_{{ $news->id }}" class="admin-label">タイトル <span class="admin-required-badge">必須</span></label>
+                            <input
+                                type="text"
+                                name="news[{{ $news->id }}][title]"
+                                id="news_title_{{ $news->id }}"
+                                value="{{ old($prefix.'.title', $news->title) }}"
+                                maxlength="255"
+                                required
+                                class="admin-input"
+                                data-news-title-input
+                            >
+                            @error($prefix.'.title')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="news_body_{{ $news->id }}" class="admin-label">本文 <span class="admin-required-badge">必須</span></label>
+                            <textarea
+                                name="news[{{ $news->id }}][body]"
+                                id="news_body_{{ $news->id }}"
+                                rows="6"
+                                required
+                                class="admin-input"
+                            >{{ old($prefix.'.body', $news->body) }}</textarea>
+                            @error($prefix.'.body')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="news_published_at_{{ $news->id }}" class="admin-label">公開日時</label>
+                            <input
+                                type="datetime-local"
+                                name="news[{{ $news->id }}][published_at]"
+                                id="news_published_at_{{ $news->id }}"
+                                value="{{ $publishedAt }}"
+                                class="admin-input"
+                            >
+                            <p class="mt-1 text-xs text-admin-muted">空欄＝制限なし（公開中ならすぐ表示）</p>
+                            @error($prefix.'.published_at')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <span class="admin-label">公開</span>
+                            <div class="admin-segmented mt-1" role="radiogroup" aria-label="公開状態">
+                                <label class="admin-segmented-option">
+                                    <input type="radio" name="news[{{ $news->id }}][is_published]" value="1" class="admin-segmented-input" @checked($isPublished)>
+                                    <span class="admin-segmented-face">
+                                        <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                            <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
+                                            <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.35"/>
+                                        </svg>
+                                        <span class="admin-segmented-text">公開</span>
+                                    </span>
+                                </label>
+                                <label class="admin-segmented-option">
+                                    <input type="radio" name="news[{{ $news->id }}][is_published]" value="0" class="admin-segmented-input" @checked(!$isPublished)>
+                                    <span class="admin-segmented-face">
+                                        <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                            <path d="M2 2.5 13.5 13.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                                            <path d="M6.7 4.1A6.4 6.4 0 0 1 8 3.5c4 0 6.5 4.5 6.5 4.5a10.3 10.3 0 0 1-2.15 2.55M4.2 5.85A10.2 10.2 0 0 0 1.5 8S4 12.5 8 12.5c.7 0 1.35-.12 1.95-.34" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M6.65 7.1a2 2 0 0 0 2.35 2.35" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                                        </svg>
+                                        <span class="admin-segmented-text">非公開</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </td>
-        </tr>
-    </template>
+            @endforeach
 
-    @php
-        $newsEditPayload = $newsList->getCollection()->mapWithKeys(function ($news) {
-            return [
-                (string) $news->id => [
-                    'id' => $news->id,
-                    'title' => $news->title,
-                    'body' => $news->body,
-                    'published_at' => $news->published_at?->format('Y-m-d\TH:i') ?? '',
-                    'is_published' => (bool) $news->is_published,
-                    'update_url' => route('admin.news.update', $news),
-                ],
-            ];
-        });
-    @endphp
-    <script type="application/json" id="news-edit-data">{!! json_encode($newsEditPayload, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
-
-    {{-- 作成モーダル（一覧に1つ） --}}
-    <div
-        id="news-create-modal"
-        class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="news-create-modal-title"
-        hidden
-    >
-        <div class="admin-modal-panel flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-admin-border/50 bg-admin-card" data-news-create-modal-panel>
-                <div class="flex shrink-0 items-center justify-between border-b border-admin-border px-6 py-4">
-                <h2 id="news-create-modal-title" class="text-lg font-semibold text-admin-text">お知らせ登録</h2>
-                <button
-                    type="button"
-                    class="rounded-md p-1 text-admin-muted hover:bg-admin-hover hover:text-admin-text focus:outline-none focus:ring-2 focus:ring-admin-accent/40"
-                    aria-label="閉じる"
-                    data-close-news-create
+            @foreach($oldNewNews as $key => $newItem)
+                @php
+                    if (! is_array($newItem)) {
+                        continue;
+                    }
+                    $prefix = 'new_news.'.$key;
+                    $publishedOld = old($prefix.'.is_published', $newItem['is_published'] ?? '1');
+                    $isPublished = in_array((string) $publishedOld, ['1', 'true', 'on'], true);
+                    $publishedAt = old($prefix.'.published_at', $newItem['published_at'] ?? '');
+                    $displayOrder = old($prefix.'.display_order', $newItem['display_order'] ?? 0);
+                    $cardTitle = trim((string) old($prefix.'.title', $newItem['title'] ?? ''));
+                    $headingTitle = $cardTitle !== '' ? $cardTitle : '新規お知らせ';
+                    $body = old($prefix.'.body', $newItem['body'] ?? '');
+                @endphp
+                <div
+                    class="admin-card news-card"
+                    data-news-card
+                    data-news-new="1"
                 >
-                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/>
-                    </svg>
-                </button>
-            </div>
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span
+                                class="news-drag-handle"
+                                data-news-drag-handle
+                                draggable="true"
+                                role="button"
+                                tabindex="0"
+                                aria-label="お知らせを並び替え"
+                                title="ドラッグして並び替え"
+                            >
+                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <circle cx="7" cy="5" r="1.25"/>
+                                    <circle cx="13" cy="5" r="1.25"/>
+                                    <circle cx="7" cy="10" r="1.25"/>
+                                    <circle cx="13" cy="10" r="1.25"/>
+                                    <circle cx="7" cy="15" r="1.25"/>
+                                    <circle cx="13" cy="15" r="1.25"/>
+                                </svg>
+                            </span>
+                            <p class="news-card-label truncate text-sm font-medium text-gray-800" data-news-card-title title="{{ $headingTitle }}">{{ $headingTitle }}</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="admin-icon-btn admin-icon-btn-delete"
+                            data-news-remove
+                            aria-label="削除"
+                            title="削除"
+                        >
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
 
-            <form
-                id="news-create-form"
-                method="POST"
-                action="{{ route('admin.news.store') }}"
-                class="flex min-h-0 flex-1 flex-col"
+                    <input type="hidden" name="new_news[{{ $key }}][display_order]" value="{{ $displayOrder }}" data-news-order>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="admin-label">タイトル <span class="admin-required-badge">必須</span></label>
+                            <input
+                                type="text"
+                                name="new_news[{{ $key }}][title]"
+                                value="{{ $cardTitle }}"
+                                maxlength="255"
+                                required
+                                class="admin-input"
+                                data-news-title-input
+                            >
+                            @error($prefix.'.title')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label class="admin-label">本文 <span class="admin-required-badge">必須</span></label>
+                            <textarea
+                                name="new_news[{{ $key }}][body]"
+                                rows="6"
+                                required
+                                class="admin-input"
+                            >{{ $body }}</textarea>
+                            @error($prefix.'.body')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label class="admin-label">公開日時</label>
+                            <input
+                                type="datetime-local"
+                                name="new_news[{{ $key }}][published_at]"
+                                value="{{ $publishedAt }}"
+                                class="admin-input"
+                            >
+                            <p class="mt-1 text-xs text-admin-muted">空欄＝制限なし（公開中ならすぐ表示）</p>
+                        </div>
+                        <div>
+                            <span class="admin-label">公開</span>
+                            <div class="admin-segmented mt-1" role="radiogroup" aria-label="公開状態">
+                                <label class="admin-segmented-option">
+                                    <input type="radio" name="new_news[{{ $key }}][is_published]" value="1" class="admin-segmented-input" @checked($isPublished)>
+                                    <span class="admin-segmented-face">
+                                        <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                            <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
+                                            <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.35"/>
+                                        </svg>
+                                        <span class="admin-segmented-text">公開</span>
+                                    </span>
+                                </label>
+                                <label class="admin-segmented-option">
+                                    <input type="radio" name="new_news[{{ $key }}][is_published]" value="0" class="admin-segmented-input" @checked(!$isPublished)>
+                                    <span class="admin-segmented-face">
+                                        <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                            <path d="M2 2.5 13.5 13.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                                            <path d="M6.7 4.1A6.4 6.4 0 0 1 8 3.5c4 0 6.5 4.5 6.5 4.5a10.3 10.3 0 0 1-2.15 2.55M4.2 5.85A10.2 10.2 0 0 0 1.5 8S4 12.5 8 12.5c.7 0 1.35-.12 1.95-.34" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M6.65 7.1a2 2 0 0 0 2.35 2.35" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                                        </svg>
+                                        <span class="admin-segmented-text">非公開</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+
+            <div
+                id="news-add-card"
+                class="admin-card flex min-h-[22rem] w-full flex-col items-center justify-center px-6 py-10 text-center"
             >
-                @csrf
-
-                <div class="space-y-5 overflow-y-auto px-6 py-5">
-                    <div>
-                        <label for="create-news-title" class="admin-label">タイトル</label>
-                        <input type="text" name="title" id="create-news-title" required class="admin-input">
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="title"></p>
-                    </div>
-                    <div>
-                        <label for="create-news-body" class="admin-label">本文</label>
-                        <textarea name="body" id="create-news-body" rows="10" required class="admin-input"></textarea>
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="body"></p>
-                    </div>
-                    <div>
-                        <label for="create-news-published_at" class="admin-label">公開日時</label>
-                        <input type="datetime-local" name="published_at" id="create-news-published_at" class="admin-input">
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="published_at"></p>
-                    </div>
-                    <div>
-                        <label class="menu-published-control" data-published-control>
-                            <input type="hidden" name="is_published" value="0">
-                            <input
-                                type="checkbox"
-                                name="is_published"
-                                id="create-news-is_published"
-                                value="1"
-                                class="menu-published-checkbox"
-                                data-published-checkbox
-                                aria-label="公開状態"
-                            >
-                            <span class="menu-published-label is-unpublished" data-published-label>
-                                <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
-                                <span data-published-text>非公開</span>
-                            </span>
-                        </label>
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="is_published"></p>
-                    </div>
-                </div>
-
-                <div class="flex shrink-0 justify-end gap-3 border-t border-admin-border px-6 py-4">
-                    <button type="button" class="admin-btn-secondary" data-close-news-create>キャンセル</button>
-                    <button
-                        type="submit"
-                        id="news-create-submit"
-                        class="admin-btn"
-                    >登録する</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {{-- 編集モーダル（一覧に1つ） --}}
-    <div
-        id="news-edit-modal"
-        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="news-edit-modal-title"
-        hidden
-    >
-        <div class="admin-modal-panel flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-admin-border/50 bg-admin-card" data-news-modal-panel>
-            <div class="flex shrink-0 items-center justify-between border-b border-admin-border px-6 py-4">
-                <h2 id="news-edit-modal-title" class="text-lg font-semibold text-admin-text">お知らせ編集</h2>
-                <button
-                    type="button"
-                    id="news-edit-modal-close"
-                    class="rounded-md p-1 text-admin-muted hover:bg-admin-hover hover:text-admin-text focus:outline-none focus:ring-2 focus:ring-admin-accent/40"
-                    aria-label="閉じる"
-                    data-close-news-edit
-                >
-                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/>
+                <div class="admin-empty-state-icon !mb-4" aria-hidden="true">
+                    <svg class="h-14 w-14" viewBox="0 0 80 80" fill="none" stroke="#B8B09F" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 20h36a4 4 0 0 1 4 4v36a4 4 0 0 1-4 4H22a4 4 0 0 1-4-4V24a4 4 0 0 1 4-4z" stroke-width="1.4"/>
+                        <path d="M28 32h24M28 40h18M28 48h12" stroke-width="1.3" opacity="0.75"/>
+                        <circle cx="56" cy="24" r="8" stroke-width="1.3" opacity="0.65"/>
+                        <path d="M56 20v8M52 24h8" stroke-width="1.3" opacity="0.65"/>
                     </svg>
-                </button>
+                </div>
+                <x-admin.create-button data-news-add>
+                    お知らせを追加
+                </x-admin.create-button>
+                <p class="mt-3 text-xs text-admin-muted">カードを追加し、保存で登録できます。</p>
             </div>
-
-            <form id="news-edit-form" method="POST" class="flex min-h-0 flex-1 flex-col">
-                @csrf
-                <input type="hidden" name="_method" value="PUT">
-
-                <div class="space-y-5 overflow-y-auto px-6 py-5">
-                    <div>
-                        <label for="modal-title" class="admin-label">タイトル</label>
-                        <input type="text" name="title" id="modal-title" required class="admin-input">
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="title"></p>
-                    </div>
-                    <div>
-                        <label for="modal-body" class="admin-label">本文</label>
-                        <textarea name="body" id="modal-body" rows="10" required class="admin-input"></textarea>
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="body"></p>
-                    </div>
-                    <div>
-                        <label for="modal-published_at" class="admin-label">公開日時</label>
-                        <input type="datetime-local" name="published_at" id="modal-published_at" class="admin-input">
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="published_at"></p>
-                    </div>
-                    <div>
-                        <label class="menu-published-control" data-published-control>
-                            <input type="hidden" name="is_published" value="0">
-                            <input
-                                type="checkbox"
-                                name="is_published"
-                                id="modal-is_published"
-                                value="1"
-                                class="menu-published-checkbox"
-                                data-published-checkbox
-                                aria-label="公開状態"
-                            >
-                            <span class="menu-published-label is-unpublished" data-published-label>
-                                <span class="menu-published-dot" data-published-dot aria-hidden="true"></span>
-                                <span data-published-text>非公開</span>
-                            </span>
-                        </label>
-                        <p class="mt-1 hidden text-sm text-red-600" data-error-for="is_published"></p>
-                    </div>
-                </div>
-
-                <div class="flex shrink-0 justify-end gap-3 border-t border-admin-border px-6 py-4">
-                    <button type="button" class="admin-btn-secondary" data-close-news-edit>キャンセル</button>
-                    <button
-                        type="submit"
-                        id="news-edit-submit"
-                        class="admin-btn"
-                    >更新する</button>
-                </div>
-            </form>
         </div>
-    </div>
+    </form>
+
+    <style>
+        .news-drag-handle {
+            display: inline-flex;
+            flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+            width: 1.75rem;
+            height: 2rem;
+            color: rgba(115, 109, 101, 0.55);
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .news-drag-handle:hover,
+        .news-drag-handle:focus-visible {
+            color: #556344;
+        }
+        .news-drag-handle:focus {
+            outline: none;
+        }
+        .news-drag-handle:focus-visible {
+            box-shadow: inset 0 0 0 2px rgba(105, 122, 85, 0.35);
+            border-radius: 0.25rem;
+        }
+        .news-drag-handle:active,
+        .news-card.is-dragging .news-drag-handle {
+            cursor: grabbing;
+        }
+        .news-card.is-dragging {
+            opacity: 0.55;
+        }
+        .news-card.is-drag-over {
+            outline: 2px dashed rgba(105, 122, 85, 0.45);
+            outline-offset: 2px;
+        }
+    </style>
 
     <script>
         (function () {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            const dataEl = document.getElementById('news-edit-data');
+            const form = document.getElementById('news-bulk-form');
+            const grid = document.getElementById('news-grid');
+            const deletedIdsWrap = document.getElementById('news-deleted-ids');
+            const addCard = document.getElementById('news-add-card');
+            const addButton = addCard ? addCard.querySelector('[data-news-add]') : null;
+            const emptyHeading = '新規お知らせ';
 
-            let newsData = {};
-            try {
-                newsData = JSON.parse(dataEl?.textContent || '{}');
-            } catch (e) {
-                newsData = {};
+            if (!form || !grid || !addCard || !addButton) {
+                return;
             }
 
-            // ---- 編集モーダル ----
-            const modal = document.getElementById('news-edit-modal');
-            const form = document.getElementById('news-edit-form');
-            const submitBtn = document.getElementById('news-edit-submit');
+            let nextNewIndex = parseInt(form.getAttribute('data-next-new-index') || '1', 10);
+            let maxOrder = parseInt(form.getAttribute('data-max-order') || '0', 10);
+            let dragCard = null;
 
-            let openTrigger = null;
-            let previouslyFocused = null;
-            let submitting = false;
-
-            const titleInput = document.getElementById('modal-title');
-            const bodyInput = document.getElementById('modal-body');
-            const publishedAtInput = document.getElementById('modal-published_at');
-            const isPublishedInput = document.getElementById('modal-is_published');
-
-            function syncPublishedLabel(checkbox) {
-                const control = checkbox.closest('[data-published-control]');
-                if (!control) {
+            function syncCardHeading(card) {
+                const label = card.querySelector('[data-news-card-title]');
+                const input = card.querySelector('[data-news-title-input]');
+                if (!label || !input) {
                     return;
                 }
-                const label = control.querySelector('[data-published-label]');
-                const text = control.querySelector('[data-published-text]');
-                if (!label) {
-                    return;
-                }
-                const published = !!checkbox.checked;
-                label.classList.toggle('is-published', published);
-                label.classList.toggle('is-unpublished', !published);
-                if (text) {
-                    text.textContent = published ? '公開' : '非公開';
-                }
+                const value = (input.value || '').trim();
+                const text = value !== '' ? value : emptyHeading;
+                label.textContent = text;
+                label.setAttribute('title', text);
             }
 
-            function setPublishedStatusCell(statusCell, published) {
-                if (!statusCell) {
-                    return;
-                }
-                let label = statusCell.querySelector('.menu-published-label');
-                if (!label) {
-                    statusCell.innerHTML =
-                        '<span class="menu-published-label">' +
-                            '<span class="menu-published-dot" data-published-dot aria-hidden="true"></span>' +
-                            '<span data-published-text></span>' +
-                        '</span>';
-                    label = statusCell.querySelector('.menu-published-label');
-                }
-                label.classList.toggle('is-published', !!published);
-                label.classList.toggle('is-unpublished', !published);
-                const text = statusCell.querySelector('[data-published-text]');
-                if (text) {
-                    text.textContent = published ? '公開' : '非公開';
-                }
-            }
-
-            document.addEventListener('change', function (e) {
-                const checkbox = e.target.closest('[data-published-checkbox]');
-                if (checkbox) {
-                    syncPublishedLabel(checkbox);
-                }
-            });
-
-            function getFocusable() {
-                return Array.from(
-                    modal.querySelectorAll(
-                        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
-                    )
-                ).filter(function (el) {
-                    return !el.hasAttribute('disabled') && el.getClientRects().length > 0;
-                });
-            }
-
-            function clearErrors() {
-                form.querySelectorAll('[data-error-for]').forEach(function (el) {
-                    el.textContent = '';
-                    el.classList.add('hidden');
-                });
-            }
-
-            function showErrors(errors) {
-                clearErrors();
-                Object.keys(errors || {}).forEach(function (field) {
-                    const target = form.querySelector('[data-error-for="' + field + '"]');
-                    if (target && errors[field] && errors[field][0]) {
-                        target.textContent = errors[field][0];
-                        target.classList.remove('hidden');
+            function syncDisplayOrders() {
+                grid.querySelectorAll('[data-news-card]').forEach(function (card, index) {
+                    const orderInput = card.querySelector('[data-news-order]');
+                    if (orderInput) {
+                        orderInput.value = String(index + 1);
                     }
                 });
+                maxOrder = grid.querySelectorAll('[data-news-card]').length;
+                form.setAttribute('data-max-order', String(maxOrder));
             }
 
-            function fillForm(item) {
-                form.action = item.update_url;
-                titleInput.value = item.title || '';
-                bodyInput.value = item.body || '';
-                publishedAtInput.value = item.published_at || '';
-                isPublishedInput.checked = !!item.is_published;
-                syncPublishedLabel(isPublishedInput);
-                clearErrors();
-            }
+            function bindCard(card) {
+                const removeBtn = card.querySelector('[data-news-remove]');
+                const titleInput = card.querySelector('[data-news-title-input]');
 
-            function openModal(newsId, trigger) {
-                const item = newsData[String(newsId)];
-                if (!item) {
-                    return;
-                }
+                titleInput?.addEventListener('input', function () {
+                    syncCardHeading(card);
+                });
+                syncCardHeading(card);
 
-                openTrigger = trigger || null;
-                previouslyFocused = document.activeElement;
-                fillForm(item);
-                modal.classList.remove('hidden');
-                modal.removeAttribute('hidden');
-                document.body.style.overflow = 'hidden';
-
-                requestAnimationFrame(function () {
-                    setTimeout(function () {
-                        titleInput.focus();
-                    }, 0);
+                removeBtn?.addEventListener('click', function () {
+                    const existingId = card.getAttribute('data-news-id');
+                    if (existingId && deletedIdsWrap) {
+                        const hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = 'deleted_ids[]';
+                        hidden.value = existingId;
+                        deletedIdsWrap.appendChild(hidden);
+                    }
+                    card.remove();
+                    syncDisplayOrders();
                 });
             }
 
-            function closeModal() {
-                if (submitting) {
-                    return;
-                }
+            function createEmptyCard() {
+                const key = 'new_' + nextNewIndex;
+                nextNewIndex += 1;
+                form.setAttribute('data-next-new-index', String(nextNewIndex));
 
-                modal.classList.add('hidden');
-                modal.setAttribute('hidden', '');
-                document.body.style.overflow = '';
-                clearErrors();
+                const order = grid.querySelectorAll('[data-news-card]').length + 1;
+                maxOrder = Math.max(maxOrder, order);
+                form.setAttribute('data-max-order', String(maxOrder));
 
-                const restore = openTrigger || previouslyFocused;
-                openTrigger = null;
-                if (restore && typeof restore.focus === 'function') {
-                    restore.focus();
-                }
+                const card = document.createElement('div');
+                card.className = 'admin-card news-card';
+                card.setAttribute('data-news-card', '');
+                card.setAttribute('data-news-new', '1');
+                card.innerHTML =
+                    '<div class="mb-3 flex items-center justify-between gap-3">' +
+                        '<div class="flex min-w-0 items-center gap-2">' +
+                            '<span class="news-drag-handle" data-news-drag-handle draggable="true" role="button" tabindex="0" aria-label="お知らせを並び替え" title="ドラッグして並び替え">' +
+                                '<svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">' +
+                                    '<circle cx="7" cy="5" r="1.25"/><circle cx="13" cy="5" r="1.25"/>' +
+                                    '<circle cx="7" cy="10" r="1.25"/><circle cx="13" cy="10" r="1.25"/>' +
+                                    '<circle cx="7" cy="15" r="1.25"/><circle cx="13" cy="15" r="1.25"/>' +
+                                '</svg>' +
+                            '</span>' +
+                            '<p class="news-card-label truncate text-sm font-medium text-gray-800" data-news-card-title title="' + emptyHeading + '">' + emptyHeading + '</p>' +
+                        '</div>' +
+                        '<button type="button" class="admin-icon-btn admin-icon-btn-delete" data-news-remove aria-label="削除" title="削除">' +
+                            '<span aria-hidden="true">&times;</span>' +
+                        '</button>' +
+                    '</div>' +
+                    '<input type="hidden" name="new_news[' + key + '][display_order]" value="' + order + '" data-news-order>' +
+                    '<div class="space-y-3">' +
+                        '<div>' +
+                            '<label class="admin-label">タイトル <span class="admin-required-badge">必須</span></label>' +
+                            '<input type="text" name="new_news[' + key + '][title]" value="" maxlength="255" required class="admin-input" data-news-title-input>' +
+                        '</div>' +
+                        '<div>' +
+                            '<label class="admin-label">本文 <span class="admin-required-badge">必須</span></label>' +
+                            '<textarea name="new_news[' + key + '][body]" rows="6" required class="admin-input"></textarea>' +
+                        '</div>' +
+                        '<div>' +
+                            '<label class="admin-label">公開日時</label>' +
+                            '<input type="datetime-local" name="new_news[' + key + '][published_at]" value="" class="admin-input">' +
+                            '<p class="mt-1 text-xs text-admin-muted">空欄＝制限なし（公開中ならすぐ表示）</p>' +
+                        '</div>' +
+                        '<div>' +
+                            '<span class="admin-label">公開</span>' +
+                            '<div class="admin-segmented mt-1" role="radiogroup" aria-label="公開状態">' +
+                                '<label class="admin-segmented-option">' +
+                                    '<input type="radio" name="new_news[' + key + '][is_published]" value="1" class="admin-segmented-input" checked>' +
+                                    '<span class="admin-segmented-face">' +
+                                        '<svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+                                            '<path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>' +
+                                            '<circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.35"/>' +
+                                        '</svg>' +
+                                        '<span class="admin-segmented-text">公開</span>' +
+                                    '</span>' +
+                                '</label>' +
+                                '<label class="admin-segmented-option">' +
+                                    '<input type="radio" name="new_news[' + key + '][is_published]" value="0" class="admin-segmented-input">' +
+                                    '<span class="admin-segmented-face">' +
+                                        '<svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+                                            '<path d="M2 2.5 13.5 13.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>' +
+                                            '<path d="M6.7 4.1A6.4 6.4 0 0 1 8 3.5c4 0 6.5 4.5 6.5 4.5a10.3 10.3 0 0 1-2.15 2.55M4.2 5.85A10.2 10.2 0 0 0 1.5 8S4 12.5 8 12.5c.7 0 1.35-.12 1.95-.34" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>' +
+                                            '<path d="M6.65 7.1a2 2 0 0 0 2.35 2.35" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>' +
+                                        '</svg>' +
+                                        '<span class="admin-segmented-text">非公開</span>' +
+                                    '</span>' +
+                                '</label>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+
+                addCard.before(card);
+                bindCard(card);
+                syncDisplayOrders();
             }
 
-            function updateRow(news) {
-                const row = document.querySelector('[data-news-row="' + news.id + '"]');
-                if (!row) {
+            grid.addEventListener('dragstart', function (e) {
+                const handle = e.target.closest('[data-news-drag-handle]');
+                if (!handle || !grid.contains(handle)) {
                     return;
                 }
-
-                const titleCell = row.querySelector('.news-title');
-                const dateCell = row.querySelector('.news-published-at');
-                const statusCell = row.querySelector('.news-status');
-
-                if (titleCell) {
-                    titleCell.textContent = news.title;
-                }
-                if (dateCell) {
-                    dateCell.textContent = news.published_at_display || '-';
-                }
-                setPublishedStatusCell(statusCell, !!news.is_published);
-            }
-
-            function showSuccess(message) {
-                if (typeof window.showToast === 'function') {
-                    window.showToast(message || 'お知らせを更新しました。', 'success');
-                } else if (window.AdminToast) {
-                    window.AdminToast.show(message || 'お知らせを更新しました。', 'success');
-                }
-            }
-
-            document.addEventListener('click', function (e) {
-                const btn = e.target.closest('[data-open-news-edit]');
-                if (!btn) {
-                    return;
-                }
-                openModal(btn.getAttribute('data-news-id'), btn);
-            });
-
-            document.querySelectorAll('[data-close-news-edit]').forEach(function (btn) {
-                btn.addEventListener('click', closeModal);
-            });
-
-            modal.addEventListener('click', function (e) {
-                if (e.target === modal) {
-                    closeModal();
-                }
-            });
-
-            document.addEventListener('keydown', function (e) {
-                if (modal.classList.contains('hidden')) {
-                    return;
-                }
-
-                if (e.key === 'Escape') {
+                const card = handle.closest('[data-news-card]');
+                if (!card) {
                     e.preventDefault();
-                    closeModal();
                     return;
                 }
-
-                if (e.key === 'Tab') {
-                    const focusable = getFocusable();
-                    if (focusable.length === 0) {
-                        return;
-                    }
-
-                    const first = focusable[0];
-                    const last = focusable[focusable.length - 1];
-
-                    if (e.shiftKey && document.activeElement === first) {
-                        e.preventDefault();
-                        last.focus();
-                    } else if (!e.shiftKey && document.activeElement === last) {
-                        e.preventDefault();
-                        first.focus();
-                    }
-                }
+                dragCard = card;
+                card.classList.add('is-dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', card.getAttribute('data-news-id') || 'new');
             });
 
-            form.addEventListener('submit', function (e) {
+            grid.addEventListener('dragend', function () {
+                if (dragCard) {
+                    dragCard.classList.remove('is-dragging');
+                }
+                grid.querySelectorAll('.is-drag-over').forEach(function (el) {
+                    el.classList.remove('is-drag-over');
+                });
+                dragCard = null;
+                syncDisplayOrders();
+            });
+
+            grid.addEventListener('dragover', function (e) {
+                if (!dragCard) {
+                    return;
+                }
                 e.preventDefault();
-                if (submitting) {
+                const over = e.target.closest('[data-news-card]');
+                if (!over || over === dragCard || !grid.contains(over)) {
                     return;
                 }
-
-                submitting = true;
-                submitBtn.disabled = true;
-                clearErrors();
-
-                const formData = new FormData(form);
-
-                fetch(form.action, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': csrfToken,
-                    },
-                    body: formData,
-                    credentials: 'same-origin',
-                })
-                    .then(async function (response) {
-                        const data = await response.json().catch(function () {
-                            return {};
-                        });
-
-                        if (response.status === 422) {
-                            showErrors(data.errors || {});
-                            return;
-                        }
-
-                        if (!response.ok) {
-                            showErrors({ title: [data.message || '更新に失敗しました。'] });
-                            return;
-                        }
-
-                        const news = data.news;
-                        if (news) {
-                            newsData[String(news.id)] = {
-                                id: news.id,
-                                title: news.title,
-                                body: news.body,
-                                published_at: news.published_at || '',
-                                is_published: !!news.is_published,
-                                update_url: form.action,
-                            };
-                            if (dataEl) {
-                                dataEl.textContent = JSON.stringify(newsData);
-                            }
-                            updateRow(news);
-                        }
-
-                        submitting = false;
-                        submitBtn.disabled = false;
-                        closeModal();
-                        showSuccess(data.message || 'お知らせを更新しました。');
-                    })
-                    .catch(function () {
-                        showErrors({ title: ['通信エラーが発生しました。'] });
-                    })
-                    .finally(function () {
-                        submitting = false;
-                        submitBtn.disabled = false;
-                    });
-            });
-
-            // ---- 作成モーダル ----
-            const createModal = document.getElementById('news-create-modal');
-            const createForm = document.getElementById('news-create-form');
-            const createSubmitBtn = document.getElementById('news-create-submit');
-            const createTitleInput = document.getElementById('create-news-title');
-            const createIsPublishedInput = document.getElementById('create-news-is_published');
-            const rowTemplate = document.getElementById('news-row-template');
-            const newsTableBody = document.getElementById('news-table-body');
-
-            let createOpenTrigger = null;
-            let createSubmitting = false;
-
-            function clearCreateErrors() {
-                createForm.querySelectorAll('[data-error-for]').forEach(function (el) {
-                    el.textContent = '';
-                    el.classList.add('hidden');
-                });
-            }
-
-            function showCreateErrors(errors) {
-                clearCreateErrors();
-                Object.keys(errors || {}).forEach(function (field) {
-                    const target = createForm.querySelector('[data-error-for="' + field + '"]');
-                    if (target && errors[field] && errors[field][0]) {
-                        target.textContent = errors[field][0];
-                        target.classList.remove('hidden');
+                grid.querySelectorAll('.is-drag-over').forEach(function (el) {
+                    if (el !== over) {
+                        el.classList.remove('is-drag-over');
                     }
                 });
-            }
-
-            function resetCreateFormState() {
-                createForm.reset();
-                createIsPublishedInput.checked = false;
-                syncPublishedLabel(createIsPublishedInput);
-                clearCreateErrors();
-                createSubmitBtn.disabled = false;
-                createSubmitBtn.textContent = '登録する';
-                createSubmitting = false;
-            }
-
-            function openCreateModal(trigger) {
-                createOpenTrigger = trigger || null;
-                resetCreateFormState();
-                createModal.classList.remove('hidden');
-                createModal.classList.add('flex');
-                createModal.removeAttribute('hidden');
-                if (window.AdminUi) {
-                    window.AdminUi.lockBody();
+                over.classList.add('is-drag-over');
+                const rect = over.getBoundingClientRect();
+                const before = (e.clientY - rect.top) < rect.height / 2;
+                if (before) {
+                    over.before(dragCard);
                 } else {
-                    document.body.style.overflow = 'hidden';
+                    over.after(dragCard);
                 }
+            });
 
-                requestAnimationFrame(function () {
-                    setTimeout(function () {
-                        createTitleInput.focus();
-                    }, 0);
-                });
-            }
-
-            function closeCreateModal() {
-                if (createSubmitting) {
+            grid.addEventListener('drop', function (e) {
+                if (!dragCard) {
                     return;
                 }
-
-                createModal.classList.add('hidden');
-                createModal.classList.remove('flex');
-                createModal.setAttribute('hidden', '');
-                if (window.AdminUi) {
-                    window.AdminUi.unlockBody();
-                } else {
-                    document.body.style.overflow = '';
-                }
-
-                resetCreateFormState();
-
-                const restore = createOpenTrigger;
-                createOpenTrigger = null;
-                if (restore && typeof restore.focus === 'function') {
-                    restore.focus();
-                }
-            }
-
-            // SQLite/MySQL: ORDER BY published_at DESC → NULLs last; then id DESC
-            function compareNewsRows(a, b) {
-                const pubA = a.getAttribute('data-published-at') || '';
-                const pubB = b.getAttribute('data-published-at') || '';
-                const aNull = pubA === '';
-                const bNull = pubB === '';
-
-                if (aNull !== bNull) {
-                    return aNull ? 1 : -1;
-                }
-
-                if (!aNull && pubA !== pubB) {
-                    return pubA > pubB ? -1 : 1;
-                }
-
-                const idA = Number(a.getAttribute('data-news-row') || 0);
-                const idB = Number(b.getAttribute('data-news-row') || 0);
-                return idB - idA;
-            }
-
-            function insertNewsRow(row) {
-                const empty = document.getElementById('news-empty-row');
-                if (empty) {
-                    empty.remove();
-                }
-
-                const rows = Array.from(newsTableBody.querySelectorAll('[data-news-row]'));
-                let inserted = false;
-                for (let i = 0; i < rows.length; i++) {
-                    if (compareNewsRows(row, rows[i]) < 0) {
-                        newsTableBody.insertBefore(row, rows[i]);
-                        inserted = true;
-                        break;
-                    }
-                }
-                if (!inserted) {
-                    newsTableBody.appendChild(row);
-                }
-            }
-
-            function buildNewsRow(news) {
-                const node = rowTemplate.content.firstElementChild.cloneNode(true);
-                const publishedAt = news.published_at || '';
-
-                node.setAttribute('data-news-row', String(news.id));
-                node.setAttribute('data-published-at', publishedAt);
-
-                const titleEl = node.querySelector('.news-title');
-                if (titleEl) {
-                    titleEl.textContent = news.title || '';
-                }
-
-                const dateEl = node.querySelector('.news-published-at');
-                if (dateEl) {
-                    dateEl.textContent = news.published_at_display || '-';
-                }
-
-                setPublishedStatusCell(node.querySelector('.news-status'), !!news.is_published);
-
-                const editBtn = node.querySelector('[data-open-news-edit]');
-                if (editBtn) {
-                    editBtn.setAttribute('data-news-id', String(news.id));
-                }
-
-                const deleteForm = node.querySelector('form[data-admin-delete-form]');
-                if (deleteForm) {
-                    deleteForm.action = news.destroy_url || '';
-                    const tokenInput = deleteForm.querySelector('input[name="_token"]');
-                    if (tokenInput) {
-                        tokenInput.value = csrfToken;
-                    }
-                    const deleteBtn = deleteForm.querySelector('[data-admin-delete-trigger]');
-                    if (deleteBtn) {
-                        deleteBtn.setAttribute(
-                            'data-delete-message',
-                            '「' + (news.title || '') + '」を削除しますか？'
-                        );
-                    }
-                }
-
-                return node;
-            }
-
-            document.querySelectorAll('[data-open-news-create]').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    openCreateModal(btn);
-                });
-            });
-
-            document.querySelectorAll('[data-close-news-create]').forEach(function (btn) {
-                btn.addEventListener('click', closeCreateModal);
-            });
-
-            createModal.addEventListener('click', function (e) {
-                if (e.target === createModal) {
-                    closeCreateModal();
-                }
-            });
-
-            document.addEventListener('keydown', function (e) {
-                if (createModal.classList.contains('hidden')) {
-                    return;
-                }
-
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    closeCreateModal();
-                    return;
-                }
-
-                if (window.AdminUi) {
-                    window.AdminUi.trapFocus(e, createModal);
-                }
-            });
-
-            createForm.addEventListener('submit', function (e) {
                 e.preventDefault();
-                if (createSubmitting) {
-                    return;
-                }
+            });
 
-                createSubmitting = true;
-                createSubmitBtn.disabled = true;
-                createSubmitBtn.textContent = '登録中...';
-                clearCreateErrors();
+            grid.querySelectorAll('[data-news-card]').forEach(bindCard);
+            syncDisplayOrders();
 
-                const formData = new FormData(createForm);
-
-                fetch(createForm.action, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': csrfToken,
-                    },
-                    body: formData,
-                    credentials: 'same-origin',
-                })
-                    .then(async function (response) {
-                        const data = await response.json().catch(function () {
-                            return {};
-                        });
-
-                        if (response.status === 422) {
-                            showCreateErrors(data.errors || {});
-                            if (typeof window.showToast === 'function') {
-                                window.showToast('入力内容を確認してください。', 'error');
-                            }
-                            return;
-                        }
-
-                        if (!response.ok) {
-                            showCreateErrors({ title: [data.message || '登録に失敗しました。'] });
-                            if (typeof window.showToast === 'function') {
-                                window.showToast(data.message || '登録に失敗しました。', 'error');
-                            }
-                            return;
-                        }
-
-                        const news = data.news;
-                        if (news) {
-                            newsData[String(news.id)] = {
-                                id: news.id,
-                                title: news.title,
-                                body: news.body,
-                                published_at: news.published_at || '',
-                                is_published: !!news.is_published,
-                                update_url: news.update_url,
-                            };
-                            if (dataEl) {
-                                dataEl.textContent = JSON.stringify(newsData);
-                            }
-
-                            const row = buildNewsRow(news);
-                            insertNewsRow(row);
-                        }
-
-                        createSubmitting = false;
-                        createSubmitBtn.disabled = false;
-                        createSubmitBtn.textContent = '登録する';
-                        closeCreateModal();
-
-                        if (typeof window.showToast === 'function') {
-                            window.showToast(data.message || 'お知らせを登録しました。', 'success');
-                        }
-                    })
-                    .catch(function () {
-                        showCreateErrors({ title: ['通信エラーが発生しました。'] });
-                        if (typeof window.showToast === 'function') {
-                            window.showToast('通信エラーが発生しました。', 'error');
-                        }
-                    })
-                    .finally(function () {
-                        createSubmitting = false;
-                        createSubmitBtn.disabled = false;
-                        createSubmitBtn.textContent = '登録する';
-                    });
+            addButton.addEventListener('click', function (e) {
+                e.preventDefault();
+                createEmptyCard();
             });
         })();
     </script>

@@ -35,6 +35,7 @@ class HomeNavigationAndNewsTest extends TestCase
             'body' => 'body',
             'is_published' => true,
             'published_at' => now()->subDays(10),
+            'display_order' => 2,
         ]);
         News::query()->create([
             'title' => '新しいお知らせ',
@@ -42,6 +43,7 @@ class HomeNavigationAndNewsTest extends TestCase
             'body' => 'body',
             'is_published' => true,
             'published_at' => now()->subDay(),
+            'display_order' => 1,
         ]);
         News::query()->create([
             'title' => '非公開',
@@ -49,6 +51,7 @@ class HomeNavigationAndNewsTest extends TestCase
             'body' => 'body',
             'is_published' => false,
             'published_at' => now(),
+            'display_order' => 99,
         ]);
 
         for ($i = 1; $i <= 5; $i++) {
@@ -58,6 +61,7 @@ class HomeNavigationAndNewsTest extends TestCase
                 'body' => 'body',
                 'is_published' => true,
                 'published_at' => now()->subDays($i + 1),
+                'display_order' => $i + 2,
             ]);
         }
 
