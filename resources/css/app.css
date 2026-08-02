@@ -5,11 +5,25 @@
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
+/* Public design tokens — overridable via DesignSetting CSS vars on public layout */
+:root {
+    --site-primary: #5F6F52;
+    --site-secondary: #7C8A6A;
+    --site-background: #FAF7F1;
+    --site-text: #3A332E;
+    --site-button-radius: 9999px;
+    --site-card-radius: 0.5rem;
+    --site-section-spacing: 5rem;
+    --site-card-padding: 1.5rem;
+    --site-heading-font: 'Noto Serif JP', 'Hiragino Mincho ProN', ui-serif, Georgia, serif;
+    --site-body-font: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', ui-sans-serif, system-ui, sans-serif;
+}
+
 @theme {
     --font-sans: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', ui-sans-serif, system-ui, sans-serif;
     --font-serif: 'Noto Serif JP', 'Hiragino Mincho ProN', ui-serif, Georgia, serif;
 
-    /* Public site tokens (unchanged) */
+    /* Public site tokens (defaults; runtime overrides via --site-* / --color-salon-*) */
     --color-salon-bg: #FAF7F1;
     --color-salon-text: #3A332E;
     --color-salon-accent: #7C8A6A;
@@ -60,15 +74,27 @@
 
 @layer components {
     .btn-primary {
-        @apply inline-flex items-center justify-center rounded-full bg-salon-button px-6 py-3 text-sm font-medium text-white transition hover:opacity-90;
+        @apply inline-flex items-center justify-center bg-salon-button px-6 py-3 text-sm font-medium text-white transition hover:opacity-90;
+        border-radius: var(--site-button-radius, 9999px);
     }
 
     .btn-outline {
-        @apply inline-flex items-center justify-center rounded-full border border-salon-button px-6 py-3 text-sm font-medium text-salon-button transition hover:bg-salon-button hover:text-white;
+        @apply inline-flex items-center justify-center border border-salon-button px-6 py-3 text-sm font-medium text-salon-button transition hover:bg-salon-button hover:text-white;
+        border-radius: var(--site-button-radius, 9999px);
     }
 
     .section-title {
-        @apply font-serif text-3xl md:text-4xl tracking-wide text-salon-text;
+        @apply text-3xl md:text-4xl tracking-wide text-salon-text;
+        font-family: var(--site-heading-font, var(--font-serif));
+    }
+
+    .site-section {
+        padding-block: var(--site-section-spacing, 5rem);
+    }
+
+    .site-card {
+        border-radius: var(--site-card-radius, 0.5rem);
+        padding: var(--site-card-padding, 1.5rem);
     }
 
     /* ---- Admin shared ---- */

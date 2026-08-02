@@ -154,20 +154,6 @@ class AdminSidebarNavTest extends TestCase
         $this->get(route('admin.system.seo'))->assertRedirect();
         $this->get(route('admin.system.analytics'))->assertRedirect();
         $this->get(route('admin.system.users'))->assertRedirect();
-    }
-
-    #[DataProvider('placeholderRoutesProvider')]
-    public function test_placeholder_pages_render_coming_soon(string $routeName, string $title): void
-    {
-        $this->actingAs($this->admin())
-            ->get(route($routeName))
-            ->assertOk()
-            ->assertSee($title, false)
-            ->assertSee('この機能は現在準備中です。', false);
-    }
-
-    public function test_placeholder_pages_require_authentication(): void
-    {
         $this->get(route('admin.system.design'))->assertRedirect();
     }
 
@@ -180,13 +166,7 @@ class AdminSidebarNavTest extends TestCase
             ['admin.system.seo', 'SEO', 'seo-form', 'system'],
             ['admin.system.analytics', 'Analytics（GA4）', 'analytics-form', 'system'],
             ['admin.system.users', '管理ユーザー', 'users-bulk-form', 'system'],
-        ];
-    }
-
-    public static function placeholderRoutesProvider(): array
-    {
-        return [
-            ['admin.system.design', 'デザイン設定'],
+            ['admin.system.design', 'デザイン設定', 'design-form', 'system'],
         ];
     }
 }

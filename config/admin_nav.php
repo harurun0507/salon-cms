@@ -125,7 +125,7 @@ return [
                 [
                     'label' => 'デザイン設定',
                     'route' => 'admin.system.design',
-                    'active' => 'admin.system.design',
+                    'active' => 'admin.system.design*',
                     'icon' => 'palette',
                     'roles' => ['admin'],
                 ],

@@ -3,7 +3,7 @@
 @section('title', 'メニュー・料金')
 
 @section('content')
-    <section class="py-16 md:py-24">
+    <section class="site-section">
         <div class="mx-auto max-w-4xl px-4 md:px-6">
             <p class="mb-2 text-sm tracking-widest text-salon-accent">Menu</p>
             <h1 class="section-title mb-12">メニュー・料金</h1>

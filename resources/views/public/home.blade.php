@@ -143,7 +143,7 @@
     @endif
 
     {{-- Concept --}}
-    <section id="concept" class="py-20 md:py-28">
+    <section id="concept" class="site-section">
         <div class="mx-auto max-w-3xl px-4 text-center md:px-6">
             <p class="mb-3 text-sm tracking-widest text-salon-accent">Concept</p>
             @if(!empty($setting->concept_title))
@@ -157,7 +157,7 @@
         @switch($section->section_key)
             @case('banner')
                 @if(($banners ?? collect())->isNotEmpty())
-                    <section id="banners" class="border-y border-salon-line bg-white/50 py-12 md:py-16">
+                    <section id="banners" class="site-section border-y border-salon-line bg-white/50">
                         <div class="mx-auto max-w-5xl px-4 md:px-6">
                             <div class="space-y-6">
                                 @foreach($banners as $banner)
@@ -216,7 +216,7 @@
                 @break
 
             @case('news')
-                <section id="news" class="border-y border-salon-line bg-white/60 py-16 md:py-20">
+                <section id="news" class="site-section border-y border-salon-line bg-white/60">
                     <div class="mx-auto max-w-4xl px-4 md:px-6">
                         <div class="mb-8 text-center md:mb-10">
                             <p class="mb-2 text-sm tracking-widest text-salon-accent">News</p>
@@ -242,7 +242,7 @@
                 @break
 
             @case('menu')
-                <section id="menu" class="py-20">
+                <section id="menu" class="site-section">
                     <div class="mx-auto max-w-6xl px-4 md:px-6">
                         <div class="mb-12">
                             <p class="mb-2 text-sm tracking-widest text-salon-accent">Menu</p>
@@ -276,7 +276,7 @@
                 @break
 
             @case('gallery')
-                <section id="gallery" class="py-20 md:py-28">
+                <section id="gallery" class="site-section">
                     <div class="mx-auto max-w-6xl px-4 md:px-6">
                         <div class="mb-12 text-center">
                             <p class="mb-2 text-sm tracking-widest text-salon-accent">Gallery</p>
@@ -299,7 +299,7 @@
                 @break
 
             @case('staff')
-                <section id="staff" class="border-t border-salon-line py-20 md:py-28">
+                <section id="staff" class="site-section border-t border-salon-line">
                     <div class="mx-auto max-w-6xl px-4 md:px-6">
                         <div class="mb-12 text-center">
                             <p class="mb-2 text-sm tracking-widest text-salon-accent">Staff</p>
@@ -330,7 +330,7 @@
                 @break
 
             @case('access')
-                <section id="access" class="border-t border-salon-line bg-white/60 py-20">
+                <section id="access" class="site-section border-t border-salon-line bg-white/60">
                     <div class="mx-auto max-w-6xl px-4 md:px-6">
                         <div class="mb-12 text-center">
                             <p class="mb-2 text-sm tracking-widest text-salon-accent">Access</p>

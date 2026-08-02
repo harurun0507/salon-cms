@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AnalyticsSettingController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DesignSettingController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\HeroImageController;
 use App\Http\Controllers\Admin\MenuController;
@@ -70,6 +71,7 @@ Route::middleware(['web', 'auth', 'active'])->prefix('admin')->name('admin.')->g
         Route::get('system/users', [AdminUserController::class, 'index'])->name('system.users');
         Route::put('system/users', [AdminUserController::class, 'bulkUpdate'])->name('system.users.update');
 
-        Route::view('system/design', 'admin.placeholder', ['title' => 'デザイン設定'])->name('system.design');
+        Route::get('system/design', [DesignSettingController::class, 'edit'])->name('system.design');
+        Route::put('system/design', [DesignSettingController::class, 'update'])->name('system.design.update');
     });
 });

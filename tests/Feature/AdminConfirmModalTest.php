@@ -174,6 +174,21 @@ class AdminConfirmModalTest extends TestCase
         $this->assertSame(1, substr_count($html, 'data-confirm-form="seo-form"'));
     }
 
+    public function test_design_save_uses_confirm_modal(): void
+    {
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.system.design'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
+        $this->assertStringContainsString('data-confirm-form="design-form"', $html);
+        $this->assertStringContainsString('data-confirm-title="デザイン設定保存の確認"', $html);
+        $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
+        $this->assertStringContainsString('data-confirm-callback="design-settings-reset"', $html);
+        $this->assertSame(1, substr_count($html, 'data-confirm-form="design-form"'));
+    }
+
     public function test_galleries_bulk_save_uses_confirm_modal_without_browser_confirm(): void
     {
         $html = $this->actingAs($this->admin())

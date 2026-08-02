@@ -3,13 +3,13 @@
 @section('title', 'アクセス・店舗情報')
 
 @section('content')
-    <section class="py-16 md:py-24">
+    <section class="site-section">
         <div class="mx-auto max-w-6xl px-4 md:px-6">
             <p class="mb-2 text-sm tracking-widest text-salon-accent">Access</p>
             <h1 class="section-title mb-12">アクセス・店舗情報</h1>
 
             <div class="grid gap-8 md:grid-cols-2 md:items-stretch">
-                <div class="rounded-lg border border-salon-line bg-white/70 p-6 md:p-8">
+                <div class="site-card border border-salon-line bg-white/70">
                     <dl class="space-y-6 text-sm leading-7">
                         <div><dt class="font-medium">店名</dt><dd class="text-salon-muted">{{ $setting->shop_name }}</dd></div>
                         <div><dt class="font-medium">住所</dt><dd class="text-salon-muted">{{ $setting->address }}</dd></div>
@@ -30,7 +30,7 @@
                     </div>
                 </div>
 
-                <div class="min-h-[280px] overflow-hidden rounded-lg border border-salon-line bg-salon-line/40 md:min-h-[420px]">
+                <div class="min-h-[280px] overflow-hidden border border-salon-line bg-salon-line/40 md:min-h-[420px]" style="border-radius: var(--site-card-radius, 0.5rem);">
                     @if($setting->google_map_embed_url)
                         <iframe
                             src="{{ $setting->google_map_embed_url }}"

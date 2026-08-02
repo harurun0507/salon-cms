@@ -3,7 +3,7 @@
 @section('title', 'プライバシーポリシー')
 
 @section('content')
-    <section class="py-16 md:py-24">
+    <section class="site-section">
         <div class="mx-auto max-w-3xl px-4 md:px-6">
             <h1 class="section-title mb-10">プライバシーポリシー</h1>
             <div class="space-y-6 text-sm leading-8 text-salon-muted">

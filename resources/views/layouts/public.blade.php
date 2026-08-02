@@ -3,6 +3,7 @@
 <head>
     @php
         $setting = $setting ?? \App\Models\SalonSetting::current();
+        $design = $design ?? \App\Models\DesignSetting::current();
         $siteTitle = $setting->seoSiteTitle();
         $pageTitle = trim($__env->yieldContent('title'));
         $documentTitle = $pageTitle !== '' && $pageTitle !== $siteTitle
@@ -87,13 +88,27 @@
         </script>
         <style type="text/tailwindcss">
             @layer components {
-                .btn-primary { @apply inline-flex items-center justify-center rounded-full bg-salon-button px-6 py-3 text-sm font-medium text-white transition hover:opacity-90; }
-                .btn-outline { @apply inline-flex items-center justify-center rounded-full border border-salon-button px-6 py-3 text-sm font-medium text-salon-button transition hover:bg-salon-button hover:text-white; }
-                .section-title { @apply font-serif text-3xl md:text-4xl tracking-wide text-salon-text; }
+                .btn-primary { @apply inline-flex items-center justify-center bg-salon-button px-6 py-3 text-sm font-medium text-white transition hover:opacity-90; border-radius: var(--site-button-radius, 9999px); }
+                .btn-outline { @apply inline-flex items-center justify-center border border-salon-button px-6 py-3 text-sm font-medium text-salon-button transition hover:bg-salon-button hover:text-white; border-radius: var(--site-button-radius, 9999px); }
+                .section-title { @apply text-3xl md:text-4xl tracking-wide text-salon-text; font-family: var(--site-heading-font, var(--font-serif)); }
+                .site-section { padding-block: var(--site-section-spacing, 5rem); }
+                .site-card { border-radius: var(--site-card-radius, 0.5rem); padding: var(--site-card-padding, 1.5rem); }
             }
         </style>
     @endif
-    <style>
+    <style id="site-design-vars">
+        :root {
+            {{ $design->cssVariablesStyleBlock() }}
+        }
+        body {
+            font-family: var(--site-body-font, var(--font-sans));
+            background-color: var(--site-background, var(--color-salon-bg, #FAF7F1));
+            color: var(--site-text, var(--color-salon-text, #3A332E));
+        }
+        .font-serif,
+        .section-title {
+            font-family: var(--site-heading-font, var(--font-serif));
+        }
         html { scroll-behavior: smooth; }
         #concept, #menu, #gallery, #staff, #access, #news { scroll-margin-top: 5.5rem; }
         @media (prefers-reduced-motion: reduce) {

@@ -3,7 +3,7 @@
 @section('title', $news->title)
 
 @section('content')
-    <article class="py-16 md:py-24">
+    <article class="site-section">
         <div class="mx-auto max-w-3xl px-4 md:px-6">
             <a href="{{ route('news.index') }}" class="text-sm text-salon-accent hover:underline">← お知らせ一覧</a>
             <header class="mt-6 border-b border-salon-line pb-6">

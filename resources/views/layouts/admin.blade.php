@@ -1100,7 +1100,8 @@
             function openConfirmModal(trigger) {
                 const formId = trigger.getAttribute('data-confirm-form');
                 const form = formId ? document.getElementById(formId) : null;
-                if (!form) {
+                const callbackName = trigger.getAttribute('data-confirm-callback');
+                if (!form && !callbackName) {
                     return;
                 }
 
@@ -1199,7 +1200,20 @@
             });
 
             submitBtn.addEventListener('click', function () {
-                if (submitting || !activeForm) {
+                if (submitting) {
+                    return;
+                }
+
+                const callbackName = activeTrigger && activeTrigger.getAttribute('data-confirm-callback');
+                if (callbackName) {
+                    document.dispatchEvent(new CustomEvent(callbackName, {
+                        detail: { trigger: activeTrigger },
+                    }));
+                    closeConfirmModal();
+                    return;
+                }
+
+                if (!activeForm) {
                     return;
                 }
 
