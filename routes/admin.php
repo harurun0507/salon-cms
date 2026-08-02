@@ -5,8 +5,11 @@ use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\HeroImageController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\NewsController;
+use App\Http\Controllers\Admin\ReservationSettingController;
 use App\Http\Controllers\Admin\SalonSettingController;
+use App\Http\Controllers\Admin\SnsSettingController;
 use App\Http\Controllers\Admin\StaffController;
+use App\Http\Controllers\Admin\TopPageSettingController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->prefix('admin')->name('admin.')->group(function () {
@@ -39,11 +42,17 @@ Route::middleware('web')->prefix('admin')->name('admin.')->group(function () {
         Route::put('home/hero', [HeroImageController::class, 'update'])->name('home.hero.update');
         Route::delete('home/hero/images/{heroImage}', [HeroImageController::class, 'destroy'])->name('home.hero.destroy');
 
+        Route::get('home/top', [TopPageSettingController::class, 'edit'])->name('home.top');
+        Route::put('home/top', [TopPageSettingController::class, 'update'])->name('home.top.update');
+
+        Route::get('store/sns', [SnsSettingController::class, 'edit'])->name('store.sns');
+        Route::put('store/sns', [SnsSettingController::class, 'update'])->name('store.sns.update');
+
+        Route::get('store/reservations', [ReservationSettingController::class, 'edit'])->name('store.reservations');
+        Route::put('store/reservations', [ReservationSettingController::class, 'update'])->name('store.reservations.update');
+
         // Placeholder screens (navigation only; features not implemented yet)
-        Route::view('home/top', 'admin.placeholder', ['title' => 'トップページ設定'])->name('home.top');
         Route::view('home/banners', 'admin.placeholder', ['title' => 'バナー'])->name('home.banners');
-        Route::view('store/sns', 'admin.placeholder', ['title' => 'SNS'])->name('store.sns');
-        Route::view('store/reservations', 'admin.placeholder', ['title' => '予約設定'])->name('store.reservations');
         Route::view('system/seo', 'admin.placeholder', ['title' => 'SEO'])->name('system.seo');
         Route::view('system/users', 'admin.placeholder', ['title' => '管理ユーザー'])->name('system.users');
         Route::view('system/design', 'admin.placeholder', ['title' => 'デザイン設定'])->name('system.design');

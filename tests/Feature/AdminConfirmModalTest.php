@@ -107,6 +107,57 @@ class AdminConfirmModalTest extends TestCase
         $this->assertSame(1, substr_count($html, 'data-confirm-form="hero-form"'));
     }
 
+    public function test_top_page_save_uses_confirm_modal(): void
+    {
+        SalonSetting::current();
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.home.top'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
+        $this->assertStringContainsString('data-admin-confirm-trigger', $html);
+        $this->assertStringContainsString('data-confirm-form="top-page-form"', $html);
+        $this->assertStringContainsString('data-confirm-title="トップページ設定保存の確認"', $html);
+        $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
+        $this->assertStringContainsString('ヒーロー、コンセプト、表示件数、セクション表示・表示順など、現在入力されている内容が反映されます。', $html);
+        $this->assertStringNotContainsString('return confirm(', $html);
+        $this->assertSame(1, substr_count($html, 'data-confirm-form="top-page-form"'));
+    }
+
+    public function test_sns_save_uses_confirm_modal(): void
+    {
+        SalonSetting::current();
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.store.sns'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
+        $this->assertStringContainsString('data-confirm-form="sns-form"', $html);
+        $this->assertStringContainsString('data-confirm-title="SNS設定保存の確認"', $html);
+        $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
+        $this->assertSame(1, substr_count($html, 'data-confirm-form="sns-form"'));
+    }
+
+    public function test_reservations_save_uses_confirm_modal(): void
+    {
+        SalonSetting::current();
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.store.reservations'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
+        $this->assertStringContainsString('data-confirm-form="reservations-form"', $html);
+        $this->assertStringContainsString('data-confirm-title="予約設定保存の確認"', $html);
+        $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
+        $this->assertSame(1, substr_count($html, 'data-confirm-form="reservations-form"'));
+    }
+
     public function test_galleries_bulk_save_uses_confirm_modal_without_browser_confirm(): void
     {
         $html = $this->actingAs($this->admin())

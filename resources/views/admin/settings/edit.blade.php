@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('heading', '店舗情報管理')
+@section('heading', '基本情報')
 
 @section('content')
     @php
@@ -84,24 +84,6 @@
             </div>
 
             <div>
-                <label for="hero_label" class="admin-label">ヒーロー英字ラベル（トップページ）</label>
-                <input type="text" name="hero_label" id="hero_label" value="{{ old('hero_label', $setting->hero_label) }}" class="admin-input" placeholder="Personal Hair Salon">
-                <p class="mt-1 text-xs text-gray-500">メインビジュアル上部の小さい英字テキスト。未入力時は表示しません。</p>
-            </div>
-            <div>
-                <label for="hero_title" class="admin-label">メインコピー（トップページ）</label>
-                <textarea name="hero_title" id="hero_title" rows="3" class="admin-input" placeholder="あなたらしさに、 / 少しだけ今っぽさを。">{{ old('hero_title', $setting->hero_title) }}</textarea>
-                <p class="mt-1 text-xs text-gray-500">改行はトップページで反映されます。未入力時は表示しません。</p>
-            </div>
-            <div>
-                <label for="concept_title" class="admin-label">コンセプト見出し（トップページ）</label>
-                <input type="text" name="concept_title" id="concept_title" value="{{ old('concept_title', $setting->concept_title) }}" class="admin-input" placeholder="ナチュラルに、自分らしく。">
-            </div>
-            <div>
-                <label for="concept" class="admin-label">コンセプト文（トップページ）</label>
-                <textarea name="concept" id="concept" rows="5" class="admin-input">{{ old('concept', $setting->concept) }}</textarea>
-            </div>
-            <div>
                 <label for="address" class="admin-label">住所</label>
                 <input type="text" name="address" id="address" value="{{ old('address', $setting->address) }}" class="admin-input">
             </div>
@@ -126,14 +108,6 @@
                 <label for="google_map_embed_url" class="admin-label">Google Map 埋め込みURL</label>
                 <textarea name="google_map_embed_url" id="google_map_embed_url" rows="3" class="admin-input" placeholder="https://www.google.com/maps/embed?pb=...">{{ old('google_map_embed_url', $setting->google_map_embed_url) }}</textarea>
                 <p class="mt-1 text-xs text-gray-500">iframe 用（埋め込みURL、または iframe タグ全体を貼り付け可）</p>
-            </div>
-            <div>
-                <label for="instagram_url" class="admin-label">Instagram URL</label>
-                <input type="url" name="instagram_url" id="instagram_url" value="{{ old('instagram_url', $setting->instagram_url) }}" class="admin-input">
-            </div>
-            <div>
-                <label for="hot_pepper_url" class="admin-label">Hot Pepper 予約URL</label>
-                <input type="url" name="hot_pepper_url" id="hot_pepper_url" value="{{ old('hot_pepper_url', $setting->hot_pepper_url) }}" class="admin-input">
             </div>
         </form>
     </div>

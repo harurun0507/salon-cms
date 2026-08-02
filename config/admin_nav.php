@@ -24,7 +24,7 @@ return [
                 [
                     'label' => 'トップページ設定',
                     'route' => 'admin.home.top',
-                    'active' => 'admin.home.top',
+                    'active' => 'admin.home.top*',
                     'icon' => 'document',
                 ],
                 [
@@ -82,15 +82,16 @@ return [
                 [
                     'label' => 'SNS',
                     'route' => 'admin.store.sns',
-                    'active' => 'admin.store.sns',
+                    'active' => 'admin.store.sns*',
                     'icon' => 'share',
                 ],
                 [
                     'label' => '予約設定',
                     'route' => 'admin.store.reservations',
-                    'active' => 'admin.store.reservations',
+                    'active' => 'admin.store.reservations*',
                     'icon' => 'calendar',
                 ],
+
             ],
         ],
         [

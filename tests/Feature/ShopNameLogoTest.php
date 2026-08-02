@@ -161,4 +161,58 @@ class ShopNameLogoTest extends TestCase
         $this->assertStringContainsString('文字で表示', $html);
         $this->assertStringContainsString('ロゴ画像で表示', $html);
     }
+
+    public function test_settings_page_keeps_basic_fields_only(): void
+    {
+        SalonSetting::current();
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.settings.edit'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('name="shop_name"', $html);
+        $this->assertStringContainsString('name="address"', $html);
+        $this->assertStringContainsString('name="business_hours"', $html);
+        $this->assertStringContainsString('name="closed_days"', $html);
+        $this->assertStringContainsString('name="phone"', $html);
+        $this->assertStringContainsString('name="google_map_url"', $html);
+        $this->assertStringContainsString('name="google_map_embed_url"', $html);
+        $this->assertStringNotContainsString('name="hero_label"', $html);
+        $this->assertStringNotContainsString('name="hero_title"', $html);
+        $this->assertStringNotContainsString('name="concept_title"', $html);
+        $this->assertStringNotContainsString('name="concept"', $html);
+        $this->assertStringNotContainsString('name="instagram_url"', $html);
+        $this->assertStringNotContainsString('name="hot_pepper_url"', $html);
+    }
+
+    public function test_settings_update_does_not_clear_moved_fields(): void
+    {
+        $setting = SalonSetting::current();
+        $setting->update([
+            'shop_name' => 'Before',
+            'hero_label' => 'Keep Label',
+            'hero_title' => "Keep\nTitle",
+            'concept_title' => 'Keep Concept',
+            'concept' => 'Keep body',
+            'instagram_url' => 'https://instagram.com/keep',
+            'hot_pepper_url' => 'https://beauty.hotpepper.jp/keep',
+        ]);
+
+        $this->actingAs($this->admin())->put(route('admin.settings.update'), [
+            'shop_name' => 'After',
+            'shop_name_display_type' => SalonSetting::DISPLAY_TYPE_TEXT,
+            'address' => '東京都',
+        ])->assertRedirect(route('admin.settings.edit'));
+
+        $fresh = SalonSetting::current()->fresh();
+        $this->assertSame('After', $fresh->shop_name);
+        $this->assertSame('東京都', $fresh->address);
+        $this->assertSame('Keep Label', $fresh->hero_label);
+        $this->assertSame("Keep\nTitle", $fresh->hero_title);
+        $this->assertSame('Keep Concept', $fresh->concept_title);
+        $this->assertSame('Keep body', $fresh->concept);
+        $this->assertSame('https://instagram.com/keep', $fresh->instagram_url);
+        $this->assertSame('https://beauty.hotpepper.jp/keep', $fresh->hot_pepper_url);
+    }
 }

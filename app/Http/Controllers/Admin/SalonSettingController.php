@@ -29,18 +29,12 @@ class SalonSettingController extends AdminController
             'shop_name_display_type' => ['required', Rule::in([SalonSetting::DISPLAY_TYPE_TEXT, SalonSetting::DISPLAY_TYPE_LOGO])],
             'logo_alt_text' => ['nullable', 'string', 'max:255'],
             'logo_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
-            'hero_label' => ['nullable', 'string', 'max:255'],
-            'hero_title' => ['nullable', 'string'],
-            'concept_title' => ['nullable', 'string', 'max:255'],
-            'concept' => ['nullable', 'string'],
             'address' => ['nullable', 'string', 'max:255'],
             'business_hours' => ['nullable', 'string'],
             'closed_days' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'google_map_url' => ['nullable', 'url', 'max:500'],
             'google_map_embed_url' => ['nullable', 'string', 'url'],
-            'instagram_url' => ['nullable', 'url', 'max:500'],
-            'hot_pepper_url' => ['nullable', 'url', 'max:500'],
         ]);
 
         $setting = SalonSetting::current();

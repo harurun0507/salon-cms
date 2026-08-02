@@ -25,7 +25,7 @@ class HomeNavigationAndNewsTest extends TestCase
         $this->assertStringContainsString(route('news.index'), $html);
     }
 
-    public function test_home_shows_up_to_five_published_news_newest_first(): void
+    public function test_home_shows_up_to_configured_published_news_newest_first(): void
     {
         SalonSetting::current();
 
@@ -72,7 +72,8 @@ class HomeNavigationAndNewsTest extends TestCase
 
         $html = $response->getContent();
         $this->assertLessThan(strpos($html, '追加1'), strpos($html, '新しいお知らせ'));
-        $this->assertSame(5, substr_count($html, 'font-medium leading-relaxed'));
+        // Default top-page news display_count is 3.
+        $this->assertSame(3, substr_count($html, 'font-medium leading-relaxed'));
     }
 
     public function test_home_news_section_hides_empty_list_when_no_published_news(): void

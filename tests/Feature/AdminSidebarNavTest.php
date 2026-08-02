@@ -128,6 +128,31 @@ class AdminSidebarNavTest extends TestCase
         $this->get(route('admin.home.hero'))->assertRedirect();
     }
 
+    #[DataProvider('realSettingScreensProvider')]
+    public function test_setting_screens_are_real_not_placeholder(string $routeName, string $title, string $formId, string $navKey): void
+    {
+        $html = $this->actingAs($this->admin())
+            ->get(route($routeName))
+            ->assertOk()
+            ->assertSee($title, false)
+            ->assertDontSee('この機能は現在準備中です。', false)
+            ->getContent();
+
+        $this->assertStringContainsString('id="'.$formId.'"', $html);
+        $this->assertStringContainsString('admin-nav-link-active', $html);
+        $this->assertMatchesRegularExpression(
+            '/<details[^>]*class="[^"]*admin-nav-group[^"]*"[^>]*data-nav-key="'.$navKey.'"[^>]*data-nav-current="1"[^>]*\sopen(?:\s|>)/u',
+            $html
+        );
+    }
+
+    public function test_setting_screens_require_authentication(): void
+    {
+        $this->get(route('admin.home.top'))->assertRedirect();
+        $this->get(route('admin.store.sns'))->assertRedirect();
+        $this->get(route('admin.store.reservations'))->assertRedirect();
+    }
+
     #[DataProvider('placeholderRoutesProvider')]
     public function test_placeholder_pages_render_coming_soon(string $routeName, string $title): void
     {
@@ -140,16 +165,22 @@ class AdminSidebarNavTest extends TestCase
 
     public function test_placeholder_pages_require_authentication(): void
     {
-        $this->get(route('admin.home.top'))->assertRedirect();
+        $this->get(route('admin.home.banners'))->assertRedirect();
+    }
+
+    public static function realSettingScreensProvider(): array
+    {
+        return [
+            ['admin.home.top', 'トップページ設定', 'top-page-form', 'home'],
+            ['admin.store.sns', 'SNS', 'sns-form', 'store'],
+            ['admin.store.reservations', '予約設定', 'reservations-form', 'store'],
+        ];
     }
 
     public static function placeholderRoutesProvider(): array
     {
         return [
-            ['admin.home.top', 'トップページ設定'],
             ['admin.home.banners', 'バナー'],
-            ['admin.store.sns', 'SNS'],
-            ['admin.store.reservations', '予約設定'],
             ['admin.system.seo', 'SEO'],
             ['admin.system.users', '管理ユーザー'],
             ['admin.system.design', 'デザイン設定'],

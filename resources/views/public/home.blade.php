@@ -7,6 +7,7 @@
         $heroImages = $heroImages ?? collect();
         $heroCount = $heroImages->count();
         $heroSliderEnabled = $heroCount > 1;
+        $topSections = $topSections ?? collect();
     @endphp
 
     {{-- Hero --}}
@@ -152,140 +153,149 @@
         </div>
     </section>
 
-    {{-- News --}}
-    <section id="news" class="border-y border-salon-line bg-white/60 py-16 md:py-20">
-        <div class="mx-auto max-w-4xl px-4 md:px-6">
-            <div class="mb-8 text-center md:mb-10">
-                <p class="mb-2 text-sm tracking-widest text-salon-accent">News</p>
-                <h2 class="section-title">お知らせ</h2>
-            </div>
-            @if($newsList->isNotEmpty())
-                <ul class="divide-y divide-salon-line">
-                    @foreach($newsList as $news)
-                        <li>
-                            <a href="{{ route('news.show', $news->slug) }}" class="flex flex-col gap-1 py-4 transition hover:text-salon-accent sm:flex-row sm:items-baseline sm:gap-6">
-                                <time class="shrink-0 text-sm tabular-nums text-salon-muted">{{ $news->published_at?->format('Y.m.d') }}</time>
-                                <span class="font-medium leading-relaxed">{{ $news->title }}</span>
-                            </a>
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-            <div class="mt-8 text-center">
-                <x-section-more-link :href="route('news.index')">一覧を見る →</x-section-more-link>
-            </div>
-        </div>
-    </section>
+    @foreach($topSections as $section)
+        @switch($section->section_key)
+            @case('news')
+                <section id="news" class="border-y border-salon-line bg-white/60 py-16 md:py-20">
+                    <div class="mx-auto max-w-4xl px-4 md:px-6">
+                        <div class="mb-8 text-center md:mb-10">
+                            <p class="mb-2 text-sm tracking-widest text-salon-accent">News</p>
+                            <h2 class="section-title">お知らせ</h2>
+                        </div>
+                        @if($newsList->isNotEmpty())
+                            <ul class="divide-y divide-salon-line">
+                                @foreach($newsList as $news)
+                                    <li>
+                                        <a href="{{ route('news.show', $news->slug) }}" class="flex flex-col gap-1 py-4 transition hover:text-salon-accent sm:flex-row sm:items-baseline sm:gap-6">
+                                            <time class="shrink-0 text-sm tabular-nums text-salon-muted">{{ $news->published_at?->format('Y.m.d') }}</time>
+                                            <span class="font-medium leading-relaxed">{{ $news->title }}</span>
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                        <div class="mt-8 text-center">
+                            <x-section-more-link :href="route('news.index')">一覧を見る →</x-section-more-link>
+                        </div>
+                    </div>
+                </section>
+                @break
 
-    {{-- Menu preview --}}
-    <section id="menu" class="py-20">
-        <div class="mx-auto max-w-6xl px-4 md:px-6">
-            <div class="mb-12">
-                <p class="mb-2 text-sm tracking-widest text-salon-accent">Menu</p>
-                <h2 class="section-title">メニュー・料金</h2>
-            </div>
-            <div class="grid gap-10 md:grid-cols-2">
-                @foreach($categories->take(2) as $category)
-                    <div>
-                        <h3 class="mb-4 border-b border-salon-line pb-2 font-medium">{{ $category->name }}</h3>
-                        <ul class="space-y-4">
-                            @foreach($category->publishedMenus->take(4) as $menu)
-                                <li class="flex items-start justify-between gap-4">
-                                    <div>
-                                        <p>{{ $menu->name }}</p>
-                                        @if($menu->description)
-                                            <p class="mt-1 text-xs text-salon-muted whitespace-pre-line">{{ $menu->description }}</p>
+            @case('menu')
+                <section id="menu" class="py-20">
+                    <div class="mx-auto max-w-6xl px-4 md:px-6">
+                        <div class="mb-12">
+                            <p class="mb-2 text-sm tracking-widest text-salon-accent">Menu</p>
+                            <h2 class="section-title">メニュー・料金</h2>
+                        </div>
+                        <div class="grid gap-10 md:grid-cols-2">
+                            @foreach($categories as $category)
+                                <div>
+                                    <h3 class="mb-4 border-b border-salon-line pb-2 font-medium">{{ $category->name }}</h3>
+                                    <ul class="space-y-4">
+                                        @foreach($category->publishedMenus as $menu)
+                                            <li class="flex items-start justify-between gap-4">
+                                                <div>
+                                                    <p>{{ $menu->name }}</p>
+                                                    @if($menu->description)
+                                                        <p class="mt-1 text-xs text-salon-muted whitespace-pre-line">{{ $menu->description }}</p>
+                                                    @endif
+                                                </div>
+                                                <p class="shrink-0 font-medium">¥{{ number_format($menu->price) }}</p>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div class="mt-10 text-center">
+                            <x-section-more-link :href="route('menu')">すべて見る →</x-section-more-link>
+                        </div>
+                    </div>
+                </section>
+                @break
+
+            @case('gallery')
+                <section id="gallery" class="py-20 md:py-28">
+                    <div class="mx-auto max-w-6xl px-4 md:px-6">
+                        <div class="mb-12 text-center">
+                            <p class="mb-2 text-sm tracking-widest text-salon-accent">Gallery</p>
+                            <h2 class="section-title">ヘアギャラリー</h2>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+                            @forelse($galleries as $gallery)
+                                <figure class="aspect-[3/4] overflow-hidden rounded-sm">
+                                    <img src="{{ asset('storage/'.$gallery->image_path) }}" alt="{{ $gallery->caption }}" class="h-full w-full object-cover transition hover:scale-105">
+                                </figure>
+                            @empty
+                                <p class="col-span-full text-center text-salon-muted">ギャラリー準備中です。</p>
+                            @endforelse
+                        </div>
+                        <div class="mt-10 text-center">
+                            <x-section-more-link :href="route('gallery')">すべて見る →</x-section-more-link>
+                        </div>
+                    </div>
+                </section>
+                @break
+
+            @case('staff')
+                <section id="staff" class="border-t border-salon-line py-20 md:py-28">
+                    <div class="mx-auto max-w-6xl px-4 md:px-6">
+                        <div class="mb-12 text-center">
+                            <p class="mb-2 text-sm tracking-widest text-salon-accent">Staff</p>
+                            <h2 class="section-title">スタッフ紹介</h2>
+                        </div>
+                        <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                            @forelse($staffMembers as $member)
+                                <article class="text-center">
+                                    <div class="mx-auto mb-4 aspect-square w-40 overflow-hidden rounded-full bg-salon-line">
+                                        @if($member->photo_path)
+                                            <img src="{{ asset('storage/'.$member->photo_path) }}" alt="{{ $member->name }}" class="h-full w-full object-cover">
                                         @endif
                                     </div>
-                                    <p class="shrink-0 font-medium">¥{{ number_format($menu->price) }}</p>
-                                </li>
-                            @endforeach
-                        </ul>
+                                    <h3 class="font-medium">{{ $member->name }}</h3>
+                                    @if($member->role)
+                                        <p class="mt-1 text-sm text-salon-accent">{{ $member->role }}</p>
+                                    @endif
+                                </article>
+                            @empty
+                                <p class="col-span-full text-center text-salon-muted">スタッフ情報準備中です。</p>
+                            @endforelse
+                        </div>
+                        <div class="mt-10 text-center">
+                            <x-section-more-link :href="route('staff')">すべて見る →</x-section-more-link>
+                        </div>
                     </div>
-                @endforeach
-            </div>
-            <div class="mt-10 text-center">
-                <x-section-more-link :href="route('menu')">すべて見る →</x-section-more-link>
-            </div>
-        </div>
-    </section>
+                </section>
+                @break
 
-    {{-- Gallery --}}
-    <section id="gallery" class="py-20 md:py-28">
-        <div class="mx-auto max-w-6xl px-4 md:px-6">
-            <div class="mb-12 text-center">
-                <p class="mb-2 text-sm tracking-widest text-salon-accent">Gallery</p>
-                <h2 class="section-title">ヘアギャラリー</h2>
-            </div>
-            <div class="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-                @forelse($galleries as $gallery)
-                    <figure class="aspect-[3/4] overflow-hidden rounded-sm">
-                        <img src="{{ asset('storage/'.$gallery->image_path) }}" alt="{{ $gallery->caption }}" class="h-full w-full object-cover transition hover:scale-105">
-                    </figure>
-                @empty
-                    <p class="col-span-full text-center text-salon-muted">ギャラリー準備中です。</p>
-                @endforelse
-            </div>
-            <div class="mt-10 text-center">
-                <x-section-more-link :href="route('gallery')">すべて見る →</x-section-more-link>
-            </div>
-        </div>
-    </section>
-
-    {{-- Staff --}}
-    <section id="staff" class="border-t border-salon-line py-20 md:py-28">
-        <div class="mx-auto max-w-6xl px-4 md:px-6">
-            <div class="mb-12 text-center">
-                <p class="mb-2 text-sm tracking-widest text-salon-accent">Staff</p>
-                <h2 class="section-title">スタッフ紹介</h2>
-            </div>
-            <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-                @forelse($staffMembers as $member)
-                    <article class="text-center">
-                        <div class="mx-auto mb-4 aspect-square w-40 overflow-hidden rounded-full bg-salon-line">
-                            @if($member->photo_path)
-                                <img src="{{ asset('storage/'.$member->photo_path) }}" alt="{{ $member->name }}" class="h-full w-full object-cover">
+            @case('access')
+                <section id="access" class="border-t border-salon-line bg-white/60 py-20">
+                    <div class="mx-auto max-w-6xl px-4 md:px-6">
+                        <div class="mb-12 text-center">
+                            <p class="mb-2 text-sm tracking-widest text-salon-accent">Access</p>
+                            <h2 class="section-title">店舗情報</h2>
+                        </div>
+                        <div class="grid gap-10 md:grid-cols-2">
+                            <dl class="space-y-4 text-sm leading-7">
+                                <div><dt class="font-medium">店名</dt><dd class="text-salon-muted">{{ $setting->shop_name }}</dd></div>
+                                <div><dt class="font-medium">住所</dt><dd class="text-salon-muted">{{ $setting->address }}</dd></div>
+                                <div><dt class="font-medium">営業時間</dt><dd class="whitespace-pre-line text-salon-muted">{{ $setting->business_hours }}</dd></div>
+                                <div><dt class="font-medium">定休日</dt><dd class="text-salon-muted">{{ $setting->closed_days }}</dd></div>
+                                <div><dt class="font-medium">電話</dt><dd class="text-salon-muted">{{ $setting->phone }}</dd></div>
+                            </dl>
+                            @if($setting->google_map_embed_url)
+                                <div class="aspect-video overflow-hidden rounded-sm bg-salon-line">
+                                    <iframe src="{{ $setting->google_map_embed_url }}" class="h-full w-full border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                                </div>
                             @endif
                         </div>
-                        <h3 class="font-medium">{{ $member->name }}</h3>
-                        @if($member->role)
-                            <p class="mt-1 text-sm text-salon-accent">{{ $member->role }}</p>
-                        @endif
-                    </article>
-                @empty
-                    <p class="col-span-full text-center text-salon-muted">スタッフ情報準備中です。</p>
-                @endforelse
-            </div>
-            <div class="mt-10 text-center">
-                <x-section-more-link :href="route('staff')">すべて見る →</x-section-more-link>
-            </div>
-        </div>
-    </section>
-
-    {{-- Access --}}
-    <section id="access" class="border-t border-salon-line bg-white/60 py-20">
-        <div class="mx-auto max-w-6xl px-4 md:px-6">
-            <div class="mb-12 text-center">
-                <p class="mb-2 text-sm tracking-widest text-salon-accent">Access</p>
-                <h2 class="section-title">店舗情報</h2>
-            </div>
-            <div class="grid gap-10 md:grid-cols-2">
-                <dl class="space-y-4 text-sm leading-7">
-                    <div><dt class="font-medium">店名</dt><dd class="text-salon-muted">{{ $setting->shop_name }}</dd></div>
-                    <div><dt class="font-medium">住所</dt><dd class="text-salon-muted">{{ $setting->address }}</dd></div>
-                    <div><dt class="font-medium">営業時間</dt><dd class="whitespace-pre-line text-salon-muted">{{ $setting->business_hours }}</dd></div>
-                    <div><dt class="font-medium">定休日</dt><dd class="text-salon-muted">{{ $setting->closed_days }}</dd></div>
-                    <div><dt class="font-medium">電話</dt><dd class="text-salon-muted">{{ $setting->phone }}</dd></div>
-                </dl>
-                @if($setting->google_map_embed_url)
-                    <div class="aspect-video overflow-hidden rounded-sm bg-salon-line">
-                        <iframe src="{{ $setting->google_map_embed_url }}" class="h-full w-full border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        <div class="mt-10 text-center">
+                            <a href="{{ route('access') }}" class="btn-primary">アクセス詳細</a>
+                        </div>
                     </div>
-                @endif
-            </div>
-            <div class="mt-10 text-center">
-                <a href="{{ route('access') }}" class="btn-primary">アクセス詳細</a>
-            </div>
-        </div>
-    </section>
+                </section>
+                @break
+        @endswitch
+    @endforeach
 @endsection

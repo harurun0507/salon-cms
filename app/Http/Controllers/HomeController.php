@@ -7,6 +7,8 @@ use App\Models\MenuCategory;
 use App\Models\News;
 use App\Models\SalonSetting;
 use App\Models\StaffMember;
+use App\Models\TopPageSection;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class HomeController extends Controller
@@ -14,14 +16,70 @@ class HomeController extends Controller
     public function index(): View
     {
         $setting = SalonSetting::current();
+        $topSections = TopPageSection::visibleOrdered();
+        $sectionMap = $topSections->keyBy('section_key');
+
+        $newsList = collect();
+        $categories = collect();
+        $galleries = collect();
+        $staffMembers = collect();
+
+        if ($sectionMap->has(TopPageSection::KEY_NEWS)) {
+            $count = max(1, (int) $sectionMap->get(TopPageSection::KEY_NEWS)->display_count);
+            $newsList = News::published()->limit($count)->get();
+        }
+
+        if ($sectionMap->has(TopPageSection::KEY_MENU)) {
+            $count = max(1, (int) $sectionMap->get(TopPageSection::KEY_MENU)->display_count);
+            $categories = $this->menuCategoriesForTop($count);
+        }
+
+        if ($sectionMap->has(TopPageSection::KEY_GALLERY)) {
+            $count = max(1, (int) $sectionMap->get(TopPageSection::KEY_GALLERY)->display_count);
+            $galleries = Gallery::published()->limit($count)->get();
+        }
+
+        if ($sectionMap->has(TopPageSection::KEY_STAFF)) {
+            $count = max(1, (int) $sectionMap->get(TopPageSection::KEY_STAFF)->display_count);
+            $staffMembers = StaffMember::published()->limit($count)->get();
+        }
 
         return view('public.home', [
             'setting' => $setting,
             'heroImages' => $setting->publishedHeroImages()->get(),
-            'newsList' => News::published()->limit(5)->get(),
-            'galleries' => Gallery::published()->limit(6)->get(),
-            'categories' => MenuCategory::query()->with('publishedMenus')->orderBy('sort_order')->get(),
-            'staffMembers' => StaffMember::published()->limit(4)->get(),
+            'topSections' => $topSections,
+            'newsList' => $newsList,
+            'categories' => $categories,
+            'galleries' => $galleries,
+            'staffMembers' => $staffMembers,
         ]);
+    }
+
+    private function menuCategoriesForTop(int $limit): Collection
+    {
+        $categories = MenuCategory::query()
+            ->with('publishedMenus')
+            ->orderBy('sort_order')
+            ->get();
+
+        $remaining = $limit;
+        $limited = collect();
+
+        foreach ($categories as $category) {
+            if ($remaining <= 0) {
+                break;
+            }
+
+            $menus = $category->publishedMenus->take($remaining);
+            if ($menus->isEmpty()) {
+                continue;
+            }
+
+            $category->setRelation('publishedMenus', $menus);
+            $limited->push($category);
+            $remaining -= $menus->count();
+        }
+
+        return $limited;
     }
 }
