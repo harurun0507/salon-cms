@@ -9,7 +9,11 @@
         $maxHeroImages = \App\Models\HeroImage::MAX_COUNT;
     @endphp
 
-    <div class="sticky top-[4.5rem] z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8">
+    <div
+        class="sticky z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8"
+        style="top: 71px"
+        data-admin-save-bar
+    >
         <div class="flex min-w-0 flex-wrap items-center gap-4">
             <button
                 type="button"
