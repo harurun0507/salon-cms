@@ -425,6 +425,58 @@
 
 }
 
+/* Mobile admin sidebar: unlayered so width beats utility classes after Vite build. */
+.admin-mobile-sidebar-panel {
+    width: min(18rem, 85vw);
+    max-width: 18rem;
+    border-right: 1px solid var(--color-admin-border, #E5E0D7);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+@media (max-width: 639px) {
+    .admin-mobile-sidebar-panel {
+        width: 100vw !important;
+        max-width: none !important;
+        min-width: 100vw;
+        border-right: 0;
+        box-shadow: none;
+    }
+
+    .admin-mobile-sidebar-overlay {
+        display: none;
+    }
+}
+
+/* Desktop admin sidebar collapse (layout-based, not overlay). */
+.admin-desktop-sidebar-open {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .admin-desktop-sidebar {
+        transition:
+            width 0.2s ease,
+            min-width 0.2s ease,
+            opacity 0.15s ease,
+            border-color 0.15s ease;
+    }
+
+    .admin-desktop-sidebar.is-collapsed,
+    html.admin-desktop-sidebar-pref-collapsed .admin-desktop-sidebar {
+        width: 0 !important;
+        min-width: 0 !important;
+        opacity: 0;
+        overflow: hidden;
+        border-right-color: transparent;
+        pointer-events: none;
+    }
+
+    .admin-layout.sidebar-collapsed .admin-desktop-sidebar-open,
+    html.admin-desktop-sidebar-pref-collapsed .admin-desktop-sidebar-open {
+        display: inline-flex;
+    }
+}
+
 /*
  * Menu published checkbox + status
  * Unlayered so these beat Tailwind preflight (accent-color / appearance) after Vite build.

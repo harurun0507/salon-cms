@@ -22,6 +22,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600&family=Noto+Serif+JP:wght@500;600&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('adminDesktopSidebarCollapsed') === '1') {
+                    document.documentElement.classList.add('admin-desktop-sidebar-pref-collapsed');
+                }
+            } catch (e) {
+                // Ignore storage access failures.
+            }
+        })();
+    </script>
     @if (file_exists(public_path('build/manifest.json')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @else
@@ -99,6 +110,49 @@
                     padding-top: 0.5rem;
                     padding-bottom: 0.5rem;
                     line-height: 1.375;
+                }
+                .admin-mobile-sidebar-panel {
+                    width: min(18rem, 85vw);
+                    max-width: 18rem;
+                    border-right: 1px solid #E5E0D7;
+                    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+                }
+                @media (max-width: 639px) {
+                    .admin-mobile-sidebar-panel {
+                        width: 100vw !important;
+                        max-width: none !important;
+                        min-width: 100vw;
+                        border-right: 0;
+                        box-shadow: none;
+                    }
+                    .admin-mobile-sidebar-overlay {
+                        display: none;
+                    }
+                }
+                .admin-desktop-sidebar-open {
+                    display: none;
+                }
+                @media (min-width: 768px) {
+                    .admin-desktop-sidebar {
+                        transition:
+                            width 0.2s ease,
+                            min-width 0.2s ease,
+                            opacity 0.15s ease,
+                            border-color 0.15s ease;
+                    }
+                    .admin-desktop-sidebar.is-collapsed,
+                    html.admin-desktop-sidebar-pref-collapsed .admin-desktop-sidebar {
+                        width: 0 !important;
+                        min-width: 0 !important;
+                        opacity: 0;
+                        overflow: hidden;
+                        border-right-color: transparent;
+                        pointer-events: none;
+                    }
+                    .admin-layout.sidebar-collapsed .admin-desktop-sidebar-open,
+                    html.admin-desktop-sidebar-pref-collapsed .admin-desktop-sidebar-open {
+                        display: inline-flex;
+                    }
                 }
                 .admin-table-wrap { @apply overflow-hidden rounded-xl border border-admin-border/40 bg-admin-card shadow-[0_2px_10px_rgba(0,0,0,0.04)]; }
                 .admin-table { @apply min-w-full divide-y divide-admin-border/40 text-sm text-admin-text; }
@@ -290,23 +344,60 @@
     @endif
 </head>
 <body class="bg-admin-bg font-sans text-admin-text antialiased">
-    <div class="flex min-h-screen">
-        <aside class="relative sticky top-0 hidden h-screen w-64 shrink-0 overflow-hidden border-r border-[#E5E0D7] bg-[#F6F2EA] text-admin-text md:flex md:flex-col">
-            <a href="{{ route('admin.dashboard') }}" class="relative z-10 flex items-center gap-3.5 px-7 py-7 hover:opacity-80">
-                <img
-                    src="{{ asset('images/admin-brand-logo.png') }}"
-                    alt=""
-                    width="40"
-                    height="40"
-                    class="h-12 w-12 shrink-0 object-contain"
-                    decoding="async"
-                    aria-hidden="true"
+    <div class="admin-layout flex min-h-screen overflow-x-hidden" data-admin-layout>
+        <aside
+            id="admin-desktop-sidebar"
+            class="admin-desktop-sidebar relative sticky top-0 hidden h-screen w-64 shrink-0 overflow-hidden border-r border-[#E5E0D7] bg-[#F6F2EA] text-admin-text md:flex md:flex-col"
+            data-admin-desktop-sidebar
+        >
+            <div class="relative z-10 flex items-center px-7 py-7">
+                <a
+                    href="{{ route('admin.dashboard') }}"
+                    class="flex min-w-0 flex-1 items-center gap-3.5 hover:opacity-80"
                 >
-                <div class="min-w-0 pt-0.5">
-                    <div class="font-serif text-xl leading-tight tracking-wide text-[#3D3833]">Sun ＆ Me</div>
-                    <div class="mt-1 text-xs tracking-wide text-[#736D65]">管理画面</div>
-                </div>
-            </a>
+                    <img
+                        src="{{ asset('images/admin-brand-logo.png') }}"
+                        alt=""
+                        width="40"
+                        height="40"
+                        class="h-12 w-12 shrink-0 object-contain"
+                        decoding="async"
+                        aria-hidden="true"
+                    >
+                    <div class="min-w-0 pt-0.5">
+                        <div class="whitespace-nowrap font-serif text-xl leading-tight tracking-wide text-[#3D3833]">
+                            Sun ＆ Me
+                        </div>
+                        <div class="mt-1 whitespace-nowrap text-xs tracking-wide text-[#736D65]">
+                            管理画面
+                        </div>
+                    </div>
+                </a>
+
+                <button
+                    type="button"
+                    class="absolute right-3 top-1/2 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-admin-muted transition hover:bg-admin-hover hover:text-admin-text focus:outline-none focus:ring-2 focus:ring-admin-accent/40 md:inline-flex"
+                    aria-label="サイドメニューを閉じる"
+                    aria-controls="admin-desktop-sidebar"
+                    aria-expanded="true"
+                    data-admin-desktop-sidebar-close
+                >
+                    <svg
+                        class="h-5 w-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                        <path d="M9 4v16"></path>
+                        <path d="m14 9-3 3 3 3"></path>
+                    </svg>
+                </button>
+            </div>
             <x-admin.sidebar-nav />
             <div
                 class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[330px] overflow-hidden text-[#B8AE98]"
@@ -634,23 +725,71 @@
         </aside>
 
         <div class="flex min-w-0 flex-1 flex-col">
-            <header class="sticky top-0 z-20 flex items-center justify-between border-b border-admin-border/60 bg-admin-card/95 px-4 py-4 backdrop-blur-sm md:px-8">
+            <header class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-admin-border/60 bg-admin-card/95 px-4 py-4 backdrop-blur-sm md:px-8">
                 @php
                     $pageIcon = \App\Support\AdminNav::currentPageIcon(
                         trim($__env->yieldContent('icon'))
                     );
                 @endphp
-                <h1 class="admin-page-title flex items-center gap-3">
-                    <span class="admin-page-title-icon hidden sm:inline-flex" aria-hidden="true">
-                        @if ($pageIcon)
-                            <x-admin.nav-icon :name="$pageIcon" class="h-[18px] w-[18px]" />
-                        @else
-                            <x-admin.leaf-icon />
-                        @endif
-                    </span>
-                    @yield('heading', '管理画面')
-                </h1>
-                <form method="POST" action="{{ route('admin.logout') }}">
+                <div class="flex min-w-0 items-center gap-2 sm:gap-3">
+                    <button
+                        type="button"
+                        class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-admin-text transition hover:bg-admin-hover focus:outline-none focus:ring-2 focus:ring-admin-accent/40 md:hidden"
+                        aria-label="メニューを開く"
+                        aria-controls="admin-mobile-sidebar"
+                        aria-expanded="false"
+                        data-admin-mobile-menu-open
+                    >
+                        <svg
+                            class="h-5 w-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.7"
+                            stroke-linecap="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M4 7h16"></path>
+                            <path d="M4 12h16"></path>
+                            <path d="M4 17h16"></path>
+                        </svg>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="admin-desktop-sidebar-open h-10 w-10 shrink-0 items-center justify-center rounded-lg text-admin-text transition hover:bg-admin-hover focus:outline-none focus:ring-2 focus:ring-admin-accent/40"
+                        aria-label="サイドメニューを開く"
+                        aria-controls="admin-desktop-sidebar"
+                        aria-expanded="true"
+                        data-admin-desktop-sidebar-open
+                    >
+                        <svg
+                            class="h-5 w-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.7"
+                            stroke-linecap="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M4 7h16"></path>
+                            <path d="M4 12h16"></path>
+                            <path d="M4 17h16"></path>
+                        </svg>
+                    </button>
+
+                    <h1 class="admin-page-title flex min-w-0 items-center gap-3">
+                        <span class="admin-page-title-icon inline-flex" aria-hidden="true">
+                            @if ($pageIcon)
+                                <x-admin.nav-icon :name="$pageIcon" class="h-[18px] w-[18px]" />
+                            @else
+                                <x-admin.leaf-icon />
+                            @endif
+                        </span>
+                        <span class="truncate">@yield('heading', '管理画面')</span>
+                    </h1>
+                </div>
+                <form method="POST" action="{{ route('admin.logout') }}" class="shrink-0">
                     @csrf
                     <button type="submit" class="admin-btn-secondary">ログアウト</button>
                 </form>
@@ -671,6 +810,239 @@
             </main>
         </div>
     </div>
+
+    <div
+        id="admin-mobile-sidebar"
+        class="fixed inset-0 z-50 hidden md:hidden"
+        hidden
+        data-admin-mobile-menu
+    >
+        <button
+            type="button"
+            class="admin-mobile-sidebar-overlay absolute inset-0 bg-black/35"
+            aria-label="メニューを閉じる"
+            data-admin-mobile-menu-close
+        ></button>
+
+        <aside
+            class="admin-mobile-sidebar-panel relative z-10 flex h-full -translate-x-full flex-col overflow-hidden bg-admin-sidebar text-admin-text transition-transform duration-200"
+            data-admin-mobile-menu-panel
+        >
+            <div class="flex min-h-0 flex-1 flex-col">
+                <div class="relative z-10 flex shrink-0 items-center gap-3 px-5 py-5">
+                    <a href="{{ route('admin.dashboard') }}" class="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80">
+                        <img
+                            src="{{ asset('images/admin-brand-logo.png') }}"
+                            alt=""
+                            width="40"
+                            height="40"
+                            class="h-12 w-12 shrink-0 object-contain"
+                            decoding="async"
+                            aria-hidden="true"
+                        >
+                        <div class="min-w-0 pt-0.5">
+                            <div class="font-serif text-xl leading-tight tracking-wide text-[#3D3833]">Sun ＆ Me</div>
+                            <div class="mt-1 text-xs tracking-wide text-[#736D65]">管理画面</div>
+                        </div>
+                    </a>
+                    <button
+                        type="button"
+                        class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-admin-border/70 bg-admin-card text-admin-muted transition hover:bg-admin-hover hover:text-admin-text focus:outline-none focus:ring-2 focus:ring-admin-accent/40"
+                        aria-label="メニューを閉じる"
+                        data-admin-mobile-menu-close
+                    >
+                        <svg
+                            class="h-4 w-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.7"
+                            stroke-linecap="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M6 6l12 12"></path>
+                            <path d="M18 6L6 18"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+                    <x-admin.sidebar-nav />
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        (function () {
+            const layout = document.querySelector('[data-admin-layout]');
+            const sidebar = document.querySelector('[data-admin-desktop-sidebar]');
+            const openButton = document.querySelector('[data-admin-desktop-sidebar-open]');
+            const closeButton = document.querySelector('[data-admin-desktop-sidebar-close]');
+            const storageKey = 'adminDesktopSidebarCollapsed';
+            const desktopQuery = window.matchMedia('(min-width: 768px)');
+
+            if (!layout || !sidebar || (!openButton && !closeButton)) {
+                return;
+            }
+
+            function setCollapsed(collapsed) {
+                sidebar.classList.toggle('is-collapsed', collapsed);
+                layout.classList.toggle('sidebar-collapsed', collapsed);
+                document.documentElement.classList.toggle(
+                    'admin-desktop-sidebar-pref-collapsed',
+                    collapsed
+                );
+
+                if (openButton) {
+                    openButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                }
+
+                if (closeButton) {
+                    closeButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                }
+
+                try {
+                    localStorage.setItem(storageKey, collapsed ? '1' : '0');
+                } catch (e) {
+                    // Ignore quota / private-mode failures.
+                }
+            }
+
+            function applySavedStateIfDesktop() {
+                if (!desktopQuery.matches) {
+                    layout.classList.remove('sidebar-collapsed');
+                    return;
+                }
+
+                let savedCollapsed = false;
+                try {
+                    savedCollapsed = localStorage.getItem(storageKey) === '1';
+                } catch (e) {
+                    savedCollapsed = false;
+                }
+
+                setCollapsed(savedCollapsed);
+            }
+
+            if (openButton) {
+                openButton.addEventListener('click', function () {
+                    if (!desktopQuery.matches) {
+                        return;
+                    }
+
+                    setCollapsed(false);
+                });
+            }
+
+            if (closeButton) {
+                closeButton.addEventListener('click', function () {
+                    if (!desktopQuery.matches) {
+                        return;
+                    }
+
+                    setCollapsed(true);
+                });
+            }
+
+            if (typeof desktopQuery.addEventListener === 'function') {
+                desktopQuery.addEventListener('change', function (event) {
+                    if (event.matches) {
+                        applySavedStateIfDesktop();
+                    } else {
+                        layout.classList.remove('sidebar-collapsed');
+                    }
+                });
+            } else if (typeof desktopQuery.addListener === 'function') {
+                desktopQuery.addListener(function (event) {
+                    if (event.matches) {
+                        applySavedStateIfDesktop();
+                    } else {
+                        layout.classList.remove('sidebar-collapsed');
+                    }
+                });
+            }
+
+            applySavedStateIfDesktop();
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const menu = document.querySelector('[data-admin-mobile-menu]');
+            const panel = document.querySelector('[data-admin-mobile-menu-panel]');
+            const openButton = document.querySelector('[data-admin-mobile-menu-open]');
+            const closeButtons = document.querySelectorAll('[data-admin-mobile-menu-close]');
+
+            if (!menu || !panel || !openButton) {
+                return;
+            }
+
+            let closeTimer = null;
+            let isOpen = false;
+
+            function openMenu() {
+                if (closeTimer) {
+                    clearTimeout(closeTimer);
+                    closeTimer = null;
+                }
+
+                isOpen = true;
+                menu.hidden = false;
+                menu.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                openButton.setAttribute('aria-expanded', 'true');
+
+                requestAnimationFrame(function () {
+                    panel.classList.remove('-translate-x-full');
+                    panel.classList.add('translate-x-0');
+                });
+            }
+
+            function closeMenu() {
+                if (!isOpen) {
+                    return;
+                }
+
+                isOpen = false;
+                panel.classList.add('-translate-x-full');
+                panel.classList.remove('translate-x-0');
+                openButton.setAttribute('aria-expanded', 'false');
+                document.body.style.overflow = '';
+
+                closeTimer = setTimeout(function () {
+                    menu.classList.add('hidden');
+                    menu.hidden = true;
+                    openButton.focus();
+                    closeTimer = null;
+                }, 200);
+            }
+
+            openButton.addEventListener('click', openMenu);
+            closeButtons.forEach(function (button) {
+                button.addEventListener('click', closeMenu);
+            });
+
+            menu.addEventListener('click', function (event) {
+                const link = event.target.closest('a[href]');
+                if (link && menu.contains(link)) {
+                    closeMenu();
+                }
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && isOpen) {
+                    closeMenu();
+                }
+            });
+
+            window.addEventListener('resize', function () {
+                if (isOpen && window.matchMedia('(min-width: 768px)').matches) {
+                    closeMenu();
+                }
+            });
+        })();
+    </script>
 
     <style>
         #admin-toast-stack {

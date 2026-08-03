@@ -94,13 +94,8 @@
 <script>
     (function () {
         const STORAGE_KEY = 'admin-sidebar-open-parents';
-        const nav = document.querySelector('[data-admin-sidebar-nav]');
-        if (!nav) {
-            return;
-        }
-
-        const groups = Array.from(nav.querySelectorAll('details.admin-nav-group[data-nav-key]'));
-        if (groups.length === 0) {
+        const pending = document.querySelectorAll('[data-admin-sidebar-nav]:not([data-admin-sidebar-nav-ready])');
+        if (pending.length === 0) {
             return;
         }
 
@@ -125,27 +120,36 @@
             }
         }
 
-        const openKeys = new Set(readOpenKeys());
+        pending.forEach((nav) => {
+            nav.setAttribute('data-admin-sidebar-nav-ready', '1');
 
-        groups.forEach((details) => {
-            if (details.getAttribute('data-nav-current') === '1') {
-                openKeys.add(details.getAttribute('data-nav-key'));
+            const groups = Array.from(nav.querySelectorAll('details.admin-nav-group[data-nav-key]'));
+            if (groups.length === 0) {
+                return;
             }
-        });
 
-        groups.forEach((details) => {
-            const key = details.getAttribute('data-nav-key');
-            details.open = openKeys.has(key);
-        });
+            const openKeys = new Set(readOpenKeys());
 
-        writeOpenKeys([...openKeys]);
+            groups.forEach((details) => {
+                if (details.getAttribute('data-nav-current') === '1') {
+                    openKeys.add(details.getAttribute('data-nav-key'));
+                }
+            });
 
-        groups.forEach((details) => {
-            details.addEventListener('toggle', function () {
-                const next = groups
-                    .filter((group) => group.open)
-                    .map((group) => group.getAttribute('data-nav-key'));
-                writeOpenKeys(next);
+            groups.forEach((details) => {
+                const key = details.getAttribute('data-nav-key');
+                details.open = openKeys.has(key);
+            });
+
+            writeOpenKeys([...openKeys]);
+
+            groups.forEach((details) => {
+                details.addEventListener('toggle', function () {
+                    const next = groups
+                        .filter((group) => group.open)
+                        .map((group) => group.getAttribute('data-nav-key'));
+                    writeOpenKeys(next);
+                });
             });
         });
     })();
