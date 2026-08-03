@@ -92,7 +92,14 @@
                 .admin-nav-parent:hover svg { @apply text-admin-accent; }
                 .admin-nav-chevron { @apply ml-auto shrink-0 transition-transform duration-150; }
                 .admin-nav-group[open] > .admin-nav-parent .admin-nav-chevron { transform: rotate(180deg); }
-                .admin-nav-link-child { @apply ml-4 py-2 pl-10 leading-snug; }
+                .admin-nav-link-child {
+                    margin-left: 0;
+                    padding-left: 2.5rem;
+                    gap: 0.5rem;
+                    padding-top: 0.5rem;
+                    padding-bottom: 0.5rem;
+                    line-height: 1.375;
+                }
                 .admin-table-wrap { @apply overflow-hidden rounded-xl border border-admin-border/40 bg-admin-card shadow-[0_2px_10px_rgba(0,0,0,0.04)]; }
                 .admin-table { @apply min-w-full divide-y divide-admin-border/40 text-sm text-admin-text; }
                 .admin-table thead { @apply bg-admin-sidebar/80; }

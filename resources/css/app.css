@@ -299,7 +299,8 @@
     }
 
     .admin-nav-link-child {
-        @apply ml-4 gap-2 py-2 pl-8 leading-snug;
+        @apply ml-0 gap-2 py-2 leading-snug;
+        padding-left: 2.5rem;
     }
 
     .admin-nav-child-icon {
