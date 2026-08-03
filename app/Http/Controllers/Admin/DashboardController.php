@@ -207,7 +207,13 @@ class DashboardController extends AdminController
                 return [
                     'type' => 'gallery',
                     'type_label' => 'ギャラリー',
-                    'title' => $this->resolveRecentTitle($gallery->caption, 'ギャラリー画像', $sortIndex),
+                    'title' => $this->resolveRecentTitle(
+                        filled($gallery->getAttributes()['title'] ?? null)
+                            ? trim((string) $gallery->getAttributes()['title'])
+                            : $gallery->captionFirstLine(),
+                        'ギャラリー画像',
+                        $sortIndex
+                    ),
                     'updated_at' => $gallery->updated_at,
                     'is_published' => (bool) $gallery->is_published,
                     'edit_url' => route('admin.galleries.edit', $gallery),

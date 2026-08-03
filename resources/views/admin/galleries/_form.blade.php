@@ -1,14 +1,42 @@
-@if(isset($gallery) && $gallery->image_path)
-    <img src="{{ asset('storage/'.$gallery->image_path) }}" alt="" class="mb-3 h-40 rounded object-cover">
+@if(isset($gallery) && ($cover = $gallery->coverImagePath()))
+    <img src="{{ asset('storage/'.$cover) }}" alt="" class="mb-3 h-40 rounded object-cover">
 @endif
 <div>
-    <label for="image" class="admin-label">画像 {{ isset($gallery) ? '（変更する場合のみ）' : '' }}</label>
+    <label for="image" class="admin-label">画像 {{ isset($gallery) ? '（1枚目を変更する場合のみ）' : '' }}</label>
     <input type="file" name="image" id="image" {{ isset($gallery) ? '' : 'required' }} accept="image/jpeg,image/png,image/webp" class="admin-input">
-    <p class="mt-1 text-xs text-gray-500">JPEG / PNG / WebP、最大5MB</p>
+    <p class="mt-1 text-xs text-gray-500">JPEG / PNG / WebP、最大5MB。複数画像の管理は一覧の一括編集をご利用ください。</p>
 </div>
 <div>
-    <label for="caption" class="admin-label">キャプション</label>
-    <input type="text" name="caption" id="caption" value="{{ old('caption', $gallery->caption ?? '') }}" class="admin-input">
+    <label for="title" class="admin-label">タイトル</label>
+    <input
+        type="text"
+        name="title"
+        id="title"
+        value="{{ old('title', $gallery->title ?? '') }}"
+        maxlength="255"
+        class="admin-input"
+        placeholder="例：ショートボブ"
+    >
+</div>
+<div>
+    <label for="caption" class="admin-label">詳細</label>
+    <textarea
+        name="caption"
+        id="caption"
+        rows="4"
+        maxlength="2000"
+        class="admin-input min-h-[7rem] resize-y"
+        placeholder="スタイルの特徴やポイントを入力してください"
+    >{{ old('caption', $gallery->caption ?? '') }}</textarea>
+</div>
+<div>
+    <label for="staff_id" class="admin-label">担当スタッフ</label>
+    <select name="staff_id" id="staff_id" class="admin-input">
+        <option value="">未設定</option>
+        @foreach(($staffMembers ?? []) as $member)
+            <option value="{{ $member->id }}" @selected((string) old('staff_id', $gallery->staff_id ?? '') === (string) $member->id)>{{ $member->name }}</option>
+        @endforeach
+    </select>
 </div>
 <div>
     <label for="sort_order" class="admin-label">表示順</label>

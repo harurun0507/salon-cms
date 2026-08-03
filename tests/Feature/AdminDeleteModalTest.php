@@ -105,7 +105,6 @@ class AdminDeleteModalTest extends TestCase
     public function test_gallery_defers_delete_to_bulk_save_without_delete_modal_trigger(): void
     {
         Gallery::query()->create([
-            'image_path' => 'galleries/a.jpg',
             'sort_order' => 1,
             'is_published' => true,
         ]);

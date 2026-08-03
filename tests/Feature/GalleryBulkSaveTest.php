@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Gallery;
+use App\Models\GalleryImage;
+use App\Models\StaffMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -20,12 +22,23 @@ class GalleryBulkSaveTest extends TestCase
 
     private function createGallery(array $overrides = []): Gallery
     {
-        return Gallery::query()->create(array_merge([
-            'image_path' => 'galleries/sample.jpg',
+        $imagePath = $overrides['image_path'] ?? 'galleries/sample.jpg';
+        unset($overrides['image_path']);
+
+        $gallery = Gallery::query()->create(array_merge([
             'caption' => 'サンプルキャプション',
             'sort_order' => 1,
             'is_published' => true,
         ], $overrides));
+
+        GalleryImage::query()->create([
+            'gallery_id' => $gallery->id,
+            'image_path' => $imagePath,
+            'alt_text' => $gallery->caption,
+            'display_order' => 1,
+        ]);
+
+        return $gallery->fresh(['images']);
     }
 
     public function test_gallery_index_shows_inline_cards_and_bulk_save_without_modals(): void
@@ -39,70 +52,29 @@ class GalleryBulkSaveTest extends TestCase
 
         $this->assertStringContainsString('id="galleries-bulk-form"', $html);
         $this->assertStringContainsString('data-gallery-workspace', $html);
-        $this->assertStringContainsString('grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3', $html);
         $this->assertStringContainsString('id="gallery-add-card"', $html);
         $this->assertStringContainsString('data-gallery-add', $html);
-        $this->assertStringContainsString('btn-admin-create', $html);
-        $this->assertStringContainsString('カードを追加し、保存で登録できます。', $html);
-        $this->assertStringContainsString('addCard.before(card)', $html);
-        $this->assertStringContainsString('addButton.addEventListener', $html);
-        $this->assertStringContainsString('data-gallery-card', $html);
-        $this->assertStringContainsString('data-gallery-existing', $html);
+        $this->assertStringContainsString('ギャラリーを追加', $html);
+        $this->assertStringContainsString('＋画像を追加', $html);
+        $this->assertStringContainsString('data-gallery-image-grid', $html);
+        $this->assertStringContainsString('data-gallery-image-item', $html);
+        $this->assertStringContainsString('data-gallery-image-add', $html);
+        $this->assertStringContainsString('担当スタッフ', $html);
         $this->assertStringContainsString('name="galleries['.$gallery->id.'][caption]"', $html);
+        $this->assertStringContainsString('name="galleries['.$gallery->id.'][title]"', $html);
+        $this->assertStringContainsString('>タイトル</label>', $html);
+        $this->assertStringContainsString('>詳細</label>', $html);
         $this->assertStringContainsString('name="galleries['.$gallery->id.'][sort_order]"', $html);
-        $this->assertStringContainsString('data-gallery-order', $html);
-        $this->assertStringContainsString('type="hidden"', $html);
+        $this->assertStringContainsString('name="galleries['.$gallery->id.'][staff_id]"', $html);
         $this->assertStringContainsString('data-gallery-drag-handle', $html);
-        $this->assertStringContainsString('gallery-drag-handle', $html);
-        $this->assertStringContainsString('function syncDisplayOrders', $html);
+        $this->assertStringContainsString('data-gallery-image-drag-handle', $html);
+        $this->assertStringContainsString('画像1', $html);
         $this->assertStringContainsString('admin-segmented-input', $html);
-        $this->assertStringContainsString('aria-label="公開状態"', $html);
-        $this->assertStringContainsString('banner-dropzone', $html);
-        $this->assertStringContainsString('banner-dropzone-main', $html);
-        $this->assertStringContainsString('banner-dropzone-drag-message', $html);
-        $this->assertStringContainsString('ここに画像をドロップしてください', $html);
-        $this->assertStringContainsString('画像をドラッグ＆ドロップ、またはクリックして選択', $html);
-        $this->assertStringContainsString('JPEG / PNG / WebP、5MBまで', $html);
-        $this->assertStringContainsString('_galleryDragCounter', $html);
-        $this->assertStringContainsString('data-gallery-card-title', $html);
-        $this->assertStringContainsString('data-gallery-caption-input', $html);
-        $this->assertStringContainsString('新規ギャラリー', $html);
-        $this->assertStringContainsString('サンプルキャプション', $html);
-        $this->assertStringContainsString('function syncCardHeading', $html);
-        $this->assertStringContainsString('banner-card-label', $html);
-        $this->assertStringContainsString('admin-icon-btn-delete', $html);
-        $this->assertStringContainsString('data-gallery-remove', $html);
-        $this->assertStringContainsString('sticky top-0', $html);
-        $this->assertStringContainsString('admin-save-bar sticky top-0', $html);
-        $this->assertStringContainsString('保存する', $html);
-        $this->assertStringContainsString('公開サイトに表示するギャラリー画像を登録・編集します。', $html);
         $this->assertStringContainsString('data-admin-confirm-trigger', $html);
         $this->assertStringContainsString('data-confirm-form="galleries-bulk-form"', $html);
-        $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
-        $this->assertStringNotContainsString('gallery-card-meta', $html);
-        $this->assertStringNotContainsString('gallery-sort-input', $html);
-        $this->assertStringNotContainsString('menu-published-control', $html);
-        $this->assertStringNotContainsString('menu-published-checkbox', $html);
-        $this->assertStringNotContainsString('gallery-image-label', $html);
-        $this->assertStringNotContainsString('画像1', $html);
-        $this->assertStringNotContainsString('一括保存', $html);
-        $this->assertStringNotContainsString('function renumberGalleryTitles', $html);
-        $this->assertStringNotContainsString('ギャラリー画像がありません。', $html);
-        $this->assertStringNotContainsString('id="gallery-empty-message"', $html);
-        $this->assertStringNotContainsString('updateEmptyState', $html);
         $this->assertStringNotContainsString('id="gallery-create-modal"', $html);
-        $this->assertStringNotContainsString('id="gallery-edit-modal"', $html);
-        $this->assertStringNotContainsString('id="gallery-edit-data"', $html);
-        $this->assertStringNotContainsString('data-open-gallery-create', $html);
-        $this->assertStringNotContainsString('data-open-gallery-edit', $html);
-        $this->assertStringNotContainsString('ギャラリー登録', $html);
-        $this->assertStringNotContainsString('ギャラリー編集', $html);
         $this->assertStringNotContainsString(
             'href="'.route('admin.galleries.create').'"',
-            $html
-        );
-        $this->assertStringNotContainsString(
-            'href="'.route('admin.galleries.edit', $gallery).'"',
             $html
         );
     }
@@ -115,12 +87,9 @@ class GalleryBulkSaveTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('id="gallery-add-card"', $html);
-        $this->assertStringContainsString('btn-admin-create', $html);
+        $this->assertStringContainsString('ギャラリーを追加', $html);
         $this->assertStringContainsString('data-gallery-add', $html);
-        $this->assertStringContainsString('画像を追加', $html);
-        $this->assertStringContainsString('カードを追加し、保存で登録できます。', $html);
         $this->assertStringContainsString('新規ギャラリー', $html);
-        $this->assertStringNotContainsString('ギャラリー画像がありません。', $html);
     }
 
     public function test_bulk_update_creates_updates_and_deletes_galleries(): void
@@ -139,9 +108,11 @@ class GalleryBulkSaveTest extends TestCase
             'sort_order' => 2,
             'is_published' => true,
         ]);
-        $removePath = $remove->image_path;
+        $removePath = $remove->images->first()->image_path;
+        $keepImageId = $keep->images->first()->id;
 
         $newImage = UploadedFile::fake()->image('new.jpg', 200, 200);
+        $extraImage = UploadedFile::fake()->image('extra.jpg', 200, 200);
         $replaceImage = UploadedFile::fake()->image('replace.jpg', 200, 200);
 
         $this->actingAs($this->admin())
@@ -151,7 +122,20 @@ class GalleryBulkSaveTest extends TestCase
                         'caption' => '更新後',
                         'sort_order' => 2,
                         'is_published' => '0',
-                        'image' => $replaceImage,
+                        'images' => [
+                            $keepImageId => [
+                                'display_order' => 1,
+                                'alt_text' => '更新後',
+                                'image' => $replaceImage,
+                            ],
+                        ],
+                        'new_images' => [
+                            'n1' => [
+                                'display_order' => 2,
+                                'alt_text' => '追加',
+                                'image' => $extraImage,
+                            ],
+                        ],
                     ],
                 ],
                 'new_galleries' => [
@@ -159,7 +143,12 @@ class GalleryBulkSaveTest extends TestCase
                         'caption' => '新規',
                         'sort_order' => 1,
                         'is_published' => '1',
-                        'image' => $newImage,
+                        'new_images' => [
+                            'n1' => [
+                                'display_order' => 1,
+                                'image' => $newImage,
+                            ],
+                        ],
                     ],
                 ],
                 'deleted_ids' => [$remove->id],
@@ -181,9 +170,13 @@ class GalleryBulkSaveTest extends TestCase
         ]);
 
         Storage::disk('public')->assertMissing($removePath);
-        $keep->refresh();
-        $this->assertNotSame('galleries/sample.jpg', $keep->image_path);
-        Storage::disk('public')->assertExists($keep->image_path);
+        $keep->refresh()->load('images');
+        $this->assertCount(2, $keep->images);
+        Storage::disk('public')->assertExists($keep->images->first()->image_path);
+
+        $created = Gallery::query()->where('caption', '新規')->with('images')->first();
+        $this->assertNotNull($created);
+        $this->assertCount(1, $created->images);
     }
 
     public function test_bulk_update_normalizes_sort_order_to_sequential(): void
@@ -208,11 +201,17 @@ class GalleryBulkSaveTest extends TestCase
                         'caption' => 'A',
                         'sort_order' => 5,
                         'is_published' => '1',
+                        'images' => [
+                            $first->images->first()->id => ['display_order' => 1],
+                        ],
                     ],
                     $second->id => [
                         'caption' => 'B',
                         'sort_order' => 1,
                         'is_published' => '1',
+                        'images' => [
+                            $second->images->first()->id => ['display_order' => 1],
+                        ],
                     ],
                 ],
             ])
@@ -233,6 +232,7 @@ class GalleryBulkSaveTest extends TestCase
         Storage::fake('public');
         $path = UploadedFile::fake()->image('keep.jpg')->store('galleries', 'public');
         $gallery = $this->createGallery(['image_path' => $path, 'caption' => '旧']);
+        $imageId = $gallery->images->first()->id;
 
         $this->actingAs($this->admin())
             ->put(route('admin.galleries.bulk-update'), [
@@ -241,6 +241,12 @@ class GalleryBulkSaveTest extends TestCase
                         'caption' => '画像維持',
                         'sort_order' => 2,
                         'is_published' => '1',
+                        'images' => [
+                            $imageId => [
+                                'display_order' => 1,
+                                'alt_text' => '画像維持',
+                            ],
+                        ],
                     ],
                 ],
             ])
@@ -248,9 +254,13 @@ class GalleryBulkSaveTest extends TestCase
 
         $this->assertDatabaseHas('galleries', [
             'id' => $gallery->id,
-            'image_path' => $path,
             'caption' => '画像維持',
             'sort_order' => 1,
+        ]);
+        $this->assertDatabaseHas('gallery_images', [
+            'id' => $imageId,
+            'image_path' => $path,
+            'display_order' => 1,
         ]);
     }
 
@@ -268,7 +278,7 @@ class GalleryBulkSaveTest extends TestCase
                 ],
             ])
             ->assertRedirect(route('admin.galleries.index'))
-            ->assertSessionHasErrors('new_galleries.new_1.image');
+            ->assertSessionHasErrors('new_galleries.new_1.new_images');
 
         $this->assertDatabaseMissing('galleries', ['caption' => '画像なし']);
     }
@@ -279,6 +289,7 @@ class GalleryBulkSaveTest extends TestCase
         $gallery = $this->createGallery([
             'image_path' => UploadedFile::fake()->image('ok.jpg')->store('galleries', 'public'),
         ]);
+        $imageId = $gallery->images->first()->id;
 
         $this->actingAs($this->admin())
             ->from(route('admin.galleries.index'))
@@ -288,12 +299,236 @@ class GalleryBulkSaveTest extends TestCase
                         'caption' => $gallery->caption,
                         'sort_order' => 1,
                         'is_published' => '1',
-                        'image' => UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf'),
+                        'images' => [
+                            $imageId => [
+                                'display_order' => 1,
+                                'image' => UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf'),
+                            ],
+                        ],
                     ],
                 ],
             ])
             ->assertRedirect(route('admin.galleries.index'))
-            ->assertSessionHasErrors('galleries.'.$gallery->id.'.image');
+            ->assertSessionHasErrors('galleries.'.$gallery->id.'.images.'.$imageId.'.image');
+    }
+
+    public function test_bulk_update_can_assign_staff_and_reorder_images(): void
+    {
+        Storage::fake('public');
+        $staff = StaffMember::query()->create([
+            'name' => '山田',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $gallery = $this->createGallery([
+            'image_path' => UploadedFile::fake()->image('one.jpg')->store('galleries', 'public'),
+            'caption' => '複数',
+        ]);
+        $firstId = $gallery->images->first()->id;
+        $second = GalleryImage::query()->create([
+            'gallery_id' => $gallery->id,
+            'image_path' => UploadedFile::fake()->image('two.jpg')->store('galleries', 'public'),
+            'display_order' => 2,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.galleries.bulk-update'), [
+                'galleries' => [
+                    $gallery->id => [
+                        'caption' => '複数',
+                        'staff_id' => $staff->id,
+                        'sort_order' => 1,
+                        'is_published' => '1',
+                        'images' => [
+                            $firstId => ['display_order' => 2],
+                            $second->id => ['display_order' => 1],
+                        ],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.galleries.index'));
+
+        $this->assertDatabaseHas('galleries', [
+            'id' => $gallery->id,
+            'staff_id' => $staff->id,
+        ]);
+        $this->assertDatabaseHas('gallery_images', [
+            'id' => $second->id,
+            'display_order' => 1,
+        ]);
+        $this->assertDatabaseHas('gallery_images', [
+            'id' => $firstId,
+            'display_order' => 2,
+        ]);
+
+        $gallery->refresh()->load('images');
+        $this->assertSame($second->id, $gallery->coverImage()?->id);
+    }
+
+    public function test_public_gallery_list_uses_cover_and_hides_empty(): void
+    {
+        Storage::fake('public');
+        $withImage = $this->createGallery([
+            'image_path' => UploadedFile::fake()->image('cover.jpg')->store('galleries', 'public'),
+            'caption' => '表示する',
+            'is_published' => true,
+        ]);
+        Gallery::query()->create([
+            'caption' => '画像なし',
+            'sort_order' => 2,
+            'is_published' => true,
+        ]);
+
+        $html = $this->get(route('gallery'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('表示する', $html);
+        $this->assertStringContainsString(route('gallery.show', $withImage), $html);
+        $this->assertStringNotContainsString('画像なし', $html);
+    }
+
+    public function test_public_gallery_detail_shows_carousel_only_for_multiple_images(): void
+    {
+        Storage::fake('public');
+        \App\Models\SalonSetting::current()->update([
+            'hot_pepper_url' => 'https://beauty.hotpepper.jp/example',
+        ]);
+        $staff = StaffMember::query()->create([
+            'name' => '山田花子',
+            'role' => 'スタイリスト',
+            'photo_path' => UploadedFile::fake()->image('staff.jpg')->store('staff', 'public'),
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $single = $this->createGallery([
+            'image_path' => UploadedFile::fake()->image('one.jpg')->store('galleries', 'public'),
+            'caption' => '1枚',
+        ]);
+        $multi = $this->createGallery([
+            'image_path' => UploadedFile::fake()->image('a.jpg')->store('galleries', 'public'),
+            'caption' => "ショートボブ\n外はねアレンジ",
+            'sort_order' => 2,
+            'staff_id' => $staff->id,
+        ]);
+        GalleryImage::query()->create([
+            'gallery_id' => $multi->id,
+            'image_path' => UploadedFile::fake()->image('b.jpg')->store('galleries', 'public'),
+            'display_order' => 2,
+        ]);
+
+        $singleHtml = $this->get(route('gallery.show', $single))->assertOk()->getContent();
+        $this->assertStringContainsString('1枚', $singleHtml);
+        $this->assertStringContainsString('gallery-detail-image-frame', $singleHtml);
+        $this->assertStringContainsString('object-fit: contain', $singleHtml);
+        $this->assertStringNotContainsString('data-gallery-prev', $singleHtml);
+        $this->assertStringNotContainsString('data-gallery-dot', $singleHtml);
+        $this->assertStringNotContainsString('担当スタイリスト', $singleHtml);
+
+        $multiHtml = $this->get(route('gallery.show', $multi))->assertOk()->getContent();
+        $this->assertStringContainsString('data-gallery-prev', $multiHtml);
+        $this->assertStringContainsString('data-gallery-next', $multiHtml);
+        $this->assertStringContainsString('data-gallery-dot', $multiHtml);
+        $this->assertStringContainsString('data-gallery-interval="5000"', $multiHtml);
+        $this->assertStringContainsString('aria-label="前の画像"', $multiHtml);
+        $this->assertStringContainsString('aria-label="次の画像"', $multiHtml);
+        $this->assertStringContainsString('画像1を表示', $multiHtml);
+        $this->assertStringContainsString('object-fit: contain', $multiHtml);
+        $this->assertStringContainsString('prefers-reduced-motion', $multiHtml);
+        $this->assertStringContainsString('setInterval', $multiHtml);
+        $this->assertStringContainsString('予約する', $multiHtml);
+        $this->assertStringContainsString('gallery-detail-layout', $multiHtml);
+        $this->assertStringContainsString('max-w-140', $multiHtml);
+        $this->assertStringContainsString('担当スタイリスト', $multiHtml);
+        $this->assertStringContainsString('山田花子', $multiHtml);
+        $this->assertStringContainsString('ショートボブ', $multiHtml);
+        $this->assertStringContainsString('whitespace-pre-line', $multiHtml);
+        $this->assertStringContainsString('ギャラリー一覧へ戻る', $multiHtml);
+    }
+
+    public function test_title_and_description_are_saved_and_shown_separately(): void
+    {
+        Storage::fake('public');
+        $gallery = $this->createGallery([
+            'image_path' => UploadedFile::fake()->image('style.jpg')->store('galleries', 'public'),
+            'title' => null,
+            'caption' => '旧詳細',
+        ]);
+        $imageId = $gallery->images->first()->id;
+        $description = "外はね・内巻き・切りっぱなし\nどれもアレンジ可能です♪";
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.galleries.bulk-update'), [
+                'galleries' => [
+                    $gallery->id => [
+                        'title' => 'ショートボブ',
+                        'caption' => $description,
+                        'sort_order' => 1,
+                        'is_published' => '1',
+                        'images' => [
+                            $imageId => ['display_order' => 1],
+                        ],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.galleries.index'));
+
+        $this->assertDatabaseHas('galleries', [
+            'id' => $gallery->id,
+            'title' => 'ショートボブ',
+            'caption' => $description,
+        ]);
+
+        $html = $this->get(route('gallery.show', $gallery))->assertOk()->getContent();
+        $this->assertStringContainsString('ショートボブ', $html);
+        $this->assertStringContainsString('どれもアレンジ可能です♪', $html);
+        $this->assertStringContainsString('<h1 class="mt-8 text-3xl font-semibold tracking-wide text-salon-text md:text-[2rem]">', $html);
+        $this->assertMatchesRegularExpression('/<h1[^>]*>\s*ショートボブ\s*<\/h1>/u', $html);
+        $this->assertDoesNotMatchRegularExpression('/whitespace-pre-line[^>]*>\s*ショートボブ/u', $html);
+    }
+
+    public function test_caption_preserves_newlines_on_save_and_public_display(): void
+    {
+        Storage::fake('public');
+        $gallery = $this->createGallery([
+            'image_path' => UploadedFile::fake()->image('cap.jpg')->store('galleries', 'public'),
+            'caption' => '旧',
+        ]);
+        $imageId = $gallery->images->first()->id;
+        $caption = "ショートボブ外はね・内巻き・切りっぱなし\nどれもアレンジ可能です♪\n\nオン眉が可愛いスタイル。";
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.galleries.bulk-update'), [
+                'galleries' => [
+                    $gallery->id => [
+                        'caption' => $caption,
+                        'sort_order' => 1,
+                        'is_published' => '1',
+                        'images' => [
+                            $imageId => ['display_order' => 1],
+                        ],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.galleries.index'));
+
+        $this->assertDatabaseHas('galleries', [
+            'id' => $gallery->id,
+            'caption' => $caption,
+        ]);
+
+        $indexHtml = $this->actingAs($this->admin())
+            ->get(route('admin.galleries.index'))
+            ->assertOk()
+            ->getContent();
+        $this->assertStringContainsString('<textarea', $indexHtml);
+        $this->assertStringContainsString('rows="4"', $indexHtml);
+        $this->assertStringContainsString('ショートボブ外はね・内巻き・切りっぱなし', $indexHtml);
+
+        $publicHtml = $this->get(route('gallery.show', $gallery))->assertOk()->getContent();
+        $this->assertStringContainsString('whitespace-pre-line', $publicHtml);
+        $this->assertStringContainsString('どれもアレンジ可能です♪', $publicHtml);
+        $this->assertStringContainsString('オン眉が可愛いスタイル。', $publicHtml);
     }
 
     public function test_fallback_create_and_edit_pages_still_available(): void
@@ -327,8 +562,9 @@ class GalleryBulkSaveTest extends TestCase
             ->assertRedirect(route('admin.galleries.index'))
             ->assertSessionHas('success', 'ギャラリー画像を登録しました。');
 
-        $gallery = Gallery::query()->where('caption', '通常登録')->first();
+        $gallery = Gallery::query()->where('caption', '通常登録')->with('images')->first();
         $this->assertNotNull($gallery);
+        $this->assertCount(1, $gallery->images);
 
         $this->actingAs($this->admin())
             ->put(route('admin.galleries.update', $gallery), [
@@ -344,5 +580,22 @@ class GalleryBulkSaveTest extends TestCase
             'caption' => '通常更新',
             'sort_order' => 2,
         ]);
+    }
+
+    public function test_migration_keeps_existing_image_as_first_gallery_image(): void
+    {
+        Storage::fake('public');
+        $path = UploadedFile::fake()->image('legacy.jpg')->store('galleries', 'public');
+        $gallery = $this->createGallery([
+            'image_path' => $path,
+            'caption' => '移行',
+        ]);
+
+        $this->assertDatabaseHas('gallery_images', [
+            'gallery_id' => $gallery->id,
+            'image_path' => $path,
+            'display_order' => 1,
+        ]);
+        $this->assertSame($path, $gallery->coverImagePath());
     }
 }

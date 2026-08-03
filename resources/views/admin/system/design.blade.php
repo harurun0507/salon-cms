@@ -51,262 +51,262 @@
         $shopName = $setting->shop_name ?: 'Sun＆ Me';
     @endphp
 
-    
-    <div class="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
-        <form id="design-form" method="POST" action="{{ route('admin.system.design.update') }}" class="space-y-5" data-design-form>
-            @csrf @method('PUT')
+    <form id="design-form" method="POST" action="{{ route('admin.system.design.update') }}" data-design-form>
+        @csrf @method('PUT')
 
-            <div class="admin-card space-y-4">
-                <div>
-                    <h2 class="text-base font-medium text-admin-text">カラー</h2>
-                    <p class="mt-1 text-sm text-admin-muted">公開サイトの基本カラーです。管理画面の色は変わりません。</p>
+        <div class="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
+            <div class="min-w-0 space-y-5">
+                <div class="admin-card space-y-4">
+                    <div>
+                        <h2 class="text-base font-medium text-admin-text">カラー</h2>
+                        <p class="mt-1 text-sm text-admin-muted">公開サイトの基本カラーです。管理画面の色は変わりません。</p>
+                    </div>
+
+                    @foreach ([
+                        'primary_color' => ['label' => 'メインカラー（ボタン）', 'value' => $primary, 'hint' => '予約ボタンなどの主色'],
+                        'secondary_color' => ['label' => 'アクセントカラー', 'value' => $secondary, 'hint' => 'リンクホバーなどの補助色'],
+                        'background_color' => ['label' => '背景色', 'value' => $background, 'hint' => 'ページ全体の背景'],
+                        'text_color' => ['label' => '文字色', 'value' => $text, 'hint' => '本文・見出しの基本色'],
+                    ] as $name => $meta)
+                        <div data-design-color-field>
+                            <label for="{{ $name }}" class="admin-label">{{ $meta['label'] }}</label>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <input
+                                    type="color"
+                                    value="{{ $meta['value'] }}"
+                                    class="h-10 w-14 cursor-pointer rounded-lg border border-admin-border bg-admin-card p-1"
+                                    data-design-color-swatch
+                                    aria-label="{{ $meta['label'] }}のカラーピッカー"
+                                >
+                                <input
+                                    type="text"
+                                    name="{{ $name }}"
+                                    id="{{ $name }}"
+                                    value="{{ $meta['value'] }}"
+                                    class="admin-input max-w-[10rem] font-mono uppercase"
+                                    maxlength="7"
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                    pattern="#?[0-9A-Fa-f]{6}"
+                                    data-design-color-hex
+                                    data-design-field="{{ $name }}"
+                                >
+                            </div>
+                            <p class="mt-1 text-xs text-admin-muted">{{ $meta['hint'] }}（#RRGGBB）</p>
+                            @error($name)
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    @endforeach
                 </div>
 
-                @foreach ([
-                    'primary_color' => ['label' => 'メインカラー（ボタン）', 'value' => $primary, 'hint' => '予約ボタンなどの主色'],
-                    'secondary_color' => ['label' => 'アクセントカラー', 'value' => $secondary, 'hint' => 'リンクホバーなどの補助色'],
-                    'background_color' => ['label' => '背景色', 'value' => $background, 'hint' => 'ページ全体の背景'],
-                    'text_color' => ['label' => '文字色', 'value' => $text, 'hint' => '本文・見出しの基本色'],
-                ] as $name => $meta)
-                    <div data-design-color-field>
-                        <label for="{{ $name }}" class="admin-label">{{ $meta['label'] }}</label>
-                        <div class="flex flex-wrap items-center gap-3">
-                            <input
-                                type="color"
-                                value="{{ $meta['value'] }}"
-                                class="h-10 w-14 cursor-pointer rounded-lg border border-admin-border bg-admin-card p-1"
-                                data-design-color-swatch
-                                aria-label="{{ $meta['label'] }}のカラーピッカー"
-                            >
-                            <input
-                                type="text"
-                                name="{{ $name }}"
-                                id="{{ $name }}"
-                                value="{{ $meta['value'] }}"
-                                class="admin-input max-w-[10rem] font-mono uppercase"
-                                maxlength="7"
-                                autocomplete="off"
-                                spellcheck="false"
-                                pattern="#?[0-9A-Fa-f]{6}"
-                                data-design-color-hex
-                                data-design-field="{{ $name }}"
-                            >
+                <div class="admin-card space-y-4">
+                    <div>
+                        <h2 class="text-base font-medium text-admin-text">フォント</h2>
+                        <p class="mt-1 text-sm text-admin-muted">公開サイトで読み込み済みのフォントから選択します。</p>
+                    </div>
+
+                    <div>
+                        <span class="admin-label" id="heading_font_label">見出しフォント</span>
+                        <div class="admin-segmented mt-1" role="radiogroup" aria-labelledby="heading_font_label" data-design-font-group="heading_font">
+                            @foreach (['serif' => '明朝体', 'sans' => 'ゴシック体', 'rounded' => '丸ゴシック体'] as $value => $label)
+                                <label class="admin-segmented-option">
+                                    <input
+                                        type="radio"
+                                        name="heading_font"
+                                        value="{{ $value }}"
+                                        class="admin-segmented-input"
+                                        data-design-field="heading_font"
+                                        {{ $headingFont === $value ? 'checked' : '' }}
+                                    >
+                                    <span class="admin-segmented-face">
+                                        <span class="admin-segmented-text">{{ $label }}</span>
+                                    </span>
+                                </label>
+                            @endforeach
                         </div>
-                        <p class="mt-1 text-xs text-admin-muted">{{ $meta['hint'] }}（#RRGGBB）</p>
-                        @error($name)
+                        @error('heading_font')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
-                @endforeach
+
+                    <div>
+                        <span class="admin-label" id="body_font_label">本文フォント</span>
+                        <div class="admin-segmented mt-1" role="radiogroup" aria-labelledby="body_font_label" data-design-font-group="body_font">
+                            @foreach (['serif' => '明朝体', 'sans' => 'ゴシック体', 'rounded' => '丸ゴシック体'] as $value => $label)
+                                <label class="admin-segmented-option">
+                                    <input
+                                        type="radio"
+                                        name="body_font"
+                                        value="{{ $value }}"
+                                        class="admin-segmented-input"
+                                        data-design-field="body_font"
+                                        {{ $bodyFont === $value ? 'checked' : '' }}
+                                    >
+                                    <span class="admin-segmented-face">
+                                        <span class="admin-segmented-text">{{ $label }}</span>
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('body_font')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                <div class="admin-card space-y-4">
+                    <div>
+                        <h2 class="text-base font-medium text-admin-text">角丸</h2>
+                        <p class="mt-1 text-sm text-admin-muted">ボタンとカードの角の丸みを調整します。</p>
+                    </div>
+
+                    <div>
+                        <span class="admin-label" id="button_radius_label">ボタンの角丸</span>
+                        <div class="admin-segmented mt-1" role="radiogroup" aria-labelledby="button_radius_label">
+                            @foreach (['small' => '小さめ', 'medium' => '標準', 'large' => '大きめ（丸）'] as $value => $label)
+                                <label class="admin-segmented-option">
+                                    <input
+                                        type="radio"
+                                        name="button_radius"
+                                        value="{{ $value }}"
+                                        class="admin-segmented-input"
+                                        data-design-field="button_radius"
+                                        {{ $buttonRadius === $value ? 'checked' : '' }}
+                                    >
+                                    <span class="admin-segmented-face">
+                                        <span class="admin-segmented-text">{{ $label }}</span>
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('button_radius')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <span class="admin-label" id="card_radius_label">カードの角丸</span>
+                        <div class="admin-segmented mt-1" role="radiogroup" aria-labelledby="card_radius_label">
+                            @foreach (['small' => '小さめ', 'medium' => '標準', 'large' => '大きめ'] as $value => $label)
+                                <label class="admin-segmented-option">
+                                    <input
+                                        type="radio"
+                                        name="card_radius"
+                                        value="{{ $value }}"
+                                        class="admin-segmented-input"
+                                        data-design-field="card_radius"
+                                        {{ $cardRadius === $value ? 'checked' : '' }}
+                                    >
+                                    <span class="admin-segmented-face">
+                                        <span class="admin-segmented-text">{{ $label }}</span>
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('card_radius')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                <div class="admin-card space-y-4">
+                    <div>
+                        <h2 class="text-base font-medium text-admin-text">レイアウト</h2>
+                        <p class="mt-1 text-sm text-admin-muted">セクションの余白とカード内の余白を調整します。「標準」が現在の公開サイトと同じです。</p>
+                    </div>
+
+                    <div>
+                        <span class="admin-label" id="layout_density_label">余白の密度</span>
+                        <div class="admin-segmented mt-1" role="radiogroup" aria-labelledby="layout_density_label">
+                            @foreach (['compact' => 'コンパクト', 'standard' => '標準', 'relaxed' => 'ゆったり'] as $value => $label)
+                                <label class="admin-segmented-option">
+                                    <input
+                                        type="radio"
+                                        name="layout_density"
+                                        value="{{ $value }}"
+                                        class="admin-segmented-input"
+                                        data-design-field="layout_density"
+                                        {{ $layoutDensity === $value ? 'checked' : '' }}
+                                    >
+                                    <span class="admin-segmented-face">
+                                        <span class="admin-segmented-text">{{ $label }}</span>
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('layout_density')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
             </div>
 
-            <div class="admin-card space-y-4">
+            <div class="admin-card min-w-0 space-y-4" data-design-preview-card>
                 <div>
-                    <h2 class="text-base font-medium text-admin-text">フォント</h2>
-                    <p class="mt-1 text-sm text-admin-muted">公開サイトで読み込み済みのフォントから選択します。</p>
+                    <h2 class="text-base font-medium text-admin-text">プレビュー</h2>
+                    <p class="mt-1 text-sm text-admin-muted">保存前の見た目を確認できます。公開サイトへは保存後に反映されます。</p>
                 </div>
-
-                <div>
-                    <span class="admin-label" id="heading_font_label">見出しフォント</span>
-                    <div class="admin-segmented mt-1" role="radiogroup" aria-labelledby="heading_font_label" data-design-font-group="heading_font">
-                        @foreach (['serif' => '明朝体', 'sans' => 'ゴシック体', 'rounded' => '丸ゴシック体'] as $value => $label)
-                            <label class="admin-segmented-option">
-                                <input
-                                    type="radio"
-                                    name="heading_font"
-                                    value="{{ $value }}"
-                                    class="admin-segmented-input"
-                                    data-design-field="heading_font"
-                                    {{ $headingFont === $value ? 'checked' : '' }}
-                                >
-                                <span class="admin-segmented-face">
-                                    <span class="admin-segmented-text">{{ $label }}</span>
-                                </span>
-                            </label>
-                        @endforeach
-                    </div>
-                    @error('heading_font')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <span class="admin-label" id="body_font_label">本文フォント</span>
-                    <div class="admin-segmented mt-1" role="radiogroup" aria-labelledby="body_font_label" data-design-font-group="body_font">
-                        @foreach (['serif' => '明朝体', 'sans' => 'ゴシック体', 'rounded' => '丸ゴシック体'] as $value => $label)
-                            <label class="admin-segmented-option">
-                                <input
-                                    type="radio"
-                                    name="body_font"
-                                    value="{{ $value }}"
-                                    class="admin-segmented-input"
-                                    data-design-field="body_font"
-                                    {{ $bodyFont === $value ? 'checked' : '' }}
-                                >
-                                <span class="admin-segmented-face">
-                                    <span class="admin-segmented-text">{{ $label }}</span>
-                                </span>
-                            </label>
-                        @endforeach
-                    </div>
-                    @error('body_font')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-
-            <div class="admin-card space-y-4">
-                <div>
-                    <h2 class="text-base font-medium text-admin-text">角丸</h2>
-                    <p class="mt-1 text-sm text-admin-muted">ボタンとカードの角の丸みを調整します。</p>
-                </div>
-
-                <div>
-                    <span class="admin-label" id="button_radius_label">ボタンの角丸</span>
-                    <div class="admin-segmented mt-1" role="radiogroup" aria-labelledby="button_radius_label">
-                        @foreach (['small' => '小さめ', 'medium' => '標準', 'large' => '大きめ（丸）'] as $value => $label)
-                            <label class="admin-segmented-option">
-                                <input
-                                    type="radio"
-                                    name="button_radius"
-                                    value="{{ $value }}"
-                                    class="admin-segmented-input"
-                                    data-design-field="button_radius"
-                                    {{ $buttonRadius === $value ? 'checked' : '' }}
-                                >
-                                <span class="admin-segmented-face">
-                                    <span class="admin-segmented-text">{{ $label }}</span>
-                                </span>
-                            </label>
-                        @endforeach
-                    </div>
-                    @error('button_radius')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <span class="admin-label" id="card_radius_label">カードの角丸</span>
-                    <div class="admin-segmented mt-1" role="radiogroup" aria-labelledby="card_radius_label">
-                        @foreach (['small' => '小さめ', 'medium' => '標準', 'large' => '大きめ'] as $value => $label)
-                            <label class="admin-segmented-option">
-                                <input
-                                    type="radio"
-                                    name="card_radius"
-                                    value="{{ $value }}"
-                                    class="admin-segmented-input"
-                                    data-design-field="card_radius"
-                                    {{ $cardRadius === $value ? 'checked' : '' }}
-                                >
-                                <span class="admin-segmented-face">
-                                    <span class="admin-segmented-text">{{ $label }}</span>
-                                </span>
-                            </label>
-                        @endforeach
-                    </div>
-                    @error('card_radius')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-
-            <div class="admin-card space-y-4">
-                <div>
-                    <h2 class="text-base font-medium text-admin-text">レイアウト</h2>
-                    <p class="mt-1 text-sm text-admin-muted">セクションの余白とカード内の余白を調整します。「標準」が現在の公開サイトと同じです。</p>
-                </div>
-
-                <div>
-                    <span class="admin-label" id="layout_density_label">余白の密度</span>
-                    <div class="admin-segmented mt-1" role="radiogroup" aria-labelledby="layout_density_label">
-                        @foreach (['compact' => 'コンパクト', 'standard' => '標準', 'relaxed' => 'ゆったり'] as $value => $label)
-                            <label class="admin-segmented-option">
-                                <input
-                                    type="radio"
-                                    name="layout_density"
-                                    value="{{ $value }}"
-                                    class="admin-segmented-input"
-                                    data-design-field="layout_density"
-                                    {{ $layoutDensity === $value ? 'checked' : '' }}
-                                >
-                                <span class="admin-segmented-face">
-                                    <span class="admin-segmented-text">{{ $label }}</span>
-                                </span>
-                            </label>
-                        @endforeach
-                    </div>
-                    @error('layout_density')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-        </form>
-
-        <div class="admin-card space-y-3 xl:sticky xl:top-[7.5rem]" data-design-preview-card>
-            <div>
-                <h2 class="text-base font-medium text-admin-text">プレビュー</h2>
-                <p class="mt-1 text-sm text-admin-muted">保存前の見た目を確認できます。公開サイトへは保存後に反映されます。</p>
-            </div>
-            <div
-                class="design-preview overflow-hidden border border-admin-border/50"
-                data-design-preview
-                style="
-                    --site-primary: {{ $primary }};
-                    --site-secondary: {{ $secondary }};
-                    --site-background: {{ $background }};
-                    --site-text: {{ $text }};
-                    background: var(--site-background);
-                    color: var(--site-text);
-                    border-radius: var(--site-card-radius, 8px);
-                    font-family: var(--site-body-font, sans-serif);
-                "
-            >
                 <div
-                    class="flex items-center justify-between gap-3 border-b px-4 py-3"
-                    style="border-color: color-mix(in srgb, var(--site-text) 12%, transparent); background: color-mix(in srgb, var(--site-background) 95%, white);"
-                    data-design-preview-header
+                    class="design-preview overflow-hidden border border-admin-border/50"
+                    data-design-preview
+                    style="
+                        --site-primary: {{ $primary }};
+                        --site-secondary: {{ $secondary }};
+                        --site-background: {{ $background }};
+                        --site-text: {{ $text }};
+                        background: var(--site-background);
+                        color: var(--site-text);
+                        border-radius: var(--site-card-radius, 8px);
+                        font-family: var(--site-body-font, sans-serif);
+                    "
                 >
-                    <span class="text-lg tracking-widest" style="font-family: var(--site-heading-font, serif);" data-design-preview-shop>{{ $shopName }}</span>
-                    <a href="#" class="text-sm" style="color: var(--site-secondary);" data-design-preview-link onclick="return false;">Menu</a>
-                </div>
-                <div class="px-4" style="padding-block: var(--site-section-spacing, 5rem);" data-design-preview-section>
-                    <h3 class="text-2xl tracking-wide" style="font-family: var(--site-heading-font, serif);" data-design-preview-heading>ナチュラルに、自分らしく。</h3>
-                    <p class="mt-3 text-sm leading-relaxed opacity-90" data-design-preview-body>
-                        一人ひとりの髪質やライフスタイルに合わせた、丁寧なカウンセリングと施術を大切にしています。
-                    </p>
-                    <div class="mt-5 flex flex-wrap items-center gap-3">
-                        <a
-                            href="#"
-                            class="btn-primary"
-                            data-design-preview-button
-                            onclick="return false;"
-                        >予約する</a>
-                        <a
-                            href="#"
-                            class="btn-outline"
-                            data-design-preview-outline
-                            onclick="return false;"
-                        >Googleマップで開く</a>
-                    </div>
                     <div
-                        class="mt-6 border"
-                        style="
-                            border-color: color-mix(in srgb, var(--site-text) 12%, transparent);
-                            border-radius: var(--site-card-radius, 8px);
-                            padding: var(--site-card-padding, 1.5rem);
-                            background: color-mix(in srgb, var(--site-background) 70%, white);
-                        "
-                        data-design-preview-site-card
+                        class="flex items-center justify-between gap-3 border-b px-4 py-3"
+                        style="border-color: color-mix(in srgb, var(--site-text) 12%, transparent); background: color-mix(in srgb, var(--site-background) 95%, white);"
+                        data-design-preview-header
                     >
-                        <p class="text-sm font-medium" style="font-family: var(--site-heading-font, serif);">アクセス情報</p>
-                        <p class="mt-2 text-sm opacity-80">東京都〇〇区〇〇 1-2-3</p>
-                        <a href="#" class="btn-outline mt-4" data-design-preview-card-link onclick="return false;">詳細を見る</a>
+                        <span class="text-lg tracking-widest" style="font-family: var(--site-heading-font, serif);" data-design-preview-shop>{{ $shopName }}</span>
+                        <a href="#" class="text-sm" style="color: var(--site-secondary);" data-design-preview-link onclick="return false;">Menu</a>
+                    </div>
+                    <div class="px-4" style="padding-block: var(--site-section-spacing, 5rem);" data-design-preview-section>
+                        <h3 class="text-2xl tracking-wide" style="font-family: var(--site-heading-font, serif);" data-design-preview-heading>ナチュラルに、自分らしく。</h3>
+                        <p class="mt-3 text-sm leading-relaxed opacity-90" data-design-preview-body>
+                            一人ひとりの髪質やライフスタイルに合わせた、丁寧なカウンセリングと施術を大切にしています。
+                        </p>
+                        <div class="mt-5 flex flex-wrap items-center gap-3">
+                            <a
+                                href="#"
+                                class="btn-primary"
+                                data-design-preview-button
+                                onclick="return false;"
+                            >予約する</a>
+                            <a
+                                href="#"
+                                class="btn-outline"
+                                data-design-preview-outline
+                                onclick="return false;"
+                            >Googleマップで開く</a>
+                        </div>
+                        <div
+                            class="mt-6 border"
+                            style="
+                                border-color: color-mix(in srgb, var(--site-text) 12%, transparent);
+                                border-radius: var(--site-card-radius, 8px);
+                                padding: var(--site-card-padding, 1.5rem);
+                                background: color-mix(in srgb, var(--site-background) 70%, white);
+                            "
+                            data-design-preview-site-card
+                        >
+                            <p class="text-sm font-medium" style="font-family: var(--site-heading-font, serif);">アクセス情報</p>
+                            <p class="mt-2 text-sm opacity-80">東京都〇〇区〇〇 1-2-3</p>
+                            <a href="#" class="btn-outline mt-4" data-design-preview-card-link onclick="return false;">詳細を見る</a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-
+    </form>
     <script>
         (function () {
             const form = document.querySelector('[data-design-form]');

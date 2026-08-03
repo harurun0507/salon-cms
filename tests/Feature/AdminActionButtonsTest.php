@@ -77,7 +77,6 @@ class AdminActionButtonsTest extends TestCase
     public function test_gallery_inline_cards_use_add_card_and_delete_icon_without_edit_button(): void
     {
         Gallery::query()->create([
-            'image_path' => 'galleries/a.jpg',
             'sort_order' => 1,
             'is_published' => true,
         ]);

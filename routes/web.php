@@ -29,6 +29,7 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/menu', [MenuPageController::class, 'index'])->name('menu');
 Route::get('/staff', [StaffPageController::class, 'index'])->name('staff');
 Route::get('/gallery', [GalleryPageController::class, 'index'])->name('gallery');
+Route::get('/gallery/{gallery}', [GalleryPageController::class, 'show'])->name('gallery.show');
 Route::get('/access', [AccessPageController::class, 'index'])->name('access');
 Route::get('/news', [NewsPageController::class, 'index'])->name('news.index');
 Route::get('/news/{slug}', [NewsPageController::class, 'show'])->name('news.show');

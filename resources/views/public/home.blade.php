@@ -284,9 +284,20 @@
                         </div>
                         <div class="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
                             @forelse($galleries as $gallery)
-                                <figure class="aspect-[3/4] overflow-hidden rounded-sm">
-                                    <img src="{{ asset('storage/'.$gallery->image_path) }}" alt="{{ $gallery->caption }}" class="h-full w-full object-cover transition hover:scale-105">
-                                </figure>
+                                @php
+                                    $cover = $gallery->coverImagePath();
+                                    $coverImage = $gallery->coverImage();
+                                    $alt = $coverImage?->alt_text ?: $gallery->displayTitle();
+                                @endphp
+                                @if($cover)
+                                    <a href="{{ route('gallery.show', $gallery) }}" class="group block aspect-[3/4] overflow-hidden rounded-sm">
+                                        <img
+                                            src="{{ asset('storage/'.$cover) }}"
+                                            alt="{{ $alt }}"
+                                            class="h-full w-full object-cover transition group-hover:scale-105"
+                                        >
+                                    </a>
+                                @endif
                             @empty
                                 <p class="col-span-full text-center text-salon-muted">ギャラリー準備中です。</p>
                             @endforelse

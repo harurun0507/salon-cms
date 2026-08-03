@@ -248,8 +248,8 @@ class AdminConfirmModalTest extends TestCase
         $this->assertStringContainsString('data-confirm-form="galleries-bulk-form"', $html);
         $this->assertStringContainsString('data-confirm-title="ギャラリー保存の確認"', $html);
         $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
-        $this->assertStringContainsString('画像、キャプション、表示順、公開状態、削除など', $html);
-        $this->assertStringContainsString('公開サイトに表示するギャラリー画像を登録・編集します。', $html);
+        $this->assertStringContainsString('画像、タイトル、詳細、担当スタッフ、表示順、公開状態、削除など', $html);
+        $this->assertStringContainsString('公開サイトに表示するギャラリーを登録・編集します。', $html);
         $this->assertStringNotContainsString('return confirm(', $html);
         $this->assertSame(1, substr_count($html, 'data-confirm-form="galleries-bulk-form"'));
     }

@@ -56,13 +56,11 @@ class AdminDashboardTest extends TestCase
         ]);
 
         Gallery::query()->create([
-            'image_path' => 'galleries/a.jpg',
             'caption' => '公開ギャラリー',
             'sort_order' => 1,
             'is_published' => true,
         ]);
         Gallery::query()->create([
-            'image_path' => 'galleries/b.jpg',
             'caption' => '非公開ギャラリー',
             'sort_order' => 2,
             'is_published' => false,
@@ -293,7 +291,6 @@ class AdminDashboardTest extends TestCase
         News::query()->whereKey($oldNews->id)->update(['updated_at' => $t1]);
 
         $gallery = Gallery::query()->create([
-            'image_path' => 'galleries/recent.jpg',
             'caption' => '最新ギャラリー',
             'sort_order' => 1,
             'is_published' => true,
@@ -445,7 +442,6 @@ class AdminDashboardTest extends TestCase
         Banner::query()->whereKey($bannerEmpty->id)->update(['updated_at' => $t3]);
 
         $galleryEmpty = Gallery::query()->create([
-            'image_path' => 'galleries/empty.jpg',
             'caption' => null,
             'sort_order' => 1,
             'is_published' => true,
