@@ -503,6 +503,36 @@
     background: #AFA692;
 }
 
+/* Admin page viewport scrollbar (not public site). */
+.admin-page,
+html:has(body.admin-page) {
+    scrollbar-width: thin;
+    scrollbar-color: #C8C0B2 #F1ECE3;
+}
+
+.admin-page::-webkit-scrollbar,
+html:has(body.admin-page)::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.admin-page::-webkit-scrollbar-track,
+html:has(body.admin-page)::-webkit-scrollbar-track {
+    background: #F1ECE3;
+}
+
+.admin-page::-webkit-scrollbar-thumb,
+html:has(body.admin-page)::-webkit-scrollbar-thumb {
+    background: #C8C0B2;
+    border: 2px solid #F1ECE3;
+    border-radius: 9999px;
+}
+
+.admin-page::-webkit-scrollbar-thumb:hover,
+html:has(body.admin-page)::-webkit-scrollbar-thumb:hover {
+    background: #AFA692;
+}
+
 /*
  * Menu published checkbox + status
  * Unlayered so these beat Tailwind preflight (accent-color / appearance) after Vite build.

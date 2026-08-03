@@ -174,6 +174,30 @@
                 .admin-sidebar-scroll::-webkit-scrollbar-thumb:hover {
                     background: #AFA692;
                 }
+                .admin-page,
+                html:has(body.admin-page) {
+                    scrollbar-width: thin;
+                    scrollbar-color: #C8C0B2 #F1ECE3;
+                }
+                .admin-page::-webkit-scrollbar,
+                html:has(body.admin-page)::-webkit-scrollbar {
+                    width: 10px;
+                    height: 10px;
+                }
+                .admin-page::-webkit-scrollbar-track,
+                html:has(body.admin-page)::-webkit-scrollbar-track {
+                    background: #F1ECE3;
+                }
+                .admin-page::-webkit-scrollbar-thumb,
+                html:has(body.admin-page)::-webkit-scrollbar-thumb {
+                    background: #C8C0B2;
+                    border: 2px solid #F1ECE3;
+                    border-radius: 9999px;
+                }
+                .admin-page::-webkit-scrollbar-thumb:hover,
+                html:has(body.admin-page)::-webkit-scrollbar-thumb:hover {
+                    background: #AFA692;
+                }
                 .admin-table-wrap { @apply overflow-hidden rounded-xl border border-admin-border/40 bg-admin-card shadow-[0_2px_10px_rgba(0,0,0,0.04)]; }
                 .admin-table { @apply min-w-full divide-y divide-admin-border/40 text-sm text-admin-text; }
                 .admin-table thead { @apply bg-admin-sidebar/80; }
@@ -363,7 +387,7 @@
         </style>
     @endif
 </head>
-<body class="bg-admin-bg font-sans text-admin-text antialiased">
+<body class="admin-page bg-admin-bg font-sans text-admin-text antialiased">
     <div class="admin-layout flex min-h-screen overflow-x-hidden" data-admin-layout>
         <aside
             id="admin-desktop-sidebar"
