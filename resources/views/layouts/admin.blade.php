@@ -286,142 +286,15 @@
     <div class="flex min-h-screen">
         <aside class="relative sticky top-0 hidden h-screen w-64 shrink-0 overflow-hidden border-r border-[#E5E0D7] bg-[#F6F2EA] text-admin-text md:flex md:flex-col">
             <a href="{{ route('admin.dashboard') }}" class="relative z-10 flex items-center gap-3.5 px-7 py-7 hover:opacity-80">
-                    <div
-                        class="pointer-events-none shrink-0 text-[#A79D87]"
-                        aria-hidden="true"
-                    >
-                        <svg
-                            viewBox="0 0 72 112"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-14 w-9 opacity-55"
-                        >
-                            <!-- 主茎 -->
-                            <path
-                                d="M37 104
-                                   C36 88 36 71 37 54
-                                   C38 37 39 21 40 8"
-                                stroke="currentColor"
-                                stroke-width="1.65"
-                                stroke-linecap="round"
-                            />
-
-                            <!-- 左上の葉 -->
-                            <path
-                                d="M39.5 22
-                                   C31 19 25 13 23 6
-                                   C31 7 37 12 39.5 22Z"
-                                stroke="currentColor"
-                                stroke-width="1.4"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            />
-                            <path
-                                d="M38.5 21
-                                   C33 16 29 12 24 8"
-                                stroke="currentColor"
-                                stroke-width="1"
-                                stroke-linecap="round"
-                                opacity=".75"
-                            />
-
-                            <!-- 右上の葉 -->
-                            <path
-                                d="M38.5 34
-                                   C47 30 53 24 55 17
-                                   C47 18 41 24 38.5 34Z"
-                                stroke="currentColor"
-                                stroke-width="1.4"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            />
-                            <path
-                                d="M39.5 33
-                                   C45 28 49 24 54 19"
-                                stroke="currentColor"
-                                stroke-width="1"
-                                stroke-linecap="round"
-                                opacity=".75"
-                            />
-
-                            <!-- 左中の葉 -->
-                            <path
-                                d="M37.5 47
-                                   C28 44 22 38 20 31
-                                   C29 32 35 38 37.5 47Z"
-                                stroke="currentColor"
-                                stroke-width="1.4"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            />
-                            <path
-                                d="M36.5 46
-                                   C31 41 26 37 21 33"
-                                stroke="currentColor"
-                                stroke-width="1"
-                                stroke-linecap="round"
-                                opacity=".75"
-                            />
-
-                            <!-- 右中の葉 -->
-                            <path
-                                d="M37 60
-                                   C46 56 52 50 54 43
-                                   C46 44 40 50 37 60Z"
-                                stroke="currentColor"
-                                stroke-width="1.4"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            />
-                            <path
-                                d="M38 59
-                                   C43 54 48 50 53 45"
-                                stroke="currentColor"
-                                stroke-width="1"
-                                stroke-linecap="round"
-                                opacity=".75"
-                            />
-
-                            <!-- 左下の葉 -->
-                            <path
-                                d="M36.5 73
-                                   C27 70 21 64 19 57
-                                   C28 58 34 64 36.5 73Z"
-                                stroke="currentColor"
-                                stroke-width="1.4"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            />
-                            <path
-                                d="M35.5 72
-                                   C30 67 25 63 20 59"
-                                stroke="currentColor"
-                                stroke-width="1"
-                                stroke-linecap="round"
-                                opacity=".75"
-                            />
-
-                            <!-- 右下の葉 -->
-                            <path
-                                d="M36 86
-                                   C45 82 51 76 53 69
-                                   C45 70 39 76 36 86Z"
-                                stroke="currentColor"
-                                stroke-width="1.4"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            />
-                            <path
-                                d="M37 85
-                                   C42 80 47 76 52 71"
-                                stroke="currentColor"
-                                stroke-width="1"
-                                stroke-linecap="round"
-                                opacity=".75"
-                            />
-                        </svg>
-                    </div>
-
+                <img
+                    src="{{ asset('images/admin-brand-logo.png') }}"
+                    alt=""
+                    width="40"
+                    height="40"
+                    class="h-12 w-12 shrink-0 object-contain"
+                    decoding="async"
+                    aria-hidden="true"
+                >
                 <div class="min-w-0 pt-0.5">
                     <div class="font-serif text-xl leading-tight tracking-wide text-[#3D3833]">Sun ＆ Me</div>
                     <div class="mt-1 text-xs tracking-wide text-[#736D65]">管理画面</div>
