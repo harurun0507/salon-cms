@@ -274,12 +274,19 @@
                     <p class="mt-3 text-sm leading-relaxed opacity-90" data-design-preview-body>
                         一人ひとりの髪質やライフスタイルに合わせた、丁寧なカウンセリングと施術を大切にしています。
                     </p>
-                    <div class="mt-5">
-                        <span
-                            class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white"
-                            style="background: var(--site-primary); border-radius: var(--site-button-radius, 9999px);"
+                    <div class="mt-5 flex flex-wrap items-center gap-3">
+                        <a
+                            href="#"
+                            class="btn-primary"
                             data-design-preview-button
-                        >予約する</span>
+                            onclick="return false;"
+                        >予約する</a>
+                        <a
+                            href="#"
+                            class="btn-outline"
+                            data-design-preview-outline
+                            onclick="return false;"
+                        >Googleマップで開く</a>
                     </div>
                     <div
                         class="mt-6 border"
@@ -293,7 +300,7 @@
                     >
                         <p class="text-sm font-medium" style="font-family: var(--site-heading-font, serif);">アクセス情報</p>
                         <p class="mt-2 text-sm opacity-80">東京都〇〇区〇〇 1-2-3</p>
-                        <a href="#" class="mt-3 inline-block text-sm" style="color: var(--site-secondary);" data-design-preview-card-link onclick="return false;">詳細を見る</a>
+                        <a href="#" class="btn-outline mt-4" data-design-preview-card-link onclick="return false;">詳細を見る</a>
                     </div>
                 </div>
             </div>

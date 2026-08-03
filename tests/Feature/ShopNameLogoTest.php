@@ -175,7 +175,8 @@ class ShopNameLogoTest extends TestCase
 
         $this->assertStringContainsString('店舗表示', $html);
         $this->assertStringContainsString('公開サイトのヘッダーに表示する店名・ロゴを設定します。', $html);
-        $this->assertStringContainsString('住所、営業時間、定休日、電話番号を設定します。', $html);
+        $this->assertStringContainsString('住所、営業時間、定休日、電話番号などの基本情報を設定します。', $html);
+        $this->assertStringContainsString('サービス・補足情報', $html);
         $this->assertStringContainsString('Googleマップへのリンクと埋め込み表示を設定します。', $html);
         $this->assertStringContainsString('Googleマップ リンクURL', $html);
         $this->assertStringContainsString('Googleマップ 埋め込みURL', $html);
@@ -184,9 +185,18 @@ class ShopNameLogoTest extends TestCase
         $this->assertStringContainsString('JPEG・PNG・WebP、5MBまで。', $html);
         $this->assertStringContainsString('name="shop_name"', $html);
         $this->assertStringContainsString('name="address"', $html);
+        $this->assertStringContainsString('name="access_directions"', $html);
         $this->assertStringContainsString('name="business_hours"', $html);
         $this->assertStringContainsString('name="closed_days"', $html);
         $this->assertStringContainsString('name="phone"', $html);
+        $this->assertStringContainsString('name="payment_methods"', $html);
+        $this->assertStringContainsString('name="cut_price"', $html);
+        $this->assertStringContainsString('name="seat_count"', $html);
+        $this->assertStringContainsString('name="staff_count"', $html);
+        $this->assertStringContainsString('name="parking"', $html);
+        $this->assertStringContainsString('name="commitment_conditions"', $html);
+        $this->assertStringContainsString('name="notes"', $html);
+        $this->assertStringContainsString('name="other_info"', $html);
         $this->assertStringContainsString('name="google_map_url"', $html);
         $this->assertStringContainsString('name="google_map_embed_url"', $html);
         $this->assertStringNotContainsString('Google Map リンクURL', $html);
@@ -226,5 +236,95 @@ class ShopNameLogoTest extends TestCase
         $this->assertSame('Keep body', $fresh->concept);
         $this->assertSame('https://instagram.com/keep', $fresh->instagram_url);
         $this->assertSame('https://beauty.hotpepper.jp/keep', $fresh->hot_pepper_url);
+    }
+
+    public function test_settings_can_save_and_show_store_detail_fields(): void
+    {
+        $payload = [
+            'shop_name' => 'Sun＆ Me',
+            'shop_name_display_type' => SalonSetting::DISPLAY_TYPE_TEXT,
+            'address' => '埼玉県川口市幸町２－14－27－102号',
+            'access_directions' => "銀座通り商店街を抜けて進みます。\n黒い看板が目印です。",
+            'business_hours' => "平日 10:00 - 20:00\n土日祝 9:00 - 19:00",
+            'closed_days' => '毎週火曜日・第3水曜日',
+            'phone' => '0120-111-1111',
+            'payment_methods' => 'Visa／Mastercard／JCB',
+            'cut_price' => '¥5,940',
+            'seat_count' => 'セット面3席',
+            'staff_count' => 'スタイリスト1人',
+            'parking' => "なし\n近隣のパーキングをご利用ください",
+            'commitment_conditions' => '4席以下の小型サロン／禁煙',
+            'notes' => '施術中はお電話に出られない場合があります。',
+            'other_info' => 'ポイント利用OK、メンズにもオススメ',
+        ];
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.settings.update'), $payload)
+            ->assertRedirect(route('admin.settings.edit'));
+
+        $fresh = SalonSetting::current()->fresh();
+        $this->assertSame($payload['access_directions'], $fresh->access_directions);
+        $this->assertSame('¥5,940', $fresh->cut_price);
+        $this->assertSame('セット面3席', $fresh->seat_count);
+        $this->assertSame('スタイリスト1人', $fresh->staff_count);
+        $this->assertSame($payload['parking'], $fresh->parking);
+        $this->assertSame($payload['commitment_conditions'], $fresh->commitment_conditions);
+        $this->assertSame($payload['notes'], $fresh->notes);
+        $this->assertSame($payload['other_info'], $fresh->other_info);
+
+        $editHtml = $this->actingAs($this->admin())
+            ->get(route('admin.settings.edit'))
+            ->assertOk()
+            ->getContent();
+        $this->assertStringContainsString('¥5,940', $editHtml);
+        $this->assertStringContainsString('セット面3席', $editHtml);
+
+        $accessHtml = $this->get(route('access'))
+            ->assertOk()
+            ->getContent();
+        $this->assertStringContainsString('アクセス・道案内', $accessHtml);
+        $this->assertStringContainsString('黒い看板が目印です。', $accessHtml);
+        $this->assertStringContainsString('支払い方法', $accessHtml);
+        $this->assertStringContainsString('カット価格', $accessHtml);
+        $this->assertStringContainsString('¥5,940', $accessHtml);
+        $this->assertStringContainsString('こだわり条件', $accessHtml);
+        $this->assertStringContainsString('備考', $accessHtml);
+        $this->assertStringContainsString('その他', $accessHtml);
+    }
+
+    public function test_public_access_hides_empty_store_detail_fields(): void
+    {
+        SalonSetting::current()->update([
+            'shop_name' => 'Sun＆ Me',
+            'address' => '埼玉県川口市',
+            'business_hours' => '10:00 - 20:00',
+            'closed_days' => '火曜定休',
+            'phone' => '0120-111-1111',
+            'access_directions' => null,
+            'payment_methods' => null,
+            'cut_price' => null,
+            'seat_count' => null,
+            'staff_count' => null,
+            'parking' => null,
+            'commitment_conditions' => null,
+            'notes' => null,
+            'other_info' => null,
+        ]);
+
+        $html = $this->get(route('access'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('住所', $html);
+        $this->assertStringContainsString('埼玉県川口市', $html);
+        $this->assertStringNotContainsString('アクセス・道案内', $html);
+        $this->assertStringNotContainsString('支払い方法', $html);
+        $this->assertStringNotContainsString('カット価格', $html);
+        $this->assertStringNotContainsString('席数', $html);
+        $this->assertStringNotContainsString('スタッフ数', $html);
+        $this->assertStringNotContainsString('駐車場', $html);
+        $this->assertStringNotContainsString('こだわり条件', $html);
+        $this->assertStringNotContainsString('備考', $html);
+        $this->assertStringNotContainsString('その他', $html);
     }
 }

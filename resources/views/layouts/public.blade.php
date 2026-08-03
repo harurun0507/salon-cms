@@ -97,8 +97,49 @@
         </script>
         <style type="text/tailwindcss">
             @layer components {
-                .btn-primary { @apply inline-flex items-center justify-center bg-salon-button px-6 py-3 text-sm font-medium text-white transition hover:opacity-90; border-radius: var(--site-button-radius, 9999px); }
-                .btn-outline { @apply inline-flex items-center justify-center border border-salon-button px-6 py-3 text-sm font-medium text-salon-button transition hover:bg-salon-button hover:text-white; border-radius: var(--site-button-radius, 9999px); }
+                .btn-primary {
+                    display: inline-flex;
+                    min-height: 44px;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 0.75rem 1.5rem;
+                    border: 1px solid var(--site-primary, #5F6F52);
+                    border-radius: var(--site-button-radius, 9999px);
+                    background-color: var(--site-primary, #5F6F52);
+                    color: #fff;
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                    line-height: 1.25;
+                    text-decoration: none;
+                    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+                }
+                .btn-primary:hover { opacity: 0.9; }
+                .btn-outline {
+                    display: inline-flex;
+                    min-height: 44px;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 0.75rem 1.5rem;
+                    border: 1px solid var(--site-primary, #5F6F52);
+                    border-radius: var(--site-button-radius, 9999px);
+                    background-color: transparent;
+                    color: var(--site-primary, #5F6F52);
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                    line-height: 1.25;
+                    text-decoration: none;
+                    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+                }
+                .btn-outline:hover {
+                    background-color: var(--site-primary, #5F6F52);
+                    border-color: var(--site-primary, #5F6F52);
+                    color: #fff;
+                }
+                .btn-primary:focus-visible,
+                .btn-outline:focus-visible {
+                    outline: 2px solid color-mix(in srgb, var(--site-primary, #5F6F52) 45%, white);
+                    outline-offset: 2px;
+                }
                 .section-title { @apply text-3xl md:text-4xl tracking-wide text-salon-text; font-family: var(--site-heading-font, var(--font-serif)); }
                 .site-section { padding-block: var(--site-section-spacing, 5rem); }
                 .site-card { border-radius: var(--site-card-radius, 0.5rem); padding: var(--site-card-padding, 1.5rem); }

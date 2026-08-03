@@ -74,13 +74,61 @@
 
 @layer components {
     .btn-primary {
-        @apply inline-flex items-center justify-center bg-salon-button px-6 py-3 text-sm font-medium text-white transition hover:opacity-90;
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        border: 1px solid var(--site-primary, #5F6F52);
         border-radius: var(--site-button-radius, 9999px);
+        background-color: var(--site-primary, #5F6F52);
+        color: #fff;
+        font-size: 0.875rem;
+        font-weight: 500;
+        line-height: 1.25;
+        text-decoration: none;
+        transition:
+            background-color 0.2s ease,
+            border-color 0.2s ease,
+            color 0.2s ease,
+            opacity 0.2s ease;
+    }
+
+    .btn-primary:hover {
+        opacity: 0.9;
     }
 
     .btn-outline {
-        @apply inline-flex items-center justify-center border border-salon-button px-6 py-3 text-sm font-medium text-salon-button transition hover:bg-salon-button hover:text-white;
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        border: 1px solid var(--site-primary, #5F6F52);
         border-radius: var(--site-button-radius, 9999px);
+        background-color: transparent;
+        color: var(--site-primary, #5F6F52);
+        font-size: 0.875rem;
+        font-weight: 500;
+        line-height: 1.25;
+        text-decoration: none;
+        transition:
+            background-color 0.2s ease,
+            border-color 0.2s ease,
+            color 0.2s ease;
+    }
+
+    .btn-outline:hover {
+        background-color: var(--site-primary, #5F6F52);
+        border-color: var(--site-primary, #5F6F52);
+        color: #fff;
+        opacity: 1;
+    }
+
+    .btn-primary:focus-visible,
+    .btn-outline:focus-visible {
+        outline: 2px solid color-mix(in srgb, var(--site-primary, #5F6F52) 45%, white);
+        outline-offset: 2px;
     }
 
     .section-title {
@@ -95,6 +143,24 @@
     .site-card {
         border-radius: var(--site-card-radius, 0.5rem);
         padding: var(--site-card-padding, 1.5rem);
+    }
+
+    .access-info-card,
+    .access-map-card,
+    .access-salon-card {
+        border: 1px solid rgba(227, 221, 210, 0.8);
+        background: rgba(255, 255, 255, 0.72);
+        border-radius: 0.75rem;
+        box-shadow: 0 2px 10px rgba(58, 51, 46, 0.025);
+        padding: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+        .access-info-card,
+        .access-map-card,
+        .access-salon-card {
+            padding: 2rem;
+        }
     }
 
     /* ---- Admin shared ---- */

@@ -136,11 +136,15 @@
             <div class="admin-card space-y-5">
                 <div>
                     <h2 class="text-base font-medium text-admin-text">店舗情報</h2>
-                    <p class="mt-1 text-sm text-admin-muted">住所、営業時間、定休日、電話番号を設定します。</p>
+                    <p class="mt-1 text-sm text-admin-muted">住所、営業時間、定休日、電話番号などの基本情報を設定します。</p>
                 </div>
                 <div>
                     <label for="address" class="admin-label">住所</label>
                     <input type="text" name="address" id="address" value="{{ old('address', $setting->address) }}" class="admin-input">
+                </div>
+                <div>
+                    <label for="access_directions" class="admin-label">アクセス・道案内</label>
+                    <textarea name="access_directions" id="access_directions" rows="5" class="admin-input">{{ old('access_directions', $setting->access_directions) }}</textarea>
                 </div>
                 <div>
                     <label for="business_hours" class="admin-label">営業時間</label>
@@ -154,6 +158,47 @@
                     <label for="phone" class="admin-label">電話番号</label>
                     <input type="text" name="phone" id="phone" value="{{ old('phone', $setting->phone) }}" class="admin-input">
                 </div>
+                <div>
+                    <label for="payment_methods" class="admin-label">支払い方法</label>
+                    <textarea name="payment_methods" id="payment_methods" rows="3" class="admin-input">{{ old('payment_methods', $setting->payment_methods) }}</textarea>
+                </div>
+                <div>
+                    <label for="cut_price" class="admin-label">カット価格</label>
+                    <input type="text" name="cut_price" id="cut_price" value="{{ old('cut_price', $setting->cut_price) }}" class="admin-input" placeholder="例：¥5,940">
+                </div>
+                <div>
+                    <label for="seat_count" class="admin-label">席数</label>
+                    <input type="text" name="seat_count" id="seat_count" value="{{ old('seat_count', $setting->seat_count) }}" class="admin-input" placeholder="例：セット面3席">
+                </div>
+                <div>
+                    <label for="staff_count" class="admin-label">スタッフ数</label>
+                    <input type="text" name="staff_count" id="staff_count" value="{{ old('staff_count', $setting->staff_count) }}" class="admin-input" placeholder="例：スタイリスト1人">
+                </div>
+                <div>
+                    <label for="parking" class="admin-label">駐車場</label>
+                    <textarea name="parking" id="parking" rows="3" class="admin-input">{{ old('parking', $setting->parking) }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        {{-- サービス・補足情報 --}}
+        <div class="admin-card space-y-5">
+            <div>
+                <h2 class="text-base font-medium text-admin-text">サービス・補足情報</h2>
+                <p class="mt-1 text-sm text-admin-muted">こだわり条件や備考など、補足情報を設定します。空欄の項目は公開サイトに表示されません。</p>
+            </div>
+            <div>
+                <label for="commitment_conditions" class="admin-label">こだわり条件</label>
+                <textarea name="commitment_conditions" id="commitment_conditions" rows="5" class="admin-input">{{ old('commitment_conditions', $setting->commitment_conditions) }}</textarea>
+            </div>
+            <div>
+                <label for="notes" class="admin-label">備考</label>
+                <textarea name="notes" id="notes" rows="4" class="admin-input">{{ old('notes', $setting->notes) }}</textarea>
+                <p class="mt-1 text-xs text-admin-muted">電話番号は上の「電話番号」欄を使用してください。ここへ重複して書かないでください。</p>
+            </div>
+            <div>
+                <label for="other_info" class="admin-label">その他</label>
+                <textarea name="other_info" id="other_info" rows="3" class="admin-input">{{ old('other_info', $setting->other_info) }}</textarea>
             </div>
         </div>
 

@@ -41,7 +41,7 @@
                 @if($setting->hot_pepper_url)
                     <a href="{{ $setting->hot_pepper_url }}" target="_blank" class="btn-primary">空席確認・予約する</a>
                 @endif
-                <a href="{{ route('menu') }}" class="btn-outline border-white text-white hover:bg-white hover:text-salon-text">メニューを見る</a>
+                <a href="{{ route('menu') }}" class="btn-outline">メニューを見る</a>
             </div>
         </div>
 
@@ -332,26 +332,13 @@
             @case('access')
                 <section id="access" class="site-section border-t border-salon-line bg-white/60">
                     <div class="mx-auto max-w-6xl px-4 md:px-6">
-                        <div class="mb-12 text-center">
+                        <div class="mb-10 text-center md:mb-12">
                             <p class="mb-2 text-sm tracking-widest text-salon-accent">Access</p>
                             <h2 class="section-title">店舗情報</h2>
                         </div>
-                        <div class="grid gap-10 md:grid-cols-2">
-                            <dl class="space-y-4 text-sm leading-7">
-                                <div><dt class="font-medium">店名</dt><dd class="text-salon-muted">{{ $setting->shop_name }}</dd></div>
-                                <div><dt class="font-medium">住所</dt><dd class="text-salon-muted">{{ $setting->address }}</dd></div>
-                                <div><dt class="font-medium">営業時間</dt><dd class="whitespace-pre-line text-salon-muted">{{ $setting->business_hours }}</dd></div>
-                                <div><dt class="font-medium">定休日</dt><dd class="text-salon-muted">{{ $setting->closed_days }}</dd></div>
-                                <div><dt class="font-medium">電話</dt><dd class="text-salon-muted">{{ $setting->phone }}</dd></div>
-                            </dl>
-                            @if($setting->google_map_embed_url)
-                                <div class="aspect-video overflow-hidden rounded-sm bg-salon-line">
-                                    <iframe src="{{ $setting->google_map_embed_url }}" class="h-full w-full border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-                                </div>
-                            @endif
-                        </div>
+                        <x-public.store-info :setting="$setting" />
                         <div class="mt-10 text-center">
-                            <a href="{{ route('access') }}" class="btn-primary">アクセス詳細</a>
+                            <x-section-more-link :href="route('access')">店舗情報を見る →</x-section-more-link>
                         </div>
                     </div>
                 </section>

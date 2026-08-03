@@ -25,9 +25,18 @@ class SalonSetting extends Model
         'concept_title',
         'concept',
         'address',
+        'access_directions',
         'business_hours',
         'closed_days',
         'phone',
+        'payment_methods',
+        'cut_price',
+        'seat_count',
+        'staff_count',
+        'parking',
+        'commitment_conditions',
+        'notes',
+        'other_info',
         'google_map_url',
         'google_map_embed_url',
         'instagram_url',
@@ -139,6 +148,35 @@ class SalonSetting extends Model
     public function hasGaMeasurementId(): bool
     {
         return filled($this->ga_measurement_id);
+    }
+
+    /**
+     * Public store-info rows in display order. Empty values are omitted.
+     *
+     * @return list<array{label: string, value: string, multiline: bool}>
+     */
+    public function publicStoreInfoItems(): array
+    {
+        $items = [
+            ['label' => '住所', 'value' => $this->address, 'multiline' => false],
+            ['label' => 'アクセス・道案内', 'value' => $this->access_directions, 'multiline' => true],
+            ['label' => '営業時間', 'value' => $this->business_hours, 'multiline' => true],
+            ['label' => '定休日', 'value' => $this->closed_days, 'multiline' => false],
+            ['label' => '電話番号', 'value' => $this->phone, 'multiline' => false],
+            ['label' => '支払い方法', 'value' => $this->payment_methods, 'multiline' => true],
+            ['label' => 'カット価格', 'value' => $this->cut_price, 'multiline' => false],
+            ['label' => '席数', 'value' => $this->seat_count, 'multiline' => false],
+            ['label' => 'スタッフ数', 'value' => $this->staff_count, 'multiline' => false],
+            ['label' => '駐車場', 'value' => $this->parking, 'multiline' => true],
+            ['label' => 'こだわり条件', 'value' => $this->commitment_conditions, 'multiline' => true],
+            ['label' => '備考', 'value' => $this->notes, 'multiline' => true],
+            ['label' => 'その他', 'value' => $this->other_info, 'multiline' => true],
+        ];
+
+        return array_values(array_filter(
+            $items,
+            static fn (array $item): bool => filled($item['value'])
+        ));
     }
 
     public static function current(): self
