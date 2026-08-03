@@ -14,7 +14,7 @@
 @endphp
 
 <nav class="relative z-10 flex min-h-0 flex-1 flex-col px-4 pb-4 pt-2 text-sm" aria-label="管理メニュー" data-admin-sidebar-nav>
-    <div class="min-h-0 flex-1 space-y-2.5 overflow-y-auto pb-2">
+    <div class="admin-sidebar-scroll min-h-0 flex-1 space-y-2.5 overflow-y-auto pb-2">
         @foreach ($items as $item)
             @if (! $canSee($item))
                 @continue

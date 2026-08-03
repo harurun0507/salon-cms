@@ -154,6 +154,26 @@
                         display: inline-flex;
                     }
                 }
+                .admin-sidebar-scroll {
+                    scrollbar-width: thin;
+                    scrollbar-color: #C8C0B2 #F1ECE3;
+                    padding-right: 0.25rem;
+                }
+                .admin-sidebar-scroll::-webkit-scrollbar {
+                    width: 8px;
+                }
+                .admin-sidebar-scroll::-webkit-scrollbar-track {
+                    background: #F1ECE3;
+                    border-radius: 9999px;
+                }
+                .admin-sidebar-scroll::-webkit-scrollbar-thumb {
+                    background: #C8C0B2;
+                    border: 2px solid #F1ECE3;
+                    border-radius: 9999px;
+                }
+                .admin-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+                    background: #AFA692;
+                }
                 .admin-table-wrap { @apply overflow-hidden rounded-xl border border-admin-border/40 bg-admin-card shadow-[0_2px_10px_rgba(0,0,0,0.04)]; }
                 .admin-table { @apply min-w-full divide-y divide-admin-border/40 text-sm text-admin-text; }
                 .admin-table thead { @apply bg-admin-sidebar/80; }
