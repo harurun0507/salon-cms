@@ -375,7 +375,7 @@ class HeroImageTest extends TestCase
         $this->assertStringContainsString('1 / '.HeroImage::MAX_COUNT.'枚', $html);
         $this->assertStringContainsString('hero-count-badge', $html);
         $this->assertMatchesRegularExpression(
-            '/sticky top-\[4\.5rem\].*?id="hero-image-count"/s',
+            '/sticky top-0.*?id="hero-image-count"/s',
             $html
         );
         $this->assertStringNotContainsString('登録数:', $html);

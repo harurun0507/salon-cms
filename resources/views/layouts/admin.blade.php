@@ -175,26 +175,31 @@
                     background: #AFA692;
                 }
                 .admin-page,
+                .admin-page-scroll,
                 html:has(body.admin-page) {
                     scrollbar-width: thin;
                     scrollbar-color: #C8C0B2 #F1ECE3;
                 }
                 .admin-page::-webkit-scrollbar,
+                .admin-page-scroll::-webkit-scrollbar,
                 html:has(body.admin-page)::-webkit-scrollbar {
                     width: 10px;
                     height: 10px;
                 }
                 .admin-page::-webkit-scrollbar-track,
+                .admin-page-scroll::-webkit-scrollbar-track,
                 html:has(body.admin-page)::-webkit-scrollbar-track {
                     background: #F1ECE3;
                 }
                 .admin-page::-webkit-scrollbar-thumb,
+                .admin-page-scroll::-webkit-scrollbar-thumb,
                 html:has(body.admin-page)::-webkit-scrollbar-thumb {
                     background: #C8C0B2;
                     border: 2px solid #F1ECE3;
                     border-radius: 9999px;
                 }
                 .admin-page::-webkit-scrollbar-thumb:hover,
+                .admin-page-scroll::-webkit-scrollbar-thumb:hover,
                 html:has(body.admin-page)::-webkit-scrollbar-thumb:hover {
                     background: #AFA692;
                 }
@@ -387,14 +392,14 @@
         </style>
     @endif
 </head>
-<body class="admin-page bg-admin-bg font-sans text-admin-text antialiased">
-    <div class="admin-layout flex min-h-screen overflow-x-hidden" data-admin-layout>
+<body class="admin-page h-screen overflow-hidden bg-admin-bg font-sans text-admin-text antialiased">
+    <div class="admin-layout flex h-screen overflow-hidden" data-admin-layout>
         <aside
             id="admin-desktop-sidebar"
-            class="admin-desktop-sidebar relative sticky top-0 hidden h-screen w-64 shrink-0 overflow-hidden border-r border-[#E5E0D7] bg-[#F6F2EA] text-admin-text md:flex md:flex-col"
+            class="admin-desktop-sidebar relative hidden h-screen w-64 shrink-0 overflow-hidden border-r border-[#E5E0D7] bg-[#F6F2EA] text-admin-text md:flex md:flex-col"
             data-admin-desktop-sidebar
         >
-            <div class="relative z-10 flex items-center px-7 py-7">
+            <div class="relative z-10 flex shrink-0 items-center px-7 py-7">
                 <a
                     href="{{ route('admin.dashboard') }}"
                     class="flex min-w-0 flex-1 items-center gap-3.5 hover:opacity-80"
@@ -768,8 +773,8 @@
             </div>
         </aside>
 
-        <div class="flex min-w-0 flex-1 flex-col">
-            <header class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-admin-border/60 bg-admin-card/95 px-4 py-4 backdrop-blur-sm md:px-8">
+        <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <header class="z-20 flex shrink-0 items-center justify-between gap-3 border-b border-admin-border/60 bg-admin-card/95 px-4 py-4 backdrop-blur-sm md:px-8">
                 @php
                     $pageIcon = \App\Support\AdminNav::currentPageIcon(
                         trim($__env->yieldContent('icon'))
@@ -839,18 +844,29 @@
                 </form>
             </header>
 
-            <main class="flex-1 bg-admin-bg p-4 md:p-8">
-                @if($errors->any())
-                    <div class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                        <ul class="list-disc pl-5">
-                            @foreach($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
+            <main class="admin-page-scroll min-h-0 flex-1 overflow-y-auto bg-admin-bg">
+                @hasSection('save-bar')
+                    <div
+                        class="admin-save-bar sticky top-0 z-20 border-b border-admin-border/50 bg-admin-bg px-4 py-3 md:px-8"
+                        data-admin-save-bar
+                    >
+                        @yield('save-bar')
                     </div>
                 @endif
 
-                @yield('content')
+                <div class="p-4 md:p-8">
+                    @if($errors->any())
+                        <div class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                            <ul class="list-disc pl-5">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @yield('content')
+                </div>
             </main>
         </div>
     </div>

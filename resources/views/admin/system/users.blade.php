@@ -2,6 +2,24 @@
 
 @section('heading', '管理ユーザー')
 
+@section('save-bar')
+    <div class="flex min-w-0 flex-wrap items-center gap-3">
+        <button
+            type="button"
+            class="admin-btn shadow-md shrink-0"
+            data-admin-confirm-trigger
+            data-confirm-form="users-bulk-form"
+            data-confirm-title="管理ユーザー保存の確認"
+            data-confirm-message="管理ユーザーの変更内容を保存します。よろしいですか？"
+            data-confirm-submit-label="保存する"
+        >保存する</button>
+        <p class="text-sm text-admin-muted">
+            管理画面にログインできるユーザーを追加・編集します。利用を停止する場合は「無効」を選択してください。
+        </p>
+    </div>
+
+@endsection
+
 @section('content')
     @php
         $oldNewUsers = old('new_users', []);
@@ -27,23 +45,7 @@
         };
     @endphp
 
-    <div class="sticky top-[4.5rem] z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8">
-        <div class="flex min-w-0 flex-wrap items-center gap-3">
-            <button
-                type="button"
-                class="admin-btn shadow-md shrink-0"
-                data-admin-confirm-trigger
-                data-confirm-form="users-bulk-form"
-                data-confirm-title="管理ユーザー保存の確認"
-                data-confirm-message="管理ユーザーの変更内容を保存します。よろしいですか？"
-                data-confirm-submit-label="保存する"
-            >保存する</button>
-            <p class="text-sm text-admin-muted">
-                管理画面にログインできるユーザーを追加・編集します。利用を停止する場合は「無効」を選択してください。
-            </p>
-        </div>
-    </div>
-
+    
     @if ($errors->any())
         <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <ul class="list-disc space-y-1 pl-5">

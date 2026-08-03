@@ -67,7 +67,7 @@ class BannerAdminTest extends TestCase
         $this->assertStringContainsString('admin-segmented-input', $html);
         $this->assertStringContainsString('>公開</span>', $html);
         $this->assertStringContainsString('>非公開</span>', $html);
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
         $this->assertStringContainsString('data-admin-confirm-trigger', $html);
         $this->assertStringContainsString('data-confirm-form="banners-bulk-form"', $html);
         $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);

@@ -2,30 +2,32 @@
 
 @section('heading', '基本情報')
 
+@section('save-bar')
+    <div class="flex min-w-0 flex-wrap items-center gap-3">
+        <button
+            type="button"
+            class="admin-btn shadow-md shrink-0"
+            data-admin-confirm-trigger
+            data-confirm-form="settings-form"
+            data-confirm-title="店舗情報保存の確認"
+            data-confirm-message="店舗情報を保存します。&#10;よろしいですか？"
+            data-confirm-note="店名、ロゴ、店舗情報など、現在入力されている内容が反映されます。"
+            data-confirm-submit-label="保存する"
+        >保存する</button>
+        <p class="text-sm text-admin-muted">
+            公開サイトに表示する店舗名・ロゴ・住所・営業時間などを設定します。
+        </p>
+    </div>
+
+@endsection
+
 @section('content')
     @php
         $displayType = old('shop_name_display_type', $setting->shop_name_display_type ?: \App\Models\SalonSetting::DISPLAY_TYPE_TEXT);
         $hasLogo = (bool) $setting->logo_image;
     @endphp
 
-    <div class="sticky top-[4.5rem] z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8">
-        <div class="flex min-w-0 flex-wrap items-center gap-3">
-            <button
-                type="button"
-                class="admin-btn shadow-md shrink-0"
-                data-admin-confirm-trigger
-                data-confirm-form="settings-form"
-                data-confirm-title="店舗情報保存の確認"
-                data-confirm-message="店舗情報を保存します。&#10;よろしいですか？"
-                data-confirm-note="店名、ロゴ、店舗情報など、現在入力されている内容が反映されます。"
-                data-confirm-submit-label="保存する"
-            >保存する</button>
-            <p class="text-sm text-admin-muted">
-                公開サイトに表示する店舗名・ロゴ・住所・営業時間などを設定します。
-            </p>
-        </div>
-    </div>
-
+    
     <form id="settings-form" method="POST" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data" class="space-y-5">
         @csrf @method('PUT')
 

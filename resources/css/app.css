@@ -503,24 +503,29 @@
     background: #AFA692;
 }
 
-/* Admin page viewport scrollbar (not public site). */
+/* Admin page viewport scrollbar (not public site).
+ * Primary scroll container is main.admin-page-scroll; html/body kept as fallback. */
+.admin-page-scroll,
 .admin-page,
 html:has(body.admin-page) {
     scrollbar-width: thin;
     scrollbar-color: #C8C0B2 #F1ECE3;
 }
 
+.admin-page-scroll::-webkit-scrollbar,
 .admin-page::-webkit-scrollbar,
 html:has(body.admin-page)::-webkit-scrollbar {
     width: 10px;
     height: 10px;
 }
 
+.admin-page-scroll::-webkit-scrollbar-track,
 .admin-page::-webkit-scrollbar-track,
 html:has(body.admin-page)::-webkit-scrollbar-track {
     background: #F1ECE3;
 }
 
+.admin-page-scroll::-webkit-scrollbar-thumb,
 .admin-page::-webkit-scrollbar-thumb,
 html:has(body.admin-page)::-webkit-scrollbar-thumb {
     background: #C8C0B2;
@@ -528,6 +533,7 @@ html:has(body.admin-page)::-webkit-scrollbar-thumb {
     border-radius: 9999px;
 }
 
+.admin-page-scroll::-webkit-scrollbar-thumb:hover,
 .admin-page::-webkit-scrollbar-thumb:hover,
 html:has(body.admin-page)::-webkit-scrollbar-thumb:hover {
     background: #AFA692;

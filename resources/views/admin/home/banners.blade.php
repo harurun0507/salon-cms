@@ -2,6 +2,25 @@
 
 @section('heading', 'バナー')
 
+@section('save-bar')
+    <div class="flex min-w-0 flex-wrap items-center gap-3">
+        <button
+            type="button"
+            class="admin-btn shadow-md shrink-0"
+            data-admin-confirm-trigger
+            data-confirm-form="banners-bulk-form"
+            data-confirm-title="バナー保存の確認"
+            data-confirm-message="変更内容を保存します。&#10;よろしいですか？"
+            data-confirm-note="画像、タイトル、リンク、表示場所、公開期間、公開状態、表示順、削除など、現在入力されている内容が反映されます。"
+            data-confirm-submit-label="保存する"
+        >保存する</button>
+        <p class="text-sm text-admin-muted">
+            トップページなどに表示するバナーを登録します。推奨サイズ：1200×400px（JPEG / PNG / WebP、5MBまで）
+        </p>
+    </div>
+
+@endsection
+
 @section('content')
     @php
         $locationLabels = \App\Models\Banner::LOCATION_LABELS;
@@ -19,24 +38,7 @@
         };
     @endphp
 
-    <div class="sticky top-[4.5rem] z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8">
-        <div class="flex min-w-0 flex-wrap items-center gap-3">
-            <button
-                type="button"
-                class="admin-btn shadow-md shrink-0"
-                data-admin-confirm-trigger
-                data-confirm-form="banners-bulk-form"
-                data-confirm-title="バナー保存の確認"
-                data-confirm-message="変更内容を保存します。&#10;よろしいですか？"
-                data-confirm-note="画像、タイトル、リンク、表示場所、公開期間、公開状態、表示順、削除など、現在入力されている内容が反映されます。"
-                data-confirm-submit-label="保存する"
-            >保存する</button>
-            <p class="text-sm text-admin-muted">
-                トップページなどに表示するバナーを登録します。推奨サイズ：1200×400px（JPEG / PNG / WebP、5MBまで）
-            </p>
-        </div>
-    </div>
-
+    
     @if ($errors->any())
         <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <ul class="list-disc space-y-1 pl-5">

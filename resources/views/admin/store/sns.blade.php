@@ -2,6 +2,25 @@
 
 @section('heading', 'SNS')
 
+@section('save-bar')
+    <div class="flex min-w-0 flex-wrap items-center gap-3">
+        <button
+            type="button"
+            class="admin-btn shadow-md shrink-0"
+            data-admin-confirm-trigger
+            data-confirm-form="sns-form"
+            data-confirm-title="SNS設定保存の確認"
+            data-confirm-message="SNS設定を保存します。&#10;よろしいですか？"
+            data-confirm-note="SNS・公式アカウントのURL・表示・並び順など、現在入力されている内容が反映されます。"
+            data-confirm-submit-label="保存する"
+        >保存する</button>
+        <p class="text-sm text-admin-muted">
+            公開サイトに表示するSNSや公式アカウントのリンクを設定します。
+        </p>
+    </div>
+
+@endsection
+
 @section('content')
     @php
         $oldLinks = old('links', []);
@@ -20,24 +39,7 @@
         }
     @endphp
 
-    <div class="sticky top-[4.5rem] z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8">
-        <div class="flex min-w-0 flex-wrap items-center gap-3">
-            <button
-                type="button"
-                class="admin-btn shadow-md shrink-0"
-                data-admin-confirm-trigger
-                data-confirm-form="sns-form"
-                data-confirm-title="SNS設定保存の確認"
-                data-confirm-message="SNS設定を保存します。&#10;よろしいですか？"
-                data-confirm-note="SNS・公式アカウントのURL・表示・並び順など、現在入力されている内容が反映されます。"
-                data-confirm-submit-label="保存する"
-            >保存する</button>
-            <p class="text-sm text-admin-muted">
-                公開サイトに表示するSNSや公式アカウントのリンクを設定します。
-            </p>
-        </div>
-    </div>
-
+    
     <form id="sns-form" method="POST" action="{{ route('admin.store.sns.update') }}" class="space-y-5">
         @csrf @method('PUT')
 

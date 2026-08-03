@@ -2,30 +2,32 @@
 
 @section('heading', 'Analytics（GA4）')
 
+@section('save-bar')
+    <div class="flex min-w-0 flex-wrap items-center gap-3">
+        <button
+            type="button"
+            class="admin-btn shadow-md shrink-0"
+            data-admin-confirm-trigger
+            data-confirm-form="analytics-form"
+            data-confirm-title="Analytics設定保存の確認"
+            data-confirm-message="Analytics設定を保存します。&#10;よろしいですか？"
+            data-confirm-note="測定IDが公開サイトへ反映されます。未入力の場合はアクセス解析は行われません。"
+            data-confirm-submit-label="保存する"
+        >保存する</button>
+        <p class="text-sm text-admin-muted">
+            Google Analyticsの測定IDを設定します。
+        </p>
+    </div>
+
+@endsection
+
 @section('content')
     @php
         $initialMeasurementId = (string) old('ga_measurement_id', $setting->ga_measurement_id ?? '');
         $isConfigured = filled(trim($initialMeasurementId));
     @endphp
 
-    <div class="sticky top-[4.5rem] z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8">
-        <div class="flex min-w-0 flex-wrap items-center gap-3">
-            <button
-                type="button"
-                class="admin-btn shadow-md shrink-0"
-                data-admin-confirm-trigger
-                data-confirm-form="analytics-form"
-                data-confirm-title="Analytics設定保存の確認"
-                data-confirm-message="Analytics設定を保存します。&#10;よろしいですか？"
-                data-confirm-note="測定IDが公開サイトへ反映されます。未入力の場合はアクセス解析は行われません。"
-                data-confirm-submit-label="保存する"
-            >保存する</button>
-            <p class="text-sm text-admin-muted">
-                Google Analyticsの測定IDを設定します。
-            </p>
-        </div>
-    </div>
-
+    
     <form id="analytics-form" method="POST" action="{{ route('admin.system.analytics.update') }}" class="space-y-5" data-analytics-form>
         @csrf @method('PUT')
 

@@ -112,8 +112,8 @@ class AdminConfirmModalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
-        $this->assertStringContainsString('-mx-4 -mt-4 mb-6', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
+        $this->assertStringContainsString('admin-save-bar sticky top-0', $html);
         $this->assertStringContainsString('data-admin-confirm-trigger', $html);
         $this->assertStringContainsString('data-confirm-form="settings-form"', $html);
         $this->assertStringContainsString('data-confirm-title="店舗情報保存の確認"', $html);
@@ -138,8 +138,8 @@ class AdminConfirmModalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
-        $this->assertStringContainsString('-mx-4 -mt-4 mb-6', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
+        $this->assertStringContainsString('admin-save-bar sticky top-0', $html);
         $this->assertStringContainsString('data-admin-confirm-trigger', $html);
         $this->assertStringContainsString('data-confirm-form="hero-form"', $html);
         $this->assertStringContainsString('data-confirm-title="メインビジュアル保存の確認"', $html);
@@ -162,7 +162,7 @@ class AdminConfirmModalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
         $this->assertStringContainsString('data-admin-confirm-trigger', $html);
         $this->assertStringContainsString('data-confirm-form="top-page-form"', $html);
         $this->assertStringContainsString('data-confirm-title="トップページ設定保存の確認"', $html);
@@ -181,7 +181,7 @@ class AdminConfirmModalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
         $this->assertStringContainsString('data-confirm-form="sns-form"', $html);
         $this->assertStringContainsString('data-confirm-title="SNS設定保存の確認"', $html);
         $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
@@ -197,7 +197,7 @@ class AdminConfirmModalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
         $this->assertStringContainsString('data-confirm-form="reservations-form"', $html);
         $this->assertStringContainsString('data-confirm-title="予約設定保存の確認"', $html);
         $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
@@ -213,7 +213,7 @@ class AdminConfirmModalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
         $this->assertStringContainsString('data-confirm-form="seo-form"', $html);
         $this->assertStringContainsString('data-confirm-title="SEO設定保存の確認"', $html);
         $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
@@ -227,7 +227,7 @@ class AdminConfirmModalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
         $this->assertStringContainsString('data-confirm-form="design-form"', $html);
         $this->assertStringContainsString('data-confirm-title="デザイン設定保存の確認"', $html);
         $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
@@ -242,8 +242,8 @@ class AdminConfirmModalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
-        $this->assertStringContainsString('-mx-4 -mt-4 mb-6', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
+        $this->assertStringContainsString('admin-save-bar sticky top-0', $html);
         $this->assertStringContainsString('data-admin-confirm-trigger', $html);
         $this->assertStringContainsString('data-confirm-form="galleries-bulk-form"', $html);
         $this->assertStringContainsString('data-confirm-title="ギャラリー保存の確認"', $html);
@@ -261,8 +261,8 @@ class AdminConfirmModalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
-        $this->assertStringContainsString('-mx-4 -mt-4 mb-6', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
+        $this->assertStringContainsString('admin-save-bar sticky top-0', $html);
         $this->assertStringContainsString('data-admin-confirm-trigger', $html);
         $this->assertStringContainsString('data-confirm-form="banners-bulk-form"', $html);
         $this->assertStringContainsString('data-confirm-title="バナー保存の確認"', $html);
@@ -279,8 +279,8 @@ class AdminConfirmModalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
-        $this->assertStringContainsString('-mx-4 -mt-4 mb-6', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
+        $this->assertStringContainsString('admin-save-bar sticky top-0', $html);
         $this->assertStringContainsString('data-admin-confirm-trigger', $html);
         $this->assertStringContainsString('data-confirm-form="news-bulk-form"', $html);
         $this->assertStringContainsString('data-confirm-title="お知らせ保存の確認"', $html);
@@ -298,8 +298,8 @@ class AdminConfirmModalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
-        $this->assertStringContainsString('-mx-4 -mt-4 mb-6', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
+        $this->assertStringContainsString('admin-save-bar sticky top-0', $html);
         $this->assertStringContainsString('data-admin-confirm-trigger', $html);
         $this->assertStringContainsString('data-confirm-form="staff-bulk-form"', $html);
         $this->assertStringContainsString('data-confirm-title="スタッフ保存の確認"', $html);

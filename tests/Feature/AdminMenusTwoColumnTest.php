@@ -174,13 +174,14 @@ class AdminMenusTwoColumnTest extends TestCase
             ->getContent();
 
         $this->assertMatchesRegularExpression(
-            '/sticky top-\[4\.5rem\][\s\S]*?data-bulk-save-btn[\s\S]*?<\/div>\s*<\/div>\s*<form/',
+            '/admin-save-bar sticky top-0[\s\S]*?data-bulk-save-btn[\s\S]*?<\/div>\s*<\/div>/',
             $html
         );
-        preg_match('/sticky top-\[4\.5rem\][\s\S]*?<\/div>\s*<\/div>\s*<form/', $html, $toolbar);
+        preg_match('/admin-save-bar sticky top-0[\s\S]*?<\/div>\s*<\/div>/', $html, $toolbar);
         $this->assertNotEmpty($toolbar);
         $this->assertStringNotContainsString('data-menu-add-btn', $toolbar[0]);
         $this->assertStringNotContainsString('data-menu-add-hint', $toolbar[0]);
+        $this->assertStringContainsString('id="menus-bulk-form"', $html);
         $this->assertStringContainsString('data-menu-list-header', $html);
         $this->assertStringContainsString('data-menu-add-btn', $html);
         $this->assertStringContainsString('このカテゴリにメニューはありません。', $html);

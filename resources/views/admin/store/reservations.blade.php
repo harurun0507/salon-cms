@@ -2,25 +2,27 @@
 
 @section('heading', '予約設定')
 
-@section('content')
-    <div class="sticky top-[4.5rem] z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8">
-        <div class="flex min-w-0 flex-wrap items-center gap-3">
-            <button
-                type="button"
-                class="admin-btn shadow-md shrink-0"
-                data-admin-confirm-trigger
-                data-confirm-form="reservations-form"
-                data-confirm-title="予約設定保存の確認"
-                data-confirm-message="予約設定を保存します。&#10;よろしいですか？"
-                data-confirm-note="Hot Pepper予約URLなど、現在入力されている予約リンクが反映されます。"
-                data-confirm-submit-label="保存する"
-            >保存する</button>
-            <p class="text-sm text-admin-muted">
-                公開サイトの予約ボタンや予約先URLを設定します。
-            </p>
-        </div>
+@section('save-bar')
+    <div class="flex min-w-0 flex-wrap items-center gap-3">
+        <button
+            type="button"
+            class="admin-btn shadow-md shrink-0"
+            data-admin-confirm-trigger
+            data-confirm-form="reservations-form"
+            data-confirm-title="予約設定保存の確認"
+            data-confirm-message="予約設定を保存します。&#10;よろしいですか？"
+            data-confirm-note="Hot Pepper予約URLなど、現在入力されている予約リンクが反映されます。"
+            data-confirm-submit-label="保存する"
+        >保存する</button>
+        <p class="text-sm text-admin-muted">
+            公開サイトの予約ボタンや予約先URLを設定します。
+        </p>
     </div>
 
+@endsection
+
+@section('content')
+    
     <form id="reservations-form" method="POST" action="{{ route('admin.store.reservations.update') }}" class="space-y-5">
         @csrf @method('PUT')
 

@@ -78,8 +78,8 @@ class StaffBulkSaveTest extends TestCase
         $this->assertStringContainsString('admin-icon-btn-delete', $html);
         $this->assertStringContainsString('data-staff-remove', $html);
         $this->assertStringContainsString('admin-required-badge', $html);
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
-        $this->assertStringContainsString('-mx-4 -mt-4 mb-6', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
+        $this->assertStringContainsString('admin-save-bar sticky top-0', $html);
         $this->assertStringContainsString('保存する', $html);
         $this->assertStringContainsString('公開サイトに表示するスタッフ情報を登録・編集します。', $html);
         $this->assertStringContainsString('data-admin-confirm-trigger', $html);

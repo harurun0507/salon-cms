@@ -2,6 +2,38 @@
 
 @section('heading', 'メニュー・料金管理')
 
+@php
+    $oldCategoriesForToolbar = old('categories', []);
+    $hasRestoredNewCategories = false;
+    foreach ($oldCategoriesForToolbar as $key => $_) {
+        if (preg_match('/^new_\d+$/', (string) $key)) {
+            $hasRestoredNewCategories = true;
+            break;
+        }
+    }
+    $hasAnyCategory = $categories->isNotEmpty() || $hasRestoredNewCategories;
+@endphp
+
+@section('save-bar')
+    <div class="flex min-w-0 flex-wrap items-center gap-3">
+        <button
+            type="button"
+            class="admin-btn shadow-md shrink-0 {{ $hasAnyCategory ? '' : 'hidden' }}"
+            data-bulk-save-btn
+            data-admin-confirm-trigger
+            data-confirm-form="menus-bulk-form"
+            data-confirm-title="一括保存の確認"
+            data-confirm-message="変更内容を一括保存します。&#10;よろしいですか？"
+            data-confirm-note="カテゴリ、メニュー、料金、表示順、公開状態など、現在入力されている内容が反映されます。"
+            data-confirm-submit-label="一括保存する"
+        >一括保存</button>
+        <p class="text-sm text-admin-muted">
+            公開サイトに表示するメニュー・料金・カテゴリを登録・編集します。
+        </p>
+    </div>
+
+@endsection
+
 @section('content')
     @php
         $menuIdToCategoryId = [];
@@ -166,25 +198,7 @@
         }
     @endphp
 
-    <div class="sticky top-[4.5rem] z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8">
-        <div class="flex min-w-0 flex-wrap items-center gap-3">
-            <button
-                type="button"
-                class="admin-btn shadow-md shrink-0 {{ $hasAnyCategory ? '' : 'hidden' }}"
-                data-bulk-save-btn
-                data-admin-confirm-trigger
-                data-confirm-form="menus-bulk-form"
-                data-confirm-title="一括保存の確認"
-                data-confirm-message="変更内容を一括保存します。&#10;よろしいですか？"
-                data-confirm-note="カテゴリ、メニュー、料金、表示順、公開状態など、現在入力されている内容が反映されます。"
-                data-confirm-submit-label="一括保存する"
-            >一括保存</button>
-            <p class="text-sm text-admin-muted">
-                公開サイトに表示するメニュー・料金・カテゴリを登録・編集します。
-            </p>
-        </div>
-    </div>
-
+    
     <form method="POST" action="{{ route('admin.menus.bulk-update') }}" id="menus-bulk-form" data-menus-workspace data-initial-category-id="{{ $initialSelectedId }}" data-next-new-index="{{ $nextNewIndex }}" data-next-new-menu-index="{{ $nextNewMenuIndex }}">
         @csrf
         @method('PUT')

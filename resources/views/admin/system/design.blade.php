@@ -2,6 +2,35 @@
 
 @section('heading', 'デザイン設定')
 
+@section('save-bar')
+    <div class="flex min-w-0 flex-wrap items-center gap-3">
+        <button
+            type="button"
+            class="admin-btn shadow-md shrink-0"
+            data-admin-confirm-trigger
+            data-confirm-form="design-form"
+            data-confirm-title="デザイン設定保存の確認"
+            data-confirm-message="デザイン設定を保存します。&#10;よろしいですか？"
+            data-confirm-note="保存すると公開サイトの見た目に反映されます。管理画面の見た目は変わりません。"
+            data-confirm-submit-label="保存する"
+        >保存する</button>
+        <button
+            type="button"
+            class="admin-btn-secondary shrink-0"
+            data-admin-confirm-trigger
+            data-confirm-callback="design-settings-reset"
+            data-confirm-title="初期値に戻す確認"
+            data-confirm-message="デザイン設定を初期値へ戻します。保存するまでは公開サイトへ反映されません。"
+            data-confirm-submit-label="初期値に戻す"
+            data-design-reset
+        >初期値に戻す</button>
+        <p class="text-sm text-admin-muted">
+            公開サイトの色・フォント・角丸・余白などを設定します。
+        </p>
+    </div>
+
+@endsection
+
 @section('content')
     @php
         $defaultsJson = $defaults;
@@ -22,34 +51,7 @@
         $shopName = $setting->shop_name ?: 'Sun＆ Me';
     @endphp
 
-    <div class="sticky top-[4.5rem] z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8">
-        <div class="flex min-w-0 flex-wrap items-center gap-3">
-            <button
-                type="button"
-                class="admin-btn shadow-md shrink-0"
-                data-admin-confirm-trigger
-                data-confirm-form="design-form"
-                data-confirm-title="デザイン設定保存の確認"
-                data-confirm-message="デザイン設定を保存します。&#10;よろしいですか？"
-                data-confirm-note="保存すると公開サイトの見た目に反映されます。管理画面の見た目は変わりません。"
-                data-confirm-submit-label="保存する"
-            >保存する</button>
-            <button
-                type="button"
-                class="admin-btn-secondary shrink-0"
-                data-admin-confirm-trigger
-                data-confirm-callback="design-settings-reset"
-                data-confirm-title="初期値に戻す確認"
-                data-confirm-message="デザイン設定を初期値へ戻します。保存するまでは公開サイトへ反映されません。"
-                data-confirm-submit-label="初期値に戻す"
-                data-design-reset
-            >初期値に戻す</button>
-            <p class="text-sm text-admin-muted">
-                公開サイトの色・フォント・角丸・余白などを設定します。
-            </p>
-        </div>
-    </div>
-
+    
     <div class="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
         <form id="design-form" method="POST" action="{{ route('admin.system.design.update') }}" class="space-y-5" data-design-form>
             @csrf @method('PUT')

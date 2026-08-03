@@ -72,8 +72,8 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringContainsString('banner-card-label', $html);
         $this->assertStringContainsString('admin-icon-btn-delete', $html);
         $this->assertStringContainsString('data-gallery-remove', $html);
-        $this->assertStringContainsString('sticky top-[4.5rem]', $html);
-        $this->assertStringContainsString('-mx-4 -mt-4 mb-6', $html);
+        $this->assertStringContainsString('sticky top-0', $html);
+        $this->assertStringContainsString('admin-save-bar sticky top-0', $html);
         $this->assertStringContainsString('保存する', $html);
         $this->assertStringContainsString('公開サイトに表示するギャラリー画像を登録・編集します。', $html);
         $this->assertStringContainsString('data-admin-confirm-trigger', $html);

@@ -2,6 +2,25 @@
 
 @section('heading', 'SEO')
 
+@section('save-bar')
+    <div class="flex min-w-0 flex-wrap items-center gap-3">
+        <button
+            type="button"
+            class="admin-btn shadow-md shrink-0"
+            data-admin-confirm-trigger
+            data-confirm-form="seo-form"
+            data-confirm-title="SEO設定保存の確認"
+            data-confirm-message="SEO設定を保存します。&#10;よろしいですか？"
+            data-confirm-note="サイト基本SEO、ファビコン、OGP、検索エンジン設定など、現在入力されている内容が反映されます。"
+            data-confirm-submit-label="保存する"
+        >保存する</button>
+        <p class="text-sm text-admin-muted">
+            検索結果やSNSで表示されるサイト情報を設定します。
+        </p>
+    </div>
+
+@endsection
+
 @section('content')
     @php
         $twitterCard = old('twitter_card', $setting->twitter_card ?: \App\Models\SalonSetting::TWITTER_CARD_SUMMARY_LARGE_IMAGE);
@@ -21,24 +40,7 @@
         $faviconUrl = $hasFavicon ? asset('storage/'.$setting->favicon_path) : null;
     @endphp
 
-    <div class="sticky top-[4.5rem] z-10 -mx-4 -mt-4 mb-6 border-b border-admin-border/50 bg-admin-bg/95 px-4 py-3 shadow-[0_1px_0_rgba(61,56,51,0.03)] backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-8">
-        <div class="flex min-w-0 flex-wrap items-center gap-3">
-            <button
-                type="button"
-                class="admin-btn shadow-md shrink-0"
-                data-admin-confirm-trigger
-                data-confirm-form="seo-form"
-                data-confirm-title="SEO設定保存の確認"
-                data-confirm-message="SEO設定を保存します。&#10;よろしいですか？"
-                data-confirm-note="サイト基本SEO、ファビコン、OGP、検索エンジン設定など、現在入力されている内容が反映されます。"
-                data-confirm-submit-label="保存する"
-            >保存する</button>
-            <p class="text-sm text-admin-muted">
-                検索結果やSNSで表示されるサイト情報を設定します。
-            </p>
-        </div>
-    </div>
-
+    
     <form
         id="seo-form"
         method="POST"
