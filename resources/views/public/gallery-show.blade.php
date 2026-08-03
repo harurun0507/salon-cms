@@ -14,11 +14,9 @@
         <div class="mx-auto max-w-6xl px-6 md:px-10 lg:px-12">
             <div class="gallery-detail-layout">
                 <div class="gallery-detail-copy min-w-0">
-                    <a href="{{ route('gallery') }}" class="inline-flex text-sm text-salon-accent hover:underline">
-                        ← ギャラリー一覧へ戻る
-                    </a>
+                    <x-back-link :href="route('gallery')">ギャラリー一覧へ戻る</x-back-link>
 
-                    <h1 class="mt-8 text-3xl font-semibold tracking-wide text-salon-text md:text-[2rem]">
+                    <h1 class="mt-6 text-3xl font-semibold tracking-wide text-salon-text md:text-[2rem]">
                         {{ $displayTitle }}
                     </h1>
 

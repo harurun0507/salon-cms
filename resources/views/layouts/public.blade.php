@@ -185,11 +185,11 @@
 
             <nav class="hidden items-center gap-8 text-sm md:flex" aria-label="メインメニュー">
                 <a href="{{ url('/#concept') }}" class="hover:text-salon-accent">Concept</a>
-                <a href="{{ url('/#menu') }}" class="hover:text-salon-accent">Menu</a>
+                <a href="{{ url('/#news') }}" class="hover:text-salon-accent">News</a>
                 <a href="{{ url('/#gallery') }}" class="hover:text-salon-accent">Gallery</a>
+                <a href="{{ url('/#menu') }}" class="hover:text-salon-accent">Menu</a>
                 <a href="{{ url('/#staff') }}" class="hover:text-salon-accent">Staff</a>
                 <a href="{{ url('/#access') }}" class="hover:text-salon-accent">Access</a>
-                <a href="{{ route('news.index') }}" class="hover:text-salon-accent">News</a>
             </nav>
 
             @if($setting->hot_pepper_url)
@@ -204,11 +204,11 @@
         <div id="mobile-menu" class="hidden border-t border-salon-line md:hidden">
             <nav class="flex flex-col gap-4 px-4 py-4 text-sm" aria-label="モバイルメニュー">
                 <a href="{{ url('/#concept') }}" data-nav-link>Concept</a>
-                <a href="{{ url('/#menu') }}" data-nav-link>Menu</a>
+                <a href="{{ url('/#news') }}" data-nav-link>News</a>
                 <a href="{{ url('/#gallery') }}" data-nav-link>Gallery</a>
+                <a href="{{ url('/#menu') }}" data-nav-link>Menu</a>
                 <a href="{{ url('/#staff') }}" data-nav-link>Staff</a>
                 <a href="{{ url('/#access') }}" data-nav-link>Access</a>
-                <a href="{{ route('news.index') }}" data-nav-link>News</a>
                 @if($setting->hot_pepper_url)
                     <a href="{{ $setting->hot_pepper_url }}" target="_blank" class="btn-primary text-center">Reserve</a>
                 @endif

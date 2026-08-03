@@ -11,18 +11,26 @@ class HomeNavigationAndNewsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_header_nav_uses_anchors_except_news_goes_to_index(): void
+    public function test_header_nav_uses_section_anchors_including_news(): void
     {
         SalonSetting::current();
 
         $html = $this->get(route('home'))->assertOk()->getContent();
 
-        foreach (['concept', 'menu', 'gallery', 'staff', 'access'] as $id) {
+        foreach (['concept', 'news', 'gallery', 'menu', 'staff', 'access'] as $id) {
             $this->assertStringContainsString('/#'.$id, $html);
         }
 
-        $this->assertStringNotContainsString('/#news"', $html);
-        $this->assertStringContainsString(route('news.index'), $html);
+        $this->assertMatchesRegularExpression(
+            '/aria-label="メインメニュー"[^>]*>\s*'
+            .'<a[^>]*>Concept<\/a>\s*'
+            .'<a[^>]*>News<\/a>\s*'
+            .'<a[^>]*>Gallery<\/a>\s*'
+            .'<a[^>]*>Menu<\/a>\s*'
+            .'<a[^>]*>Staff<\/a>\s*'
+            .'<a[^>]*>Access<\/a>/s',
+            $html
+        );
     }
 
     public function test_home_shows_up_to_configured_published_news_newest_first(): void
