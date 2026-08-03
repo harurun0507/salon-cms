@@ -48,6 +48,9 @@ class DesignSetting extends Model
         'secondary_color' => '#7c8a6a',
         'background_color' => '#faf7f1',
         'text_color' => '#3a332e',
+        'scrollbar_thumb_color' => '#c8c0b2',
+        'scrollbar_track_color' => '#f1ece3',
+        'scrollbar_thumb_hover_color' => '#afa692',
         'heading_font' => self::FONT_SERIF,
         'body_font' => self::FONT_SANS,
         'button_radius' => self::RADIUS_LARGE,
@@ -96,6 +99,9 @@ class DesignSetting extends Model
         'secondary_color',
         'background_color',
         'text_color',
+        'scrollbar_thumb_color',
+        'scrollbar_track_color',
+        'scrollbar_thumb_hover_color',
         'heading_font',
         'body_font',
         'button_radius',
@@ -163,12 +169,18 @@ class DesignSetting extends Model
         $secondary = $this->safeHex($this->secondary_color, self::DEFAULTS['secondary_color']);
         $background = $this->safeHex($this->background_color, self::DEFAULTS['background_color']);
         $text = $this->safeHex($this->text_color, self::DEFAULTS['text_color']);
+        $scrollbarThumb = $this->safeHex($this->scrollbar_thumb_color, self::DEFAULTS['scrollbar_thumb_color']);
+        $scrollbarTrack = $this->safeHex($this->scrollbar_track_color, self::DEFAULTS['scrollbar_track_color']);
+        $scrollbarThumbHover = $this->safeHex($this->scrollbar_thumb_hover_color, self::DEFAULTS['scrollbar_thumb_hover_color']);
 
         return [
             '--site-primary' => $primary,
             '--site-secondary' => $secondary,
             '--site-background' => $background,
             '--site-text' => $text,
+            '--site-scrollbar-thumb' => $scrollbarThumb,
+            '--site-scrollbar-track' => $scrollbarTrack,
+            '--site-scrollbar-thumb-hover' => $scrollbarThumbHover,
             '--site-button-radius' => $this->resolvedButtonRadius(),
             '--site-card-radius' => $this->resolvedCardRadius(),
             '--site-section-spacing' => $this->resolvedSectionSpacing(),

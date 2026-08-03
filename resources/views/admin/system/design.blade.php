@@ -43,6 +43,9 @@
         $secondary = old('secondary_color', $design->secondary_color);
         $background = old('background_color', $design->background_color);
         $text = old('text_color', $design->text_color);
+        $scrollbarThumb = old('scrollbar_thumb_color', $design->scrollbar_thumb_color);
+        $scrollbarTrack = old('scrollbar_track_color', $design->scrollbar_track_color);
+        $scrollbarThumbHover = old('scrollbar_thumb_hover_color', $design->scrollbar_thumb_hover_color);
         $headingFont = old('heading_font', $design->heading_font);
         $bodyFont = old('body_font', $design->body_font);
         $buttonRadius = old('button_radius', $design->button_radius);
@@ -98,6 +101,48 @@
                             @enderror
                         </div>
                     @endforeach
+
+                    <div class="border-t border-admin-border/60 pt-4">
+                        <div class="mb-3">
+                            <h3 class="text-sm font-medium text-admin-text">スクロールバー</h3>
+                            <p class="mt-1 text-xs text-admin-muted">公開サイトのスクロールバー色です。管理画面のスクロールバーは変わりません。</p>
+                        </div>
+                        @foreach ([
+                            'scrollbar_thumb_color' => ['label' => 'つまみ色', 'value' => $scrollbarThumb, 'hint' => 'スクロールバーのつまみ'],
+                            'scrollbar_track_color' => ['label' => '背景色', 'value' => $scrollbarTrack, 'hint' => 'スクロールバーの背景'],
+                            'scrollbar_thumb_hover_color' => ['label' => 'ホバー色', 'value' => $scrollbarThumbHover, 'hint' => 'つまみにマウスを乗せたとき'],
+                        ] as $name => $meta)
+                            <div class="mt-3" data-design-color-field>
+                                <label for="{{ $name }}" class="admin-label">{{ $meta['label'] }}</label>
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <input
+                                        type="color"
+                                        value="{{ $meta['value'] }}"
+                                        class="h-10 w-14 cursor-pointer rounded-lg border border-admin-border bg-admin-card p-1"
+                                        data-design-color-swatch
+                                        aria-label="{{ $meta['label'] }}のカラーピッカー"
+                                    >
+                                    <input
+                                        type="text"
+                                        name="{{ $name }}"
+                                        id="{{ $name }}"
+                                        value="{{ $meta['value'] }}"
+                                        class="admin-input max-w-[10rem] font-mono uppercase"
+                                        maxlength="7"
+                                        autocomplete="off"
+                                        spellcheck="false"
+                                        pattern="#?[0-9A-Fa-f]{6}"
+                                        data-design-color-hex
+                                        data-design-field="{{ $name }}"
+                                    >
+                                </div>
+                                <p class="mt-1 text-xs text-admin-muted">{{ $meta['hint'] }}（#RRGGBB）</p>
+                                @error($name)
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
 
                 <div class="admin-card space-y-4">
@@ -255,6 +300,9 @@
                         --site-secondary: {{ $secondary }};
                         --site-background: {{ $background }};
                         --site-text: {{ $text }};
+                        --site-scrollbar-thumb: {{ $scrollbarThumb }};
+                        --site-scrollbar-track: {{ $scrollbarTrack }};
+                        --site-scrollbar-thumb-hover: {{ $scrollbarThumbHover }};
                         background: var(--site-background);
                         color: var(--site-text);
                         border-radius: var(--site-card-radius, 8px);
@@ -272,7 +320,7 @@
                     <div class="px-4" style="padding-block: var(--site-section-spacing, 5rem);" data-design-preview-section>
                         <h3 class="text-2xl tracking-wide" style="font-family: var(--site-heading-font, serif);" data-design-preview-heading>ナチュラルに、自分らしく。</h3>
                         <p class="mt-3 text-sm leading-relaxed opacity-90" data-design-preview-body>
-                            一人ひとりの髪質やライフスタイルに合わせた、丁寧なカウンセリングと施術を大切にしています。
+                            ☆一人一人の　”　ラ シ サ　”　を大切にするパーソナルサロン☆
                         </p>
                         <div class="mt-5 flex flex-wrap items-center gap-3">
                             <a
@@ -299,8 +347,21 @@
                             data-design-preview-site-card
                         >
                             <p class="text-sm font-medium" style="font-family: var(--site-heading-font, serif);">アクセス情報</p>
-                            <p class="mt-2 text-sm opacity-80">東京都〇〇区〇〇 1-2-3</p>
+                            <p class="mt-2 text-sm opacity-80">埼玉県川口市幸町２－14－27－102号</p>
                             <a href="#" class="btn-outline mt-4" data-design-preview-card-link onclick="return false;">詳細を見る</a>
+                        </div>
+                        <div class="mt-5">
+                            <p class="text-xs opacity-70">スクロールバー表示例</p>
+                            <div
+                                class="design-preview-scrollbar mt-2 h-24 overflow-y-auto rounded border px-3 py-2 text-xs leading-relaxed opacity-90"
+                                style="border-color: color-mix(in srgb, var(--site-text) 12%, transparent);"
+                                data-design-preview-scrollbar
+                            >
+                                <p>公開サイトのスクロールバー色です。</p>
+                                <p class="mt-2">つまみ・背景・ホバー色を変更すると、この見本にも反映されます。</p>
+                                <p class="mt-2">余白を増やしてスクロールできるようにしています。</p>
+                                <p class="mt-2">保存後に公開サイトへ適用されます。</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -348,6 +409,9 @@
                 const secondary = normalizeHex(form.querySelector('[name="secondary_color"]').value);
                 const background = normalizeHex(form.querySelector('[name="background_color"]').value);
                 const text = normalizeHex(form.querySelector('[name="text_color"]').value);
+                const scrollbarThumb = normalizeHex(form.querySelector('[name="scrollbar_thumb_color"]').value);
+                const scrollbarTrack = normalizeHex(form.querySelector('[name="scrollbar_track_color"]').value);
+                const scrollbarThumbHover = normalizeHex(form.querySelector('[name="scrollbar_thumb_hover_color"]').value);
                 const headingFont = getRadioValue('heading_font');
                 const bodyFont = getRadioValue('body_font');
                 const buttonRadius = getRadioValue('button_radius');
@@ -368,6 +432,15 @@
                 if (isValidHex(text)) {
                     preview.style.setProperty('--site-text', text);
                     preview.style.color = text;
+                }
+                if (isValidHex(scrollbarThumb)) {
+                    preview.style.setProperty('--site-scrollbar-thumb', scrollbarThumb);
+                }
+                if (isValidHex(scrollbarTrack)) {
+                    preview.style.setProperty('--site-scrollbar-track', scrollbarTrack);
+                }
+                if (isValidHex(scrollbarThumbHover)) {
+                    preview.style.setProperty('--site-scrollbar-thumb-hover', scrollbarThumbHover);
                 }
 
                 preview.style.setProperty('--site-heading-font', fontStacks[headingFont] || fontStacks.serif);
@@ -416,6 +489,9 @@
                 form.querySelector('[name="secondary_color"]').value = defaults.secondary_color;
                 form.querySelector('[name="background_color"]').value = defaults.background_color;
                 form.querySelector('[name="text_color"]').value = defaults.text_color;
+                form.querySelector('[name="scrollbar_thumb_color"]').value = defaults.scrollbar_thumb_color;
+                form.querySelector('[name="scrollbar_track_color"]').value = defaults.scrollbar_track_color;
+                form.querySelector('[name="scrollbar_thumb_hover_color"]').value = defaults.scrollbar_thumb_hover_color;
                 form.querySelectorAll('[data-design-color-field]').forEach((field) => {
                     const swatch = field.querySelector('[data-design-color-swatch]');
                     const hex = field.querySelector('[data-design-color-hex]');

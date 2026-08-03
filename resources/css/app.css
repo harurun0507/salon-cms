@@ -11,6 +11,9 @@
     --site-secondary: #7C8A6A;
     --site-background: #FAF7F1;
     --site-text: #3A332E;
+    --site-scrollbar-thumb: #C8C0B2;
+    --site-scrollbar-track: #F1ECE3;
+    --site-scrollbar-thumb-hover: #AFA692;
     --site-button-radius: 9999px;
     --site-card-radius: 0.5rem;
     --site-section-spacing: 5rem;
@@ -70,6 +73,60 @@
             scroll-behavior: auto;
         }
     }
+}
+
+/* Public site scrollbar — excluded from admin (admin uses hardcoded beige chrome). */
+html:not(:has(body.admin-page)) {
+    scrollbar-width: thin;
+    scrollbar-color:
+        var(--site-scrollbar-thumb, #C8C0B2)
+        var(--site-scrollbar-track, #F1ECE3);
+}
+
+html:not(:has(body.admin-page))::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+html:not(:has(body.admin-page))::-webkit-scrollbar-track {
+    background: var(--site-scrollbar-track, #F1ECE3);
+}
+
+html:not(:has(body.admin-page))::-webkit-scrollbar-thumb {
+    background: var(--site-scrollbar-thumb, #C8C0B2);
+    border: 2px solid var(--site-scrollbar-track, #F1ECE3);
+    border-radius: 9999px;
+}
+
+html:not(:has(body.admin-page))::-webkit-scrollbar-thumb:hover {
+    background: var(--site-scrollbar-thumb-hover, #AFA692);
+}
+
+/* Design settings preview mini scrollbar (admin page, uses public --site-scrollbar-* vars). */
+.design-preview-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color:
+        var(--site-scrollbar-thumb, #C8C0B2)
+        var(--site-scrollbar-track, #F1ECE3);
+}
+
+.design-preview-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.design-preview-scrollbar::-webkit-scrollbar-track {
+    background: var(--site-scrollbar-track, #F1ECE3);
+}
+
+.design-preview-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--site-scrollbar-thumb, #C8C0B2);
+    border: 2px solid var(--site-scrollbar-track, #F1ECE3);
+    border-radius: 9999px;
+}
+
+.design-preview-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--site-scrollbar-thumb-hover, #AFA692);
 }
 
 @layer components {

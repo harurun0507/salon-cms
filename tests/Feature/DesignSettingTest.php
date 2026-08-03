@@ -41,10 +41,18 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('name="secondary_color"', $html);
         $this->assertStringContainsString('name="background_color"', $html);
         $this->assertStringContainsString('name="text_color"', $html);
+        $this->assertStringContainsString('name="scrollbar_thumb_color"', $html);
+        $this->assertStringContainsString('name="scrollbar_track_color"', $html);
+        $this->assertStringContainsString('name="scrollbar_thumb_hover_color"', $html);
+        $this->assertStringContainsString('スクロールバー', $html);
+        $this->assertStringContainsString('スクロールバー表示例', $html);
         $this->assertStringContainsString('value="#5f6f52"', $html);
         $this->assertStringContainsString('value="#7c8a6a"', $html);
         $this->assertStringContainsString('value="#faf7f1"', $html);
         $this->assertStringContainsString('value="#3a332e"', $html);
+        $this->assertStringContainsString('value="#c8c0b2"', $html);
+        $this->assertStringContainsString('value="#f1ece3"', $html);
+        $this->assertStringContainsString('value="#afa692"', $html);
         $this->assertStringContainsString('明朝体', $html);
         $this->assertStringContainsString('ゴシック体', $html);
         $this->assertStringContainsString('丸ゴシック体', $html);
@@ -67,6 +75,9 @@ class DesignSettingTest extends TestCase
                 'secondary_color' => '#DDEEFF',
                 'background_color' => '#112233',
                 'text_color' => '#445566',
+                'scrollbar_thumb_color' => '#B1B2B3',
+                'scrollbar_track_color' => '#C4C5C6',
+                'scrollbar_thumb_hover_color' => '#D7D8D9',
                 'heading_font' => DesignSetting::FONT_SANS,
                 'body_font' => DesignSetting::FONT_ROUNDED,
                 'button_radius' => DesignSetting::RADIUS_SMALL,
@@ -80,6 +91,9 @@ class DesignSettingTest extends TestCase
         $this->assertSame('#ddeeff', $design->secondary_color);
         $this->assertSame('#112233', $design->background_color);
         $this->assertSame('#445566', $design->text_color);
+        $this->assertSame('#b1b2b3', $design->scrollbar_thumb_color);
+        $this->assertSame('#c4c5c6', $design->scrollbar_track_color);
+        $this->assertSame('#d7d8d9', $design->scrollbar_thumb_hover_color);
         $this->assertSame(DesignSetting::FONT_SANS, $design->heading_font);
         $this->assertSame(DesignSetting::FONT_ROUNDED, $design->body_font);
         $this->assertSame(DesignSetting::RADIUS_SMALL, $design->button_radius);
@@ -115,6 +129,14 @@ class DesignSettingTest extends TestCase
             ]))
             ->assertRedirect(route('admin.system.design'))
             ->assertSessionHasErrors('primary_color');
+
+        $this->actingAs($this->admin())
+            ->from(route('admin.system.design'))
+            ->put(route('admin.system.design.update'), $this->validPayload([
+                'scrollbar_thumb_color' => 'green',
+            ]))
+            ->assertRedirect(route('admin.system.design'))
+            ->assertSessionHasErrors('scrollbar_thumb_color');
 
         $this->assertSame('#5f6f52', DesignSetting::current()->fresh()->primary_color);
     }
@@ -162,6 +184,9 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('data-confirm-callback="design-settings-reset"', $html);
         $this->assertStringContainsString('design-settings-reset', $html);
         $this->assertStringContainsString('"primary_color":"#5f6f52"', $html);
+        $this->assertStringContainsString('"scrollbar_thumb_color":"#c8c0b2"', $html);
+        $this->assertStringContainsString('"scrollbar_track_color":"#f1ece3"', $html);
+        $this->assertStringContainsString('"scrollbar_thumb_hover_color":"#afa692"', $html);
 
         $saved = DesignSetting::current()->fresh();
         $this->assertSame('#112233', $saved->primary_color);
@@ -176,6 +201,9 @@ class DesignSettingTest extends TestCase
             'secondary_color' => '#fedcba',
             'background_color' => '#010203',
             'text_color' => '#040506',
+            'scrollbar_thumb_color' => '#111213',
+            'scrollbar_track_color' => '#141516',
+            'scrollbar_thumb_hover_color' => '#171819',
             'heading_font' => DesignSetting::FONT_SANS,
             'body_font' => DesignSetting::FONT_SERIF,
             'button_radius' => DesignSetting::RADIUS_SMALL,
@@ -192,6 +220,9 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('--site-secondary: #fedcba;', $html);
         $this->assertStringContainsString('--site-background: #010203;', $html);
         $this->assertStringContainsString('--site-text: #040506;', $html);
+        $this->assertStringContainsString('--site-scrollbar-thumb: #111213;', $html);
+        $this->assertStringContainsString('--site-scrollbar-track: #141516;', $html);
+        $this->assertStringContainsString('--site-scrollbar-thumb-hover: #171819;', $html);
         $this->assertStringContainsString('--site-button-radius: 8px;', $html);
         $this->assertStringContainsString('--site-card-radius: 16px;', $html);
         $this->assertStringContainsString('--site-section-spacing: 3rem;', $html);
@@ -208,6 +239,9 @@ class DesignSettingTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('--site-primary: #5f6f52;', $html);
+        $this->assertStringContainsString('--site-scrollbar-thumb: #c8c0b2;', $html);
+        $this->assertStringContainsString('--site-scrollbar-track: #f1ece3;', $html);
+        $this->assertStringContainsString('--site-scrollbar-thumb-hover: #afa692;', $html);
         $this->assertStringContainsString('--site-button-radius: 9999px;', $html);
         $this->assertStringContainsString('--site-section-spacing: 5rem;', $html);
     }
