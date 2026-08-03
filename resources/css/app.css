@@ -214,6 +214,40 @@ html:not(:has(body.admin-page))::-webkit-scrollbar-thumb:hover {
         flex-shrink: 0;
     }
 
+    .site-carousel-dot {
+        width: 0.55rem;
+        height: 0.55rem;
+        padding: 0;
+        border: 0;
+        border-radius: 9999px;
+        background: color-mix(
+            in srgb,
+            var(--site-primary, #5F6F52) 28%,
+            white
+        );
+        cursor: pointer;
+        transition:
+            background-color 0.2s ease,
+            transform 0.2s ease;
+    }
+
+    .site-carousel-dot:hover {
+        transform: scale(1.15);
+    }
+
+    .site-carousel-dot.is-active {
+        background: var(--site-primary, #5F6F52);
+    }
+
+    .site-carousel-dot:focus-visible {
+        outline: 2px solid color-mix(
+            in srgb,
+            var(--site-primary, #5F6F52) 45%,
+            white
+        );
+        outline-offset: 2px;
+    }
+
     .section-title {
         @apply text-3xl md:text-4xl tracking-wide text-salon-text;
         font-family: var(--site-heading-font, var(--font-serif));

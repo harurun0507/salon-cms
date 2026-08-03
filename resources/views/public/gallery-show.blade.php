@@ -73,7 +73,7 @@
                                     @foreach($images as $index => $image)
                                         <button
                                             type="button"
-                                            class="gallery-detail-dot {{ $index === 0 ? 'is-active' : '' }}"
+                                            class="site-carousel-dot {{ $index === 0 ? 'is-active' : '' }}"
                                             data-gallery-dot
                                             data-gallery-index="{{ $index }}"
                                             aria-label="画像{{ $index + 1 }}を表示"
@@ -270,25 +270,6 @@
             height: 14px;
         }
 
-        .gallery-detail-dot {
-            width: 0.55rem;
-            height: 0.55rem;
-            border: 0;
-            border-radius: 9999px;
-            background: color-mix(in srgb, var(--site-primary, #5F6F52) 28%, white);
-            cursor: pointer;
-            transition: background-color 0.2s ease, transform 0.2s ease;
-        }
-        .gallery-detail-dot:hover {
-            transform: scale(1.15);
-        }
-        .gallery-detail-dot.is-active {
-            background: var(--site-primary, #5F6F52);
-        }
-        .gallery-detail-dot:focus-visible {
-            outline: 2px solid color-mix(in srgb, var(--site-primary, #5F6F52) 45%, white);
-            outline-offset: 2px;
-        }
         [data-gallery-carousel]:focus {
             outline: none;
         }

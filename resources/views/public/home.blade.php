@@ -54,7 +54,13 @@
             </button>
             <div id="hero-dots" class="absolute bottom-5 left-0 right-0 z-30 flex justify-center gap-2" role="tablist" aria-label="メインビジュアルの位置">
                 @foreach($heroImages as $index => $heroImage)
-                    <button type="button" class="hero-dot h-2.5 w-2.5 rounded-full bg-white/45 transition {{ $index === 0 ? 'bg-white' : '' }}" data-hero-dot="{{ $index }}" aria-label="画像{{ $index + 1 }}" aria-current="{{ $index === 0 ? 'true' : 'false' }}"></button>
+                    <button
+                        type="button"
+                        class="hero-dot site-carousel-dot {{ $index === 0 ? 'is-active' : '' }}"
+                        data-hero-dot="{{ $index }}"
+                        aria-label="画像{{ $index + 1 }}"
+                        @if($index === 0) aria-current="true" @endif
+                    ></button>
                 @endforeach
             </div>
         @endif
@@ -91,9 +97,12 @@
                     });
                     dots.forEach(function (dot, i) {
                         const active = i === index;
-                        dot.classList.toggle('bg-white', active);
-                        dot.classList.toggle('bg-white/45', !active);
-                        dot.setAttribute('aria-current', active ? 'true' : 'false');
+                        dot.classList.toggle('is-active', active);
+                        if (active) {
+                            dot.setAttribute('aria-current', 'true');
+                        } else {
+                            dot.removeAttribute('aria-current');
+                        }
                     });
                 }
 
