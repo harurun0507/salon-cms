@@ -48,11 +48,15 @@ class BlogAdminTest extends TestCase
         $this->assertStringContainsString('id="blog-add-card"', $html);
         $this->assertStringContainsString('ブログを追加', $html);
         $this->assertStringContainsString('アイキャッチ画像', $html);
-        $this->assertStringContainsString('投稿日', $html);
+        $this->assertStringContainsString('投稿日時', $html);
+        $this->assertStringNotContainsString('>投稿日<', $html);
         $this->assertStringContainsString('name="blogs['.$blog->id.'][title]"', $html);
         $this->assertStringContainsString('name="blogs['.$blog->id.'][body]"', $html);
         $this->assertStringContainsString('name="blogs['.$blog->id.'][published_at]"', $html);
         $this->assertStringContainsString('name="blogs['.$blog->id.'][eye_catch]"', $html);
+        $this->assertStringContainsString('data-blog-published-at', $html);
+        $this->assertStringContainsString('data-blog-is-published', $html);
+        $this->assertStringContainsString('fillPublishedAtIfEmpty', $html);
         $this->assertStringContainsString('data-confirm-form="blog-bulk-form"', $html);
     }
 
@@ -145,6 +149,192 @@ class BlogAdminTest extends TestCase
         $this->assertFalse(Storage::disk('public')->exists($path));
     }
 
+    public function test_validation_error_keeps_uploaded_new_blog_image_as_pending_preview(): void
+    {
+        Storage::fake('public');
+
+        $html = $this->actingAs($this->admin())
+            ->followingRedirects()
+            ->from(route('admin.blog.index'))
+            ->put(route('admin.blog.update'), [
+                'new_blogs' => [
+                    'new_1' => [
+                        'title' => '画像ありタイトル',
+                        'body' => '本文',
+                        'published_at' => '',
+                        'is_published' => '1',
+                        'display_order' => 1,
+                        'eye_catch' => UploadedFile::fake()->image('cover.jpg', 800, 500),
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('投稿日時は必須です。', $html);
+        $this->assertStringContainsString('name="new_blogs[new_1][pending_image_path]"', $html);
+        $this->assertStringContainsString('選択中の画像を保持しています', $html);
+        $this->assertMatchesRegularExpression(
+            '#name="new_blogs\[new_1\]\[pending_image_path\]"\s+value="blogs/tmp/[^"]+"#',
+            $html
+        );
+        $this->assertStringContainsString('storage/blogs/tmp/', $html);
+        $this->assertSame(0, Blog::query()->count());
+
+        $pendingFiles = Storage::disk('public')->allFiles('blogs/tmp');
+        $this->assertNotEmpty($pendingFiles);
+    }
+
+    public function test_new_blog_can_be_saved_using_pending_image_after_validation_error(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->admin())
+            ->from(route('admin.blog.index'))
+            ->put(route('admin.blog.update'), [
+                'new_blogs' => [
+                    'new_1' => [
+                        'title' => '再保存ブログ',
+                        'body' => '本文',
+                        'published_at' => '',
+                        'is_published' => '1',
+                        'display_order' => 1,
+                        'eye_catch' => UploadedFile::fake()->image('retry.jpg', 800, 500),
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.blog.index'))
+            ->assertSessionHasErrors(['new_blogs.new_1.published_at']);
+
+        $pendingPath = session()->getOldInput('new_blogs.new_1.pending_image_path');
+        $this->assertIsString($pendingPath);
+        Storage::disk('public')->assertExists($pendingPath);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.blog.update'), [
+                'new_blogs' => [
+                    'new_1' => [
+                        'title' => '再保存ブログ',
+                        'body' => '本文',
+                        'published_at' => '2026-08-01T10:00',
+                        'is_published' => '1',
+                        'display_order' => 1,
+                        'pending_image_path' => $pendingPath,
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.blog.index'))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success');
+
+        $created = Blog::query()->where('title', '再保存ブログ')->first();
+        $this->assertNotNull($created);
+        $this->assertStringStartsWith('blogs/', $created->eye_catch_image_path);
+        $this->assertStringNotContainsString('/tmp/', $created->eye_catch_image_path);
+        Storage::disk('public')->assertExists($created->eye_catch_image_path);
+        Storage::disk('public')->assertMissing($pendingPath);
+    }
+
+    public function test_validation_error_keeps_existing_blog_image_preview(): void
+    {
+        Storage::fake('public');
+        $path = UploadedFile::fake()->image('keep.jpg')->store('blogs', 'public');
+        $blog = $this->createBlog([
+            'eye_catch_image_path' => $path,
+            'title' => '既存ブログ',
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->followingRedirects()
+            ->from(route('admin.blog.index'))
+            ->put(route('admin.blog.update'), [
+                'blogs' => [
+                    $blog->id => [
+                        'title' => '',
+                        'body' => $blog->body,
+                        'published_at' => $blog->published_at->format('Y-m-d\TH:i'),
+                        'is_published' => '1',
+                        'display_order' => 1,
+                        'remove_eye_catch' => '0',
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('storage/'.$path, $html);
+        $this->assertStringContainsString('data-blog-image', $html);
+        $this->assertStringContainsString('タイトルは必須です。', $html);
+        Storage::disk('public')->assertExists($path);
+        $this->assertSame($path, $blog->fresh()->eye_catch_image_path);
+    }
+
+    public function test_validation_error_with_new_upload_keeps_pending_without_replacing_saved_image(): void
+    {
+        Storage::fake('public');
+        $path = UploadedFile::fake()->image('saved.jpg')->store('blogs', 'public');
+        $blog = $this->createBlog([
+            'eye_catch_image_path' => $path,
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->followingRedirects()
+            ->from(route('admin.blog.index'))
+            ->put(route('admin.blog.update'), [
+                'blogs' => [
+                    $blog->id => [
+                        'title' => '',
+                        'body' => $blog->body,
+                        'published_at' => $blog->published_at->format('Y-m-d\TH:i'),
+                        'is_published' => '1',
+                        'display_order' => 1,
+                        'remove_eye_catch' => '0',
+                        'eye_catch' => UploadedFile::fake()->image('next.jpg', 800, 500),
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('選択中の画像を保持しています', $html);
+        $this->assertStringContainsString('storage/blogs/tmp/', $html);
+        Storage::disk('public')->assertExists($path);
+        $this->assertSame($path, $blog->fresh()->eye_catch_image_path);
+        $this->assertNotEmpty(Storage::disk('public')->allFiles('blogs/tmp'));
+    }
+
+    public function test_validation_error_with_remove_flag_does_not_delete_stored_image(): void
+    {
+        Storage::fake('public');
+        $path = UploadedFile::fake()->image('keep.jpg')->store('blogs', 'public');
+        $blog = $this->createBlog([
+            'eye_catch_image_path' => $path,
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->followingRedirects()
+            ->from(route('admin.blog.index'))
+            ->put(route('admin.blog.update'), [
+                'blogs' => [
+                    $blog->id => [
+                        'title' => '',
+                        'body' => $blog->body,
+                        'published_at' => $blog->published_at->format('Y-m-d\TH:i'),
+                        'is_published' => '1',
+                        'display_order' => 1,
+                        'remove_eye_catch' => '1',
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('タイトルは必須です。', $html);
+        $this->assertStringNotContainsString('storage/'.$path, $html);
+        Storage::disk('public')->assertExists($path);
+        $this->assertSame($path, $blog->fresh()->eye_catch_image_path);
+    }
+
     public function test_bulk_update_requires_published_at(): void
     {
         $this->actingAs($this->admin())
@@ -161,7 +351,42 @@ class BlogAdminTest extends TestCase
                 ],
             ])
             ->assertRedirect(route('admin.blog.index'))
-            ->assertSessionHasErrors(['new_blogs.new_1.published_at']);
+            ->assertSessionHasErrors(['new_blogs.new_1.published_at' => '投稿日時は必須です。']);
+    }
+
+    public function test_bulk_update_requires_publish_state(): void
+    {
+        $this->actingAs($this->admin())
+            ->from(route('admin.blog.index'))
+            ->put(route('admin.blog.update'), [
+                'new_blogs' => [
+                    'new_1' => [
+                        'title' => 'タイトル',
+                        'body' => '本文',
+                        'published_at' => '2026-08-09T16:30',
+                        'display_order' => 1,
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.blog.index'))
+            ->assertSessionHasErrors(['new_blogs.new_1.is_published' => '公開状態を選択してください。']);
+    }
+
+    public function test_new_blog_card_starts_with_publish_unselected(): void
+    {
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.blog.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString(
+            "'<input type=\"radio\" name=\"new_blogs[' + key + '][is_published]\" value=\"1\" class=\"admin-segmented-input\" data-blog-is-published>'",
+            $html
+        );
+        $this->assertStringNotContainsString(
+            "name=\"new_blogs[' + key + '][is_published]\" value=\"1\" class=\"admin-segmented-input\" checked",
+            $html
+        );
     }
 
     public function test_guest_cannot_access_blog_admin(): void

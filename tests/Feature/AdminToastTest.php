@@ -178,4 +178,34 @@ class AdminToastTest extends TestCase
         $this->assertStringContainsString('保持されるメニュー名', $categoryHtml);
         $this->assertStringNotContainsString('mb-6 rounded-lg border border-red-200 bg-red-50', $categoryHtml);
     }
+
+    public function test_blog_validation_errors_are_passed_to_toast_payload_without_inline_or_banner(): void
+    {
+        $html = $this->actingAs($this->admin())
+            ->followingRedirects()
+            ->from(route('admin.blog.index'))
+            ->put(route('admin.blog.update'), [
+                'new_blogs' => [
+                    'new_1' => [
+                        'title' => 'タイトルあり',
+                        'body' => '本文あり',
+                        'display_order' => 1,
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('"validationErrors"', $html);
+        $this->assertStringContainsString('投稿日時は必須です。', $html);
+        $this->assertStringContainsString('公開状態を選択してください。', $html);
+        $this->assertStringContainsString('入力内容を確認してください。', $html);
+        $this->assertStringContainsString('duration: 12000', $html);
+        $this->assertStringNotContainsString('mb-6 rounded-lg border border-red-200 bg-red-50', $html);
+        $this->assertStringNotContainsString('mb-4 rounded-lg border border-red-200 bg-red-50', $html);
+        $this->assertStringNotContainsString('text-sm text-red-600', $html);
+        $this->assertStringNotContainsString('text-sm text-red-700', $html);
+        $this->assertStringContainsString('タイトルあり', $html);
+        $this->assertStringContainsString('name="new_blogs[new_1][title]"', $html);
+    }
 }

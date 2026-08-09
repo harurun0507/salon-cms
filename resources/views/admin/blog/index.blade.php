@@ -11,7 +11,7 @@
             data-confirm-form="blog-bulk-form"
             data-confirm-title="ブログ保存の確認"
             data-confirm-message="変更内容を保存します。&#10;よろしいですか？"
-            data-confirm-note="アイキャッチ画像、タイトル、本文、投稿日、公開状態、表示順、削除など、現在入力されている内容が反映されます。"
+            data-confirm-note="アイキャッチ画像、タイトル、本文、投稿日時、公開状態、表示順、削除など、現在入力されている内容が反映されます。"
             data-confirm-submit-label="保存する"
         >保存する</button>
         <p class="text-sm text-admin-muted">
@@ -49,16 +49,6 @@
     @endphp
 
     
-    @if ($errors->any())
-        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <ul class="list-disc space-y-1 pl-5">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
     <form
         method="POST"
         action="{{ route('admin.blog.update') }}"
@@ -78,11 +68,21 @@
                 @php
                     $prefix = 'blogs.'.$blog->id;
                     $publishedOld = old($prefix.'.is_published', $blog->is_published ? '1' : '0');
-                    $isPublished = in_array((string) $publishedOld, ['1', 'true', 'on'], true);
+                    $isPublished = (string) $publishedOld === '1';
+                    $isUnpublished = (string) $publishedOld === '0';
                     $publishedAt = old($prefix.'.published_at', $formatLocal($blog->published_at));
                     $displayOrder = old($prefix.'.display_order', $blog->display_order);
                     $cardTitle = trim((string) old($prefix.'.title', $blog->title));
                     $headingTitle = $cardTitle !== '' ? $cardTitle : '新規ブログ';
+                    $removeEyeCatch = (string) old($prefix.'.remove_eye_catch', '0') === '1';
+                    $pendingImagePath = (string) old($prefix.'.pending_image_path', '');
+                    $pendingImageUsable = $pendingImagePath !== ''
+                        && \Illuminate\Support\Facades\Storage::disk('public')->exists($pendingImagePath);
+                    $previewImagePath = $pendingImageUsable
+                        ? $pendingImagePath
+                        : ($removeEyeCatch ? null : $blog->eye_catch_image_path);
+                    $hasPreviewImage = filled($previewImagePath)
+                        && \Illuminate\Support\Facades\Storage::disk('public')->exists($previewImagePath);
                 @endphp
                 <div
                     class="admin-card blog-card"
@@ -124,22 +124,22 @@
                     </div>
 
                     <input type="hidden" name="blogs[{{ $blog->id }}][display_order]" value="{{ $displayOrder }}" data-blog-order>
-                    <input type="hidden" name="blogs[{{ $blog->id }}][remove_eye_catch]" value="0" data-blog-remove-eye-catch>
+                    <input type="hidden" name="blogs[{{ $blog->id }}][remove_eye_catch]" value="{{ $removeEyeCatch ? '1' : '0' }}" data-blog-remove-eye-catch>
 
                     <div class="mb-3">
                         <span class="admin-label">アイキャッチ画像</span>
-                        <div data-blog-dropzone class="banner-dropzone cursor-pointer overflow-hidden rounded-lg {{ $blog->eye_catch_image_path ? '' : 'is-empty' }}">
-                            <div data-blog-preview class="{{ $blog->eye_catch_image_path ? '' : 'hidden' }}">
-                                @if($blog->eye_catch_image_path)
+                        <div data-blog-dropzone class="banner-dropzone cursor-pointer overflow-hidden rounded-lg {{ $hasPreviewImage ? '' : 'is-empty' }}">
+                            <div data-blog-preview @class(['hidden' => ! $hasPreviewImage])>
+                                @if($hasPreviewImage)
                                     <img
-                                        src="{{ asset('storage/'.$blog->eye_catch_image_path) }}"
+                                        src="{{ asset('storage/'.$previewImagePath) }}"
                                         alt=""
                                         class="aspect-[16/10] w-full object-cover"
                                         data-blog-image
                                     >
                                 @endif
                             </div>
-                            <div data-blog-placeholder class="banner-dropzone-placeholder {{ $blog->eye_catch_image_path ? 'hidden' : '' }} min-h-[7.5rem] flex-col items-center justify-center px-4 text-center">
+                            <div data-blog-placeholder class="banner-dropzone-placeholder {{ $hasPreviewImage ? 'hidden' : '' }} min-h-[7.5rem] flex-col items-center justify-center px-4 text-center">
                                 <div class="banner-dropzone-main">
                                     <svg class="banner-dropzone-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                         <rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
@@ -153,6 +153,12 @@
                             <p class="banner-dropzone-drag-message" aria-hidden="true">ここに画像をドロップしてください</p>
                         </div>
                         <input
+                            type="hidden"
+                            name="blogs[{{ $blog->id }}][pending_image_path]"
+                            value="{{ $pendingImageUsable ? $pendingImagePath : '' }}"
+                            data-blog-pending-image
+                        >
+                        <input
                             type="file"
                             name="blogs[{{ $blog->id }}][eye_catch]"
                             accept="image/jpeg,image/png,image/webp"
@@ -163,14 +169,14 @@
                             <p class="text-xs text-admin-muted">未登録でも保存できます</p>
                             <button
                                 type="button"
-                                class="text-xs text-admin-muted underline decoration-admin-border underline-offset-2 hover:text-admin-text {{ $blog->eye_catch_image_path ? '' : 'hidden' }}"
+                                class="text-xs text-admin-muted underline decoration-admin-border underline-offset-2 hover:text-admin-text {{ $hasPreviewImage ? '' : 'hidden' }}"
                                 data-blog-clear-eye-catch
                             >画像を削除</button>
                         </div>
-                        <p class="mt-1 hidden text-sm text-red-600" data-blog-image-error role="alert"></p>
-                        @error($prefix.'.eye_catch')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if($pendingImageUsable && $hasPreviewImage)
+                            <p class="mt-1 text-xs text-admin-muted">選択中の画像を保持しています。変更する場合は再選択してください。</p>
+                        @endif
+                        <p class="mt-1 hidden text-sm text-admin-muted" data-blog-image-error role="alert"></p>
                     </div>
 
                     <div class="space-y-3">
@@ -182,13 +188,9 @@
                                 id="blog_title_{{ $blog->id }}"
                                 value="{{ old($prefix.'.title', $blog->title) }}"
                                 maxlength="255"
-                                required
                                 class="admin-input"
                                 data-blog-title-input
                             >
-                            @error($prefix.'.title')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
                         </div>
                         <div>
                             <label for="blog_body_{{ $blog->id }}" class="admin-label">本文 <span class="admin-required-badge">必須</span></label>
@@ -196,33 +198,26 @@
                                 name="blogs[{{ $blog->id }}][body]"
                                 id="blog_body_{{ $blog->id }}"
                                 rows="6"
-                                required
                                 class="admin-input"
                             >{{ old($prefix.'.body', $blog->body) }}</textarea>
-                            @error($prefix.'.body')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
                         </div>
                         <div>
-                            <label for="blog_published_at_{{ $blog->id }}" class="admin-label">投稿日 <span class="admin-required-badge">必須</span></label>
+                            <label for="blog_published_at_{{ $blog->id }}" class="admin-label">投稿日時 <span class="admin-required-badge">必須</span></label>
                             <input
                                 type="datetime-local"
                                 name="blogs[{{ $blog->id }}][published_at]"
                                 id="blog_published_at_{{ $blog->id }}"
                                 value="{{ $publishedAt }}"
-                                required
                                 class="admin-input"
+                                data-blog-published-at
                             >
-                            <p class="mt-1 text-xs text-admin-muted">公開判定に使います（投稿日が未来の場合は表示されません）</p>
-                            @error($prefix.'.published_at')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                            <p class="mt-1 text-xs text-admin-muted">公開判定に使います（投稿日時が未来の場合は表示されません）</p>
                         </div>
                         <div>
-                            <span class="admin-label">公開</span>
+                            <span class="admin-label">公開 <span class="admin-required-badge">必須</span></span>
                             <div class="admin-segmented mt-1" role="radiogroup" aria-label="公開状態">
                                 <label class="admin-segmented-option">
-                                    <input type="radio" name="blogs[{{ $blog->id }}][is_published]" value="1" class="admin-segmented-input" @checked($isPublished)>
+                                    <input type="radio" name="blogs[{{ $blog->id }}][is_published]" value="1" class="admin-segmented-input" data-blog-is-published @checked($isPublished)>
                                     <span class="admin-segmented-face">
                                         <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                                             <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
@@ -232,7 +227,7 @@
                                     </span>
                                 </label>
                                 <label class="admin-segmented-option">
-                                    <input type="radio" name="blogs[{{ $blog->id }}][is_published]" value="0" class="admin-segmented-input" @checked(!$isPublished)>
+                                    <input type="radio" name="blogs[{{ $blog->id }}][is_published]" value="0" class="admin-segmented-input" data-blog-is-published @checked($isUnpublished)>
                                     <span class="admin-segmented-face">
                                         <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                                             <path d="M2 2.5 13.5 13.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
@@ -254,13 +249,17 @@
                         continue;
                     }
                     $prefix = 'new_blogs.'.$key;
-                    $publishedOld = old($prefix.'.is_published', $newItem['is_published'] ?? '1');
-                    $isPublished = in_array((string) $publishedOld, ['1', 'true', 'on'], true);
+                    $publishedOld = old($prefix.'.is_published', $newItem['is_published'] ?? null);
+                    $isPublished = (string) $publishedOld === '1';
+                    $isUnpublished = (string) $publishedOld === '0';
                     $publishedAt = old($prefix.'.published_at', $newItem['published_at'] ?? '');
                     $displayOrder = old($prefix.'.display_order', $newItem['display_order'] ?? 0);
                     $cardTitle = trim((string) old($prefix.'.title', $newItem['title'] ?? ''));
                     $headingTitle = $cardTitle !== '' ? $cardTitle : '新規ブログ';
                     $body = old($prefix.'.body', $newItem['body'] ?? '');
+                    $pendingImagePath = (string) old($prefix.'.pending_image_path', $newItem['pending_image_path'] ?? '');
+                    $hasPreviewImage = $pendingImagePath !== ''
+                        && \Illuminate\Support\Facades\Storage::disk('public')->exists($pendingImagePath);
                 @endphp
                 <div
                     class="admin-card blog-card"
@@ -304,9 +303,18 @@
 
                     <div class="mb-3">
                         <span class="admin-label">アイキャッチ画像</span>
-                        <div data-blog-dropzone class="banner-dropzone is-empty cursor-pointer overflow-hidden rounded-lg">
-                            <div data-blog-preview class="hidden"></div>
-                            <div data-blog-placeholder class="banner-dropzone-placeholder min-h-[7.5rem] flex-col items-center justify-center px-4 text-center">
+                        <div data-blog-dropzone class="banner-dropzone cursor-pointer overflow-hidden rounded-lg {{ $hasPreviewImage ? '' : 'is-empty' }}">
+                            <div data-blog-preview @class(['hidden' => ! $hasPreviewImage])>
+                                @if($hasPreviewImage)
+                                    <img
+                                        src="{{ asset('storage/'.$pendingImagePath) }}"
+                                        alt=""
+                                        class="aspect-[16/10] w-full object-cover"
+                                        data-blog-image
+                                    >
+                                @endif
+                            </div>
+                            <div data-blog-placeholder class="banner-dropzone-placeholder {{ $hasPreviewImage ? 'hidden' : '' }} min-h-[7.5rem] flex-col items-center justify-center px-4 text-center">
                                 <div class="banner-dropzone-main">
                                     <svg class="banner-dropzone-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                         <rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
@@ -320,6 +328,12 @@
                             <p class="banner-dropzone-drag-message" aria-hidden="true">ここに画像をドロップしてください</p>
                         </div>
                         <input
+                            type="hidden"
+                            name="new_blogs[{{ $key }}][pending_image_path]"
+                            value="{{ $hasPreviewImage ? $pendingImagePath : '' }}"
+                            data-blog-pending-image
+                        >
+                        <input
                             type="file"
                             name="new_blogs[{{ $key }}][eye_catch]"
                             accept="image/jpeg,image/png,image/webp"
@@ -328,12 +342,12 @@
                         >
                         <div class="mt-2 flex flex-wrap items-center gap-3">
                             <p class="text-xs text-admin-muted">未登録でも保存できます</p>
-                            <button type="button" class="hidden text-xs text-admin-muted underline decoration-admin-border underline-offset-2 hover:text-admin-text" data-blog-clear-eye-catch>画像を削除</button>
+                            <button type="button" class="text-xs text-admin-muted underline decoration-admin-border underline-offset-2 hover:text-admin-text {{ $hasPreviewImage ? '' : 'hidden' }}" data-blog-clear-eye-catch>画像を削除</button>
                         </div>
-                        <p class="mt-1 hidden text-sm text-red-600" data-blog-image-error role="alert"></p>
-                        @error($prefix.'.eye_catch')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if($hasPreviewImage)
+                            <p class="mt-1 text-xs text-admin-muted">選択中の画像を保持しています。変更する場合は再選択してください。</p>
+                        @endif
+                        <p class="mt-1 hidden text-sm text-admin-muted" data-blog-image-error role="alert"></p>
                     </div>
 
                     <div class="space-y-3">
@@ -344,45 +358,34 @@
                                 name="new_blogs[{{ $key }}][title]"
                                 value="{{ $cardTitle }}"
                                 maxlength="255"
-                                required
                                 class="admin-input"
                                 data-blog-title-input
                             >
-                            @error($prefix.'.title')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
                         </div>
                         <div>
                             <label class="admin-label">本文 <span class="admin-required-badge">必須</span></label>
                             <textarea
                                 name="new_blogs[{{ $key }}][body]"
                                 rows="6"
-                                required
                                 class="admin-input"
                             >{{ $body }}</textarea>
-                            @error($prefix.'.body')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
                         </div>
                         <div>
-                            <label class="admin-label">投稿日 <span class="admin-required-badge">必須</span></label>
+                            <label class="admin-label">投稿日時 <span class="admin-required-badge">必須</span></label>
                             <input
                                 type="datetime-local"
                                 name="new_blogs[{{ $key }}][published_at]"
                                 value="{{ $publishedAt }}"
-                                required
                                 class="admin-input"
+                                data-blog-published-at
                             >
-                            <p class="mt-1 text-xs text-admin-muted">公開判定に使います（投稿日が未来の場合は表示されません）</p>
-                            @error($prefix.'.published_at')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                            <p class="mt-1 text-xs text-admin-muted">公開判定に使います（投稿日時が未来の場合は表示されません）</p>
                         </div>
                         <div>
-                            <span class="admin-label">公開</span>
+                            <span class="admin-label">公開 <span class="admin-required-badge">必須</span></span>
                             <div class="admin-segmented mt-1" role="radiogroup" aria-label="公開状態">
                                 <label class="admin-segmented-option">
-                                    <input type="radio" name="new_blogs[{{ $key }}][is_published]" value="1" class="admin-segmented-input" @checked($isPublished)>
+                                    <input type="radio" name="new_blogs[{{ $key }}][is_published]" value="1" class="admin-segmented-input" data-blog-is-published @checked($isPublished)>
                                     <span class="admin-segmented-face">
                                         <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                                             <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
@@ -392,7 +395,7 @@
                                     </span>
                                 </label>
                                 <label class="admin-segmented-option">
-                                    <input type="radio" name="new_blogs[{{ $key }}][is_published]" value="0" class="admin-segmented-input" @checked(!$isPublished)>
+                                    <input type="radio" name="new_blogs[{{ $key }}][is_published]" value="0" class="admin-segmented-input" data-blog-is-published @checked($isUnpublished)>
                                     <span class="admin-segmented-face">
                                         <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                                             <path d="M2 2.5 13.5 13.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
@@ -485,6 +488,9 @@
                     '</svg>' +
                     '<p class="banner-dropzone-text text-sm text-gray-700">画像をドラッグ＆ドロップ、またはクリックして選択</p>' +
                 '</div>';
+            const appTimezone = @json(config('app.timezone'));
+            const serverNowMs = {{ (int) now()->getTimestampMs() }};
+            const clientPageLoadMs = Date.now();
 
             if (!form || !grid || !addCard || !addButton) {
                 return;
@@ -493,6 +499,42 @@
             let nextNewIndex = parseInt(form.getAttribute('data-next-new-index') || '1', 10);
             let maxOrder = parseInt(form.getAttribute('data-max-order') || '0', 10);
             let dragCard = null;
+
+            function pad2(n) {
+                return String(n).padStart(2, '0');
+            }
+
+            function formatAppDateTimeLocal(date) {
+                const parts = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: appTimezone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hourCycle: 'h23',
+                }).formatToParts(date);
+                const get = function (type) {
+                    const part = parts.find(function (item) {
+                        return item.type === type;
+                    });
+                    return part ? part.value : '00';
+                };
+                return get('year') + '-' + get('month') + '-' + get('day') + 'T' + get('hour') + ':' + get('minute');
+            }
+
+            function currentAppDateTimeLocal() {
+                const elapsed = Date.now() - clientPageLoadMs;
+                return formatAppDateTimeLocal(new Date(serverNowMs + elapsed));
+            }
+
+            function fillPublishedAtIfEmpty(card) {
+                const publishedAtInput = card.querySelector('[data-blog-published-at]');
+                if (!publishedAtInput || publishedAtInput.value) {
+                    return;
+                }
+                publishedAtInput.value = currentAppDateTimeLocal();
+            }
 
             function showCardImageError(card, message) {
                 const errorEl = card.querySelector('[data-blog-image-error]');
@@ -564,6 +606,7 @@
                 const clearBtn = card.querySelector('[data-blog-clear-eye-catch]');
                 const input = card.querySelector('[data-blog-file]');
                 const removeFlag = card.querySelector('[data-blog-remove-eye-catch]');
+                const pendingInput = card.querySelector('[data-blog-pending-image]');
                 if (preview) {
                     preview.innerHTML = '';
                     preview.classList.add('hidden');
@@ -574,6 +617,9 @@
                 if (input) {
                     input.value = '';
                 }
+                if (pendingInput) {
+                    pendingInput.value = '';
+                }
                 if (removeFlag) {
                     removeFlag.value = '1';
                 }
@@ -582,6 +628,7 @@
             function applyFile(card, file) {
                 const input = card.querySelector('[data-blog-file]');
                 const removeFlag = card.querySelector('[data-blog-remove-eye-catch]');
+                const pendingInput = card.querySelector('[data-blog-pending-image]');
                 const error = isValidImage(file);
                 if (error) {
                     if (input) {
@@ -593,6 +640,9 @@
                 showCardImageError(card, '');
                 if (removeFlag) {
                     removeFlag.value = '0';
+                }
+                if (pendingInput) {
+                    pendingInput.value = '';
                 }
                 if (input) {
                     const dt = new DataTransfer();
@@ -648,6 +698,14 @@
                     syncCardHeading(card);
                 });
                 syncCardHeading(card);
+
+                card.querySelectorAll('[data-blog-is-published]').forEach(function (input) {
+                    input.addEventListener('change', function () {
+                        if (input.value === '1' && input.checked) {
+                            fillPublishedAtIfEmpty(card);
+                        }
+                    });
+                });
 
                 dropzone?.addEventListener('click', function () {
                     input?.click();
@@ -742,32 +800,33 @@
                             '</div>' +
                             '<p class="banner-dropzone-drag-message" aria-hidden="true">ここに画像をドロップしてください</p>' +
                         '</div>' +
+                        '<input type="hidden" name="new_blogs[' + key + '][pending_image_path]" value="" data-blog-pending-image>' +
                         '<input type="file" name="new_blogs[' + key + '][eye_catch]" accept="image/jpeg,image/png,image/webp" class="hidden" data-blog-file>' +
                         '<div class="mt-2 flex flex-wrap items-center gap-3">' +
                             '<p class="text-xs text-admin-muted">未登録でも保存できます</p>' +
                             '<button type="button" class="hidden text-xs text-admin-muted underline decoration-admin-border underline-offset-2 hover:text-admin-text" data-blog-clear-eye-catch>画像を削除</button>' +
                         '</div>' +
-                        '<p class="mt-1 hidden text-sm text-red-600" data-blog-image-error role="alert"></p>' +
+                        '<p class="mt-1 hidden text-sm text-admin-muted" data-blog-image-error role="alert"></p>' +
                     '</div>' +
                     '<div class="space-y-3">' +
                         '<div>' +
                             '<label class="admin-label">タイトル <span class="admin-required-badge">必須</span></label>' +
-                            '<input type="text" name="new_blogs[' + key + '][title]" value="" maxlength="255" required class="admin-input" data-blog-title-input>' +
+                            '<input type="text" name="new_blogs[' + key + '][title]" value="" maxlength="255" class="admin-input" data-blog-title-input>' +
                         '</div>' +
                         '<div>' +
                             '<label class="admin-label">本文 <span class="admin-required-badge">必須</span></label>' +
-                            '<textarea name="new_blogs[' + key + '][body]" rows="6" required class="admin-input"></textarea>' +
+                            '<textarea name="new_blogs[' + key + '][body]" rows="6" class="admin-input"></textarea>' +
                         '</div>' +
                         '<div>' +
-                            '<label class="admin-label">投稿日 <span class="admin-required-badge">必須</span></label>' +
-                            '<input type="datetime-local" name="new_blogs[' + key + '][published_at]" value="" required class="admin-input">' +
-                            '<p class="mt-1 text-xs text-admin-muted">公開判定に使います（投稿日が未来の場合は表示されません）</p>' +
+                            '<label class="admin-label">投稿日時 <span class="admin-required-badge">必須</span></label>' +
+                            '<input type="datetime-local" name="new_blogs[' + key + '][published_at]" value="" class="admin-input" data-blog-published-at>' +
+                            '<p class="mt-1 text-xs text-admin-muted">公開判定に使います（投稿日時が未来の場合は表示されません）</p>' +
                         '</div>' +
                         '<div>' +
-                            '<span class="admin-label">公開</span>' +
+                            '<span class="admin-label">公開 <span class="admin-required-badge">必須</span></span>' +
                             '<div class="admin-segmented mt-1" role="radiogroup" aria-label="公開状態">' +
                                 '<label class="admin-segmented-option">' +
-                                    '<input type="radio" name="new_blogs[' + key + '][is_published]" value="1" class="admin-segmented-input" checked>' +
+                                    '<input type="radio" name="new_blogs[' + key + '][is_published]" value="1" class="admin-segmented-input" data-blog-is-published>' +
                                     '<span class="admin-segmented-face">' +
                                         '<svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
                                             '<path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>' +
@@ -777,7 +836,7 @@
                                     '</span>' +
                                 '</label>' +
                                 '<label class="admin-segmented-option">' +
-                                    '<input type="radio" name="new_blogs[' + key + '][is_published]" value="0" class="admin-segmented-input">' +
+                                    '<input type="radio" name="new_blogs[' + key + '][is_published]" value="0" class="admin-segmented-input" data-blog-is-published>' +
                                     '<span class="admin-segmented-face">' +
                                         '<svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
                                             '<path d="M2 2.5 13.5 13.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>' +
