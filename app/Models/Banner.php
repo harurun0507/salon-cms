@@ -38,6 +38,12 @@ class Banner extends Model
         self::LOCATION_NEWS => 'お知らせ（将来用）',
     ];
 
+    /**
+     * Future feature: show display-location chips in the banner admin UI.
+     * Keep false until multi-location banners are ready; backend/validation stay intact.
+     */
+    public const DISPLAY_LOCATION_UI_ENABLED = false;
+
     public const LINK_TARGETS = ['_self', '_blank'];
 
     protected $fillable = [

@@ -267,7 +267,12 @@ class AdminConfirmModalTest extends TestCase
         $this->assertStringContainsString('data-confirm-form="banners-bulk-form"', $html);
         $this->assertStringContainsString('data-confirm-title="バナー保存の確認"', $html);
         $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
-        $this->assertStringContainsString('画像、タイトル、リンク、表示場所、公開期間、公開状態、表示順、削除など', $html);
+        if (\App\Models\Banner::DISPLAY_LOCATION_UI_ENABLED) {
+            $this->assertStringContainsString('画像、タイトル、リンク、表示場所、公開期間、公開状態、表示順、削除など', $html);
+        } else {
+            $this->assertStringContainsString('画像、タイトル、リンク、公開期間、公開状態、表示順、削除など', $html);
+            $this->assertStringNotContainsString('表示場所、公開期間', $html);
+        }
         $this->assertStringNotContainsString('return confirm(', $html);
         $this->assertSame(1, substr_count($html, 'data-confirm-form="banners-bulk-form"'));
     }

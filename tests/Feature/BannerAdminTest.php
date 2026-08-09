@@ -59,8 +59,17 @@ class BannerAdminTest extends TestCase
         $this->assertStringContainsString('name="banners['.$banner->id.'][title]"', $html);
         $this->assertStringContainsString('name="banners['.$banner->id.'][link_url]"', $html);
         $this->assertStringContainsString('name="banners['.$banner->id.'][display_location]"', $html);
-        $this->assertStringContainsString('banner-location-chips', $html);
-        $this->assertStringContainsString('banner-location-chip-input', $html);
+        if (Banner::DISPLAY_LOCATION_UI_ENABLED) {
+            $this->assertStringContainsString('banner-location-chips', $html);
+            $this->assertStringContainsString('banner-location-chip-input', $html);
+            $this->assertStringContainsString('表示場所', $html);
+        } else {
+            $this->assertStringNotContainsString('banner-location-chips', $html);
+            $this->assertStringNotContainsString('banner-location-chip-input', $html);
+            $this->assertStringNotContainsString('>表示場所</span>', $html);
+            $this->assertStringNotContainsString('トップ（メイン）', $html);
+            $this->assertStringContainsString('type="hidden" name="banners['.$banner->id.'][display_location]"', $html);
+        }
         $this->assertStringContainsString('banner-dropzone', $html);
         $this->assertStringContainsString('aria-label="公開状態"', $html);
         $this->assertStringContainsString('name="banners['.$banner->id.'][is_published]"', $html);

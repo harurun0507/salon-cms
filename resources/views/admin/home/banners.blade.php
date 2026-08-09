@@ -11,7 +11,9 @@
             data-confirm-form="banners-bulk-form"
             data-confirm-title="バナー保存の確認"
             data-confirm-message="変更内容を保存します。&#10;よろしいですか？"
-            data-confirm-note="画像、タイトル、リンク、表示場所、公開期間、公開状態、表示順、削除など、現在入力されている内容が反映されます。"
+            data-confirm-note="{{ \App\Models\Banner::DISPLAY_LOCATION_UI_ENABLED
+                ? '画像、タイトル、リンク、表示場所、公開期間、公開状態、表示順、削除など、現在入力されている内容が反映されます。'
+                : '画像、タイトル、リンク、公開期間、公開状態、表示順、削除など、現在入力されている内容が反映されます。' }}"
             data-confirm-submit-label="保存する"
         >保存する</button>
         <p class="text-sm text-admin-muted">
@@ -24,6 +26,7 @@
 @section('content')
     @php
         $locationLabels = \App\Models\Banner::LOCATION_LABELS;
+        $showDisplayLocationUi = \App\Models\Banner::DISPLAY_LOCATION_UI_ENABLED;
         $maxOrder = (int) ($banners->max('display_order') ?? 0);
 
         $formatLocal = function ($value) {
@@ -222,23 +225,28 @@
                                 </label>
                             </div>
                         </div>
-                        <div>
-                            <span class="admin-label" id="banner_location_label_{{ $banner->id }}">表示場所</span>
-                            <div class="banner-location-chips" role="radiogroup" aria-labelledby="banner_location_label_{{ $banner->id }}">
-                                @foreach($locationLabels as $value => $label)
-                                    <label class="banner-location-chip">
-                                        <input
-                                            type="radio"
-                                            name="banners[{{ $banner->id }}][display_location]"
-                                            value="{{ $value }}"
-                                            class="banner-location-chip-input"
-                                            @checked($displayLocation === $value)
-                                        >
-                                        <span class="banner-location-chip-face">{{ $label }}</span>
-                                    </label>
-                                @endforeach
+                        @if($showDisplayLocationUi)
+                            <div>
+                                <span class="admin-label" id="banner_location_label_{{ $banner->id }}">表示場所</span>
+                                <div class="banner-location-chips" role="radiogroup" aria-labelledby="banner_location_label_{{ $banner->id }}">
+                                    @foreach($locationLabels as $value => $label)
+                                        <label class="banner-location-chip">
+                                            <input
+                                                type="radio"
+                                                name="banners[{{ $banner->id }}][display_location]"
+                                                value="{{ $value }}"
+                                                class="banner-location-chip-input"
+                                                @checked($displayLocation === $value)
+                                            >
+                                            <span class="banner-location-chip-face">{{ $label }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
                             </div>
-                        </div>
+                        @else
+                            {{-- Future: display location UI (Banner::DISPLAY_LOCATION_UI_ENABLED) --}}
+                            <input type="hidden" name="banners[{{ $banner->id }}][display_location]" value="{{ $displayLocation }}">
+                        @endif
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div>
                                 <label for="banner_from_{{ $banner->id }}" class="admin-label">公開開始</label>
@@ -377,7 +385,9 @@
             const deletedIdsWrap = document.getElementById('banner-deleted-ids');
             const addCard = document.getElementById('banner-add-card');
             const addButton = addCard ? addCard.querySelector('[data-banner-add]') : null;
+            @if($showDisplayLocationUi)
             const locationOptions = @json($locationLabels);
+            @endif
             const emptyHeading = '新規バナー';
             const dropzoneMainHtml =
                 '<div class="banner-dropzone-main">' +
@@ -388,6 +398,33 @@
                     '</svg>' +
                     '<p class="banner-dropzone-text text-sm text-gray-700">画像をドラッグ＆ドロップ、またはクリックして選択</p>' +
                 '</div>';
+
+            @if($showDisplayLocationUi)
+            function locationChipsHtml(name, selected) {
+                let html = '<div class="banner-location-chips" role="radiogroup" aria-label="表示場所">';
+                Object.keys(locationOptions).forEach(function (value) {
+                    html +=
+                        '<label class="banner-location-chip">' +
+                            '<input type="radio" name="' + name + '" value="' + value + '" class="banner-location-chip-input"' +
+                                (value === selected ? ' checked' : '') + '>' +
+                            '<span class="banner-location-chip-face">' + locationOptions[value] + '</span>' +
+                        '</label>';
+                });
+                html += '</div>';
+                return html;
+            }
+
+            function displayLocationFieldHtml(name, selected) {
+                return '<div>' +
+                    '<span class="admin-label">表示場所</span>' +
+                    locationChipsHtml(name, selected) +
+                '</div>';
+            }
+            @else
+            function displayLocationFieldHtml(name, selected) {
+                return '<input type="hidden" name="' + name + '" value="' + selected + '">';
+            }
+            @endif
 
             if (!form || !grid || !addCard || !addButton) {
                 return;
@@ -499,20 +536,6 @@
                 });
                 maxOrder = grid.querySelectorAll('[data-banner-card]').length;
                 form.setAttribute('data-max-order', String(maxOrder));
-            }
-
-            function locationChipsHtml(name, selected) {
-                let html = '<div class="banner-location-chips" role="radiogroup" aria-label="表示場所">';
-                Object.keys(locationOptions).forEach(function (value) {
-                    html +=
-                        '<label class="banner-location-chip">' +
-                            '<input type="radio" name="' + name + '" value="' + value + '" class="banner-location-chip-input"' +
-                                (value === selected ? ' checked' : '') + '>' +
-                            '<span class="banner-location-chip-face">' + locationOptions[value] + '</span>' +
-                        '</label>';
-                });
-                html += '</div>';
-                return html;
             }
 
             function clearDropzoneDragState(dropzone) {
@@ -673,10 +696,7 @@
                                 '</label>' +
                             '</div>' +
                         '</div>' +
-                        '<div>' +
-                            '<span class="admin-label">表示場所</span>' +
-                            locationChipsHtml('new_banners[' + key + '][display_location]', 'top') +
-                        '</div>' +
+                        displayLocationFieldHtml('new_banners[' + key + '][display_location]', 'top') +
                         '<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">' +
                             '<div>' +
                                 '<label class="admin-label">公開開始</label>' +
