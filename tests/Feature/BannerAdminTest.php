@@ -49,7 +49,7 @@ class BannerAdminTest extends TestCase
         $this->assertStringContainsString('id="banners-bulk-form"', $html);
         $this->assertStringContainsString('grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3', $html);
         $this->assertStringContainsString('id="banner-add-card"', $html);
-        $this->assertStringContainsString('バナーを追加', $html);
+        $this->assertStringContainsString('キャンペーンを追加', $html);
         $this->assertStringContainsString('カードを追加し、保存で登録できます。', $html);
         $this->assertStringContainsString('data-banner-drag-handle', $html);
         $this->assertStringContainsString('data-banner-card-title', $html);
@@ -92,7 +92,7 @@ class BannerAdminTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('id="banner-add-card"', $html);
-        $this->assertStringContainsString('バナーを追加', $html);
+        $this->assertStringContainsString('キャンペーンを追加', $html);
         $this->assertStringNotContainsString('ありません', $html);
     }
 
@@ -128,7 +128,7 @@ class BannerAdminTest extends TestCase
                         'display_location' => Banner::LOCATION_TOP,
                         'display_order' => 2,
                         'is_published' => '0',
-                        'published_from' => '',
+                        'published_from' => '2026-08-01T10:00',
                         'published_until' => '',
                         'image' => $replaceImage,
                     ],
@@ -143,7 +143,7 @@ class BannerAdminTest extends TestCase
                         'display_location' => Banner::LOCATION_TOP,
                         'display_order' => 1,
                         'is_published' => '1',
-                        'published_from' => '',
+                        'published_from' => '2026-08-01T11:00',
                         'published_until' => '',
                         'image' => $newImage,
                     ],
@@ -151,7 +151,7 @@ class BannerAdminTest extends TestCase
                 'deleted_ids' => [$remove->id],
             ])
             ->assertRedirect(route('admin.home.banners'))
-            ->assertSessionHas('success', 'バナーを保存しました。');
+            ->assertSessionHas('success', 'キャンペーンを保存しました。');
 
         $this->assertDatabaseMissing('banners', ['id' => $remove->id]);
         Storage::disk('public')->assertMissing($removePath);
@@ -188,6 +188,7 @@ class BannerAdminTest extends TestCase
                         'display_location' => Banner::LOCATION_TOP,
                         'display_order' => 1,
                         'is_published' => '1',
+                        'published_from' => '2026-08-01T10:00',
                     ],
                 ],
             ])
@@ -216,7 +217,230 @@ class BannerAdminTest extends TestCase
                 ],
             ])
             ->assertRedirect(route('admin.home.banners'))
-            ->assertSessionHasErrors(['new_banners.new_1.title', 'new_banners.new_1.image']);
+            ->assertSessionHasErrors([
+                'new_banners.new_1.title',
+                'new_banners.new_1.image',
+                'new_banners.new_1.published_from',
+            ]);
+    }
+
+    public function test_bulk_update_requires_published_from_for_new_banner(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->admin())
+            ->from(route('admin.home.banners'))
+            ->put(route('admin.home.banners.update'), [
+                'new_banners' => [
+                    'new_1' => [
+                        'title' => '公開開始未入力',
+                        'link_target' => '_self',
+                        'display_location' => Banner::LOCATION_TOP,
+                        'display_order' => 1,
+                        'is_published' => '1',
+                        'published_from' => '',
+                        'image' => UploadedFile::fake()->image('new.jpg', 1200, 400),
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.home.banners'))
+            ->assertSessionHasErrors(['new_banners.new_1.published_from']);
+    }
+
+    public function test_bulk_update_requires_publish_state_for_new_banner(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->admin())
+            ->from(route('admin.home.banners'))
+            ->put(route('admin.home.banners.update'), [
+                'new_banners' => [
+                    'new_1' => [
+                        'title' => '公開未選択',
+                        'link_target' => '_self',
+                        'display_location' => Banner::LOCATION_TOP,
+                        'display_order' => 1,
+                        'published_from' => '2026-08-01T10:00',
+                        'image' => UploadedFile::fake()->image('new.jpg', 1200, 400),
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.home.banners'))
+            ->assertSessionHasErrors(['new_banners.new_1.is_published']);
+    }
+
+    public function test_new_banner_card_markup_leaves_publish_state_unselected(): void
+    {
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.home.banners'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('novalidate', $html);
+        $this->assertStringContainsString('fillPublishedFromIfEmpty', $html);
+        $this->assertStringContainsString('data-banner-published-from', $html);
+        $this->assertStringContainsString(
+            "'<input type=\"radio\" name=\"new_banners[' + key + '][is_published]\" value=\"1\" class=\"admin-segmented-input\" data-banner-is-published>' +",
+            $html
+        );
+        $this->assertStringNotContainsString(
+            "'<input type=\"radio\" name=\"new_banners[' + key + '][is_published]\" value=\"1\" class=\"admin-segmented-input\" data-banner-is-published checked>' +",
+            $html
+        );
+    }
+
+    public function test_banner_validation_errors_are_passed_to_toast_payload(): void
+    {
+        $html = $this->actingAs($this->admin())
+            ->followingRedirects()
+            ->from(route('admin.home.banners'))
+            ->put(route('admin.home.banners.update'), [
+                'new_banners' => [
+                    'new_1' => [
+                        'title' => 'タイトルあり',
+                        'link_target' => '_self',
+                        'display_location' => Banner::LOCATION_TOP,
+                        'display_order' => 1,
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('"validationErrors"', $html);
+        $this->assertStringContainsString('公開状態を選択してください。', $html);
+        $this->assertStringContainsString('公開開始は必須です。', $html);
+        $this->assertStringContainsString('画像は必須です。', $html);
+        $this->assertStringContainsString('タイトルあり', $html);
+        $this->assertStringContainsString('name="new_banners[new_1][title]"', $html);
+        $this->assertStringContainsString('キャンペーン画像', $html);
+        $this->assertStringContainsString('banner-dropzone is-empty', $html);
+        $this->assertStringContainsString('画像をドラッグ＆ドロップ、またはクリックして選択', $html);
+        $this->assertStringContainsString('ensureEmptyDropzoneVisible', $html);
+        $this->assertStringNotContainsString('mb-6 rounded-lg border border-red-200 bg-red-50', $html);
+        $this->assertStringNotContainsString('mb-4 rounded-lg border border-red-200 bg-red-50', $html);
+        $this->assertStringNotContainsString('text-sm text-red-600', $html);
+    }
+
+    public function test_validation_error_keeps_uploaded_new_banner_image_as_pending_preview(): void
+    {
+        Storage::fake('public');
+
+        $html = $this->actingAs($this->admin())
+            ->followingRedirects()
+            ->from(route('admin.home.banners'))
+            ->put(route('admin.home.banners.update'), [
+                'new_banners' => [
+                    'new_1' => [
+                        'title' => '画像ありタイトル不足対策',
+                        'link_target' => '_self',
+                        'display_location' => Banner::LOCATION_TOP,
+                        'display_order' => 1,
+                        'is_published' => '1',
+                        'published_from' => '',
+                        'image' => UploadedFile::fake()->image('campaign.jpg', 1200, 400),
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('公開開始は必須です。', $html);
+        $this->assertStringContainsString('name="new_banners[new_1][pending_image_path]"', $html);
+        $this->assertStringContainsString('選択中の画像を保持しています', $html);
+        $this->assertMatchesRegularExpression(
+            '#name="new_banners\[new_1\]\[pending_image_path\]"\s+value="banners/tmp/[^"]+"#',
+            $html
+        );
+        $this->assertStringContainsString('storage/banners/tmp/', $html);
+        $this->assertSame(0, Banner::query()->count());
+
+        $pendingFiles = Storage::disk('public')->allFiles('banners/tmp');
+        $this->assertNotEmpty($pendingFiles);
+    }
+
+    public function test_new_banner_can_be_saved_using_pending_image_after_validation_error(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->admin())
+            ->from(route('admin.home.banners'))
+            ->put(route('admin.home.banners.update'), [
+                'new_banners' => [
+                    'new_1' => [
+                        'title' => '再保存キャンペーン',
+                        'link_target' => '_self',
+                        'display_location' => Banner::LOCATION_TOP,
+                        'display_order' => 1,
+                        'is_published' => '1',
+                        'published_from' => '',
+                        'image' => UploadedFile::fake()->image('retry.jpg', 1200, 400),
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.home.banners'))
+            ->assertSessionHasErrors(['new_banners.new_1.published_from']);
+
+        $pendingPath = session()->getOldInput('new_banners.new_1.pending_image_path');
+        $this->assertIsString($pendingPath);
+        Storage::disk('public')->assertExists($pendingPath);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.home.banners.update'), [
+                'new_banners' => [
+                    'new_1' => [
+                        'title' => '再保存キャンペーン',
+                        'link_target' => '_self',
+                        'display_location' => Banner::LOCATION_TOP,
+                        'display_order' => 1,
+                        'is_published' => '1',
+                        'published_from' => '2026-08-01T10:00',
+                        'pending_image_path' => $pendingPath,
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.home.banners'))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success');
+
+        $created = Banner::query()->where('title', '再保存キャンペーン')->first();
+        $this->assertNotNull($created);
+        $this->assertStringStartsWith('banners/', $created->image_path);
+        $this->assertStringNotContainsString('/tmp/', $created->image_path);
+        Storage::disk('public')->assertExists($created->image_path);
+        Storage::disk('public')->assertMissing($pendingPath);
+    }
+
+    public function test_validation_error_keeps_existing_banner_image_preview(): void
+    {
+        Storage::fake('public');
+        $path = UploadedFile::fake()->image('keep.jpg')->store('banners', 'public');
+        $banner = $this->createBanner([
+            'image_path' => $path,
+            'title' => '既存キャンペーン',
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->followingRedirects()
+            ->from(route('admin.home.banners'))
+            ->put(route('admin.home.banners.update'), [
+                'banners' => [
+                    $banner->id => [
+                        'title' => '',
+                        'link_target' => '_self',
+                        'display_location' => Banner::LOCATION_TOP,
+                        'display_order' => 1,
+                        'is_published' => '1',
+                        'published_from' => '2026-08-01T10:00',
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('storage/'.$path, $html);
+        $this->assertStringContainsString('data-banner-image', $html);
+        $this->assertStringContainsString('タイトルは必須です。', $html);
     }
 
     public function test_bulk_update_validates_link_url_and_publish_window(): void
@@ -266,6 +490,7 @@ class BannerAdminTest extends TestCase
                         'display_location' => Banner::LOCATION_TOP,
                         'display_order' => 1,
                         'is_published' => '1',
+                        'published_from' => '2026-08-01T10:00',
                         'image' => UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf'),
                     ],
                 ],
@@ -297,6 +522,7 @@ class BannerAdminTest extends TestCase
                         'display_location' => Banner::LOCATION_TOP,
                         'display_order' => 1,
                         'is_published' => '1',
+                        'published_from' => '2026-08-01T10:00',
                     ],
                     $a->id => [
                         'title' => 'A',
@@ -304,6 +530,7 @@ class BannerAdminTest extends TestCase
                         'display_location' => Banner::LOCATION_TOP,
                         'display_order' => 2,
                         'is_published' => '1',
+                        'published_from' => '2026-08-01T10:00',
                     ],
                 ],
             ])
@@ -338,18 +565,110 @@ class BannerAdminTest extends TestCase
             'display_order' => 2,
             'link_url' => null,
         ]);
+        \App\Models\News::query()->create([
+            'title' => '順序確認用お知らせ',
+            'slug' => 'order-check-news',
+            'body' => 'body',
+            'category' => 'other',
+            'is_published' => true,
+            'published_at' => now()->subHour(),
+            'display_order' => 1,
+        ]);
 
         $html = $this->get(route('home'))->assertOk()->getContent();
 
         $this->assertStringContainsString('id="banners"', $html);
+        $this->assertStringContainsString('Campaign', $html);
+        $this->assertStringContainsString('キャンペーン', $html);
+        $this->assertStringContainsString('grid grid-cols-1 gap-8 md:grid-cols-2', $html);
         $this->assertStringContainsString('先に表示', $html);
         $this->assertStringContainsString('後に表示', $html);
         $this->assertStringContainsString('href="https://example.com/first"', $html);
         $this->assertStringContainsString('target="_blank"', $html);
         $this->assertStringContainsString('alt="先に表示"', $html);
+        $this->assertStringContainsString('id="banners" class="site-section"', $html);
+        $this->assertStringNotContainsString('id="banners" class="site-section border-y border-salon-line bg-white/50"', $html);
+        $this->assertStringContainsString(route('campaign'), $html);
+        $this->assertStringContainsString('すべて見る →', $html);
         $this->assertLessThan(strpos($html, '後に表示'), strpos($html, '先に表示'));
         $this->assertLessThan(strpos($html, 'id="news"'), strpos($html, 'id="banners"'));
         $this->assertNotNull($first);
+    }
+
+    public function test_campaign_index_shows_visible_top_banners_in_order(): void
+    {
+        Storage::fake('public');
+
+        $this->createBanner([
+            'title' => '先に表示',
+            'image_path' => UploadedFile::fake()->image('1.jpg')->store('banners', 'public'),
+            'display_order' => 1,
+            'link_url' => 'https://example.com/first',
+            'link_target' => '_blank',
+            'alt_text' => '',
+        ]);
+        $this->createBanner([
+            'title' => '後に表示',
+            'image_path' => UploadedFile::fake()->image('2.jpg')->store('banners', 'public'),
+            'display_order' => 2,
+            'link_url' => null,
+            'description' => '一覧では出さない説明',
+        ]);
+
+        $html = $this->get(route('campaign'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('Campaign', $html);
+        $this->assertStringContainsString('キャンペーン', $html);
+        $this->assertStringContainsString('grid grid-cols-1 gap-8 md:grid-cols-2', $html);
+        $this->assertStringContainsString('先に表示', $html);
+        $this->assertStringContainsString('後に表示', $html);
+        $this->assertStringContainsString('href="https://example.com/first"', $html);
+        $this->assertStringContainsString('target="_blank"', $html);
+        $this->assertStringContainsString('alt="先に表示"', $html);
+        $this->assertStringContainsString(route('home'), $html);
+        $this->assertStringContainsString('トップページへ戻る', $html);
+        $this->assertStringContainsString('site-back-link', $html);
+        $this->assertStringNotContainsString('一覧では出さない説明', $html);
+        $this->assertLessThan(strpos($html, '後に表示'), strpos($html, '先に表示'));
+    }
+
+    public function test_campaign_index_hides_unpublished_outside_period_and_wrong_location(): void
+    {
+        Storage::fake('public');
+
+        $this->createBanner([
+            'title' => '公開中',
+            'image_path' => UploadedFile::fake()->image('ok.jpg')->store('banners', 'public'),
+            'display_order' => 1,
+        ]);
+        $this->createBanner([
+            'title' => '非公開',
+            'image_path' => UploadedFile::fake()->image('u.jpg')->store('banners', 'public'),
+            'is_published' => false,
+        ]);
+        $this->createBanner([
+            'title' => '期間前',
+            'image_path' => UploadedFile::fake()->image('f.jpg')->store('banners', 'public'),
+            'published_from' => now()->addDay(),
+        ]);
+        $this->createBanner([
+            'title' => '期間後',
+            'image_path' => UploadedFile::fake()->image('p.jpg')->store('banners', 'public'),
+            'published_until' => now()->subDay(),
+        ]);
+        $this->createBanner([
+            'title' => 'メニュー用',
+            'image_path' => UploadedFile::fake()->image('m.jpg')->store('banners', 'public'),
+            'display_location' => Banner::LOCATION_MENU,
+        ]);
+
+        $html = $this->get(route('campaign'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('公開中', $html);
+        $this->assertStringNotContainsString('非公開', $html);
+        $this->assertStringNotContainsString('期間前', $html);
+        $this->assertStringNotContainsString('期間後', $html);
+        $this->assertStringNotContainsString('メニュー用', $html);
     }
 
     public function test_home_hides_unpublished_outside_period_and_wrong_location(): void

@@ -49,9 +49,10 @@ class AdminSidebarNavTest extends TestCase
         $this->assertStringContainsString('ホームページ', $html);
         $this->assertStringContainsString('メインビジュアル', $html);
         $this->assertStringContainsString('トップページ設定', $html);
-        $this->assertStringContainsString('バナー', $html);
+        $this->assertStringContainsString('キャンペーン', $html);
         $this->assertStringContainsString('コンテンツ', $html);
-        $this->assertStringContainsString('お知らせ', $html);
+        $this->assertStringContainsString('お知らせ（NEWS）', $html);
+        $this->assertStringContainsString('ブログ', $html);
         $this->assertStringContainsString('ギャラリー', $html);
         $this->assertStringContainsString('>メニュー<', $html);
         $this->assertStringContainsString('スタッフ', $html);
@@ -82,6 +83,24 @@ class AdminSidebarNavTest extends TestCase
         );
         $this->assertStringContainsString('admin-nav-link-active', $html);
         $this->assertStringContainsString(route('admin.news.index'), $html);
+    }
+
+    public function test_blog_page_shows_bulk_ui_and_opens_content_group(): void
+    {
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.blog.index'))
+            ->assertOk()
+            ->assertSee('ブログ', false)
+            ->assertDontSee('この機能は現在準備中です。', false)
+            ->getContent();
+
+        $this->assertStringContainsString('id="blog-bulk-form"', $html);
+        $this->assertStringContainsString('ブログを追加', $html);
+        $this->assertStringContainsString('admin-nav-link-active', $html);
+        $this->assertMatchesRegularExpression(
+            '/<details[^>]*class="[^"]*admin-nav-group[^"]*"[^>]*data-nav-key="content"[^>]*data-nav-current="1"[^>]*\sopen(?:\s|>)/u',
+            $html
+        );
     }
 
     public function test_nav_groups_are_independent_not_exclusive_accordion(): void

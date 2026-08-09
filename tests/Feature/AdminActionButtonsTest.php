@@ -104,13 +104,13 @@ class AdminActionButtonsTest extends TestCase
         $setting = SalonSetting::current();
 
         $category = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
-        Menu::query()->create([
-            'menu_category_id' => $category->id,
+        $menu = Menu::query()->create([
             'name' => 'カット',
             'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menu->categories()->attach($category->id, ['sort_order' => 1]);
         $setting->update(['logo_image' => 'settings/logos/logo.png']);
 
         $menusHtml = $this->actingAs($user)->get(route('admin.menus.index'))->assertOk()->getContent();

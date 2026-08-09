@@ -193,6 +193,10 @@ class HeroImageTest extends TestCase
         $response->assertSee('id="hero-prev"', false);
         $response->assertSee('id="hero-dots"', false);
         $response->assertSee('data-autoplay="5000"', false);
+        $html = $response->getContent();
+        $this->assertStringContainsString('hero-slider-controls', $html);
+        $this->assertStringContainsString('data-hero-controls', $html);
+        $this->assertStringContainsString('hero-slider-nav', $html);
     }
 
     public function test_home_page_falls_back_to_gradient_when_no_published_images(): void

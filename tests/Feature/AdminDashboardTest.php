@@ -67,20 +67,20 @@ class AdminDashboardTest extends TestCase
         ]);
 
         $category = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
-        Menu::query()->create([
-            'menu_category_id' => $category->id,
+        $menu = Menu::query()->create([
             'name' => 'カットA',
             'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
-        Menu::query()->create([
-            'menu_category_id' => $category->id,
+        $menu->categories()->attach($category->id, ['sort_order' => 1]);
+        $menu = Menu::query()->create([
             'name' => 'カットB',
             'price' => '¥6,000',
             'sort_order' => 2,
             'is_published' => false,
         ]);
+        $menu->categories()->attach($category->id, ['sort_order' => 2]);
 
         StaffMember::query()->create([
             'name' => '公開スタッフ',
@@ -136,7 +136,7 @@ class AdminDashboardTest extends TestCase
         $this->assertStringContainsString('クイックアクション', $html);
         $this->assertStringContainsString('お知らせ追加', $html);
         $this->assertStringContainsString('ギャラリー追加', $html);
-        $this->assertStringContainsString('バナー追加', $html);
+        $this->assertStringContainsString('キャンペーン追加', $html);
         $this->assertStringContainsString('スタッフ追加', $html);
         $this->assertStringContainsString(route('admin.galleries.create'), $html);
         $this->assertStringContainsString(route('admin.home.banners'), $html);
@@ -200,13 +200,13 @@ class AdminDashboardTest extends TestCase
         ]);
 
         $category = MenuCategory::query()->create(['name' => '完了カテゴリ', 'sort_order' => 1]);
-        Menu::query()->create([
-            'menu_category_id' => $category->id,
+        $menu = Menu::query()->create([
             'name' => '完了メニュー',
             'price' => '¥3,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menu->categories()->attach($category->id, ['sort_order' => 1]);
 
         $resolved = $this->actingAs($this->admin())
             ->get(route('admin.dashboard'))
@@ -299,12 +299,12 @@ class AdminDashboardTest extends TestCase
 
         $category = MenuCategory::query()->create(['name' => 'カラー', 'sort_order' => 1]);
         $menu = Menu::query()->create([
-            'menu_category_id' => $category->id,
             'name' => '中間メニュー',
             'price' => '¥8,000',
             'sort_order' => 1,
             'is_published' => false,
         ]);
+        $menu->categories()->attach($category->id, ['sort_order' => 1]);
         Menu::query()->whereKey($menu->id)->update(['updated_at' => $t5]);
 
         $staff = StaffMember::query()->create([
@@ -475,7 +475,7 @@ class AdminDashboardTest extends TestCase
         // Numbered fallbacks use admin display order (sort_order / display_order), not update order.
         $this->assertStringContainsString('メインビジュアル2', $html); // sort_order 2, updated most recently
         $this->assertStringContainsString('メインビジュアル1', $html); // sort_order 1
-        $this->assertStringContainsString('バナー1', $html);
+        $this->assertStringContainsString('キャンペーン1', $html);
         $this->assertStringContainsString('ギャラリー画像1', $html);
         $this->assertStringContainsString('春キャンペーン', $html);
 
@@ -484,7 +484,7 @@ class AdminDashboardTest extends TestCase
             $html
         );
         $this->assertMatchesRegularExpression(
-            '/dashboard-recent-title[^>]*>バナー1</u',
+            '/dashboard-recent-title[^>]*>キャンペーン1</u',
             $html
         );
         $this->assertMatchesRegularExpression(

@@ -24,12 +24,12 @@ class AdminMenusTwoColumnTest extends TestCase
         $first = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
         $second = MenuCategory::query()->create(['name' => 'カラー', 'sort_order' => 2]);
         $menu = Menu::query()->create([
-            'menu_category_id' => $first->id,
             'name' => 'カットベーシック',
             'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menu->categories()->attach($first->id, ['sort_order' => 1]);
 
         $html = $this->actingAs($this->admin())
             ->get(route('admin.menus.index'))
@@ -95,10 +95,10 @@ class AdminMenusTwoColumnTest extends TestCase
         $this->assertStringNotContainsString('data-open-detail', $html);
         $this->assertStringNotContainsString('menu-description-preview-', $html);
         $this->assertStringContainsString("target.tagName === 'TEXTAREA'", $html);
-        $this->assertStringContainsString('.menu-list-row:hover', $html);
-        $this->assertStringContainsString('.menu-list-row.is-selected', $html);
-        $this->assertStringContainsString('.menu-list-row:hover .category-delete-x', $html);
-        $this->assertStringContainsString('.menu-list-row.is-selected .category-delete-x', $html);
+        $this->assertStringContainsString('.menu-row-group:hover', $html);
+        $this->assertStringContainsString('.menu-row-group.is-selected', $html);
+        $this->assertStringContainsString('.menu-row-group:hover .category-delete-x', $html);
+        $this->assertStringContainsString('.menu-row-group.is-selected .category-delete-x', $html);
         $this->assertStringContainsString('function selectMenu', $html);
         $this->assertStringContainsString("closest('[data-menu-row]')", $html);
     }
@@ -108,20 +108,20 @@ class AdminMenusTwoColumnTest extends TestCase
         $category = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
         $longDescription = str_repeat('長い説明テキストです。', 20);
         $menu = Menu::query()->create([
-            'menu_category_id' => $category->id,
             'name' => 'カットベーシック',
             'price' => '¥5,000',
             'description' => $longDescription,
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menu->categories()->attach($category->id, ['sort_order' => 1]);
 
         $html = $this->actingAs($this->admin())
             ->get(route('admin.menus.index'))
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('id="menu-description-'.$menu->id.'"', $html);
+        $this->assertStringContainsString('id="menu-description-'.$menu->id.'-'.$category->id.'"', $html);
         $this->assertStringContainsString('name="menus['.$menu->id.'][description]"', $html);
         $this->assertStringContainsString('<textarea', $html);
         $this->assertStringContainsString('rows="3"', $html);
@@ -159,13 +159,13 @@ class AdminMenusTwoColumnTest extends TestCase
     public function test_menu_add_lives_in_panel_not_sticky_toolbar(): void
     {
         $withMenus = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
-        Menu::query()->create([
-            'menu_category_id' => $withMenus->id,
+        $menu = Menu::query()->create([
             'name' => 'カットベーシック',
             'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menu->categories()->attach($withMenus->id, ['sort_order' => 1]);
         MenuCategory::query()->create(['name' => 'カラー', 'sort_order' => 2]);
 
         $html = $this->actingAs($this->admin())
@@ -267,12 +267,12 @@ class AdminMenusTwoColumnTest extends TestCase
         $first = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
         $second = MenuCategory::query()->create(['name' => 'カラー', 'sort_order' => 2]);
         $menu = Menu::query()->create([
-            'menu_category_id' => $second->id,
             'name' => 'カラーベーシック',
             'price' => '¥8,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menu->categories()->attach($second->id, ['sort_order' => 1]);
 
         $errors = new ViewErrorBag;
         $errors->put('default', new MessageBag([
@@ -294,12 +294,12 @@ class AdminMenusTwoColumnTest extends TestCase
         $first = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
         $second = MenuCategory::query()->create(['name' => 'カラー', 'sort_order' => 2]);
         $menu = Menu::query()->create([
-            'menu_category_id' => $second->id,
             'name' => 'カラーベーシック',
             'price' => '¥8,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menu->categories()->attach($second->id, ['sort_order' => 1]);
 
         $errors = new ViewErrorBag;
         $errors->put('default', new MessageBag([
@@ -322,13 +322,13 @@ class AdminMenusTwoColumnTest extends TestCase
     {
         $category = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
         $menu = Menu::query()->create([
-            'menu_category_id' => $category->id,
             'name' => 'カットベーシック',
             'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
             'description' => '旧説明',
         ]);
+        $menu->categories()->attach($category->id, ['sort_order' => 1]);
 
         $this->actingAs($this->admin())
             ->put(route('admin.menus.bulk-update'), [
@@ -341,6 +341,7 @@ class AdminMenusTwoColumnTest extends TestCase
                 ],
                 'menus' => [
                     $menu->id => [
+                        'category_ids' => [$category->id],
                         'name' => 'カット更新メニュー',
                         'price' => '¥5,500',
                         'sort_order' => 2,
@@ -522,12 +523,12 @@ class AdminMenusTwoColumnTest extends TestCase
     {
         $category = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
         $menu = Menu::query()->create([
-            'menu_category_id' => $category->id,
             'name' => 'カットベーシック',
             'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menu->categories()->attach($category->id, ['sort_order' => 1]);
 
         $html = $this->actingAs($this->admin())
             ->get(route('admin.menus.index'))
@@ -540,7 +541,7 @@ class AdminMenusTwoColumnTest extends TestCase
         $this->assertStringContainsString('id="delete-menu-'.$menu->id.'"', $html);
         $this->assertStringContainsString('aria-label="メニューを削除"', $html);
         $this->assertTrue((bool) preg_match(
-            '/<tr[^>]*data-menu-row="'.preg_quote((string) $menu->id, '/').'"[^>]*>(.*?)<\/tr>/s',
+            '/<tbody[^>]*data-menu-row="'.preg_quote((string) $menu->id, '/').'"[^>]*>(.*?)<\/tbody>/s',
             $html,
             $menuRowMatches
         ));
@@ -563,7 +564,7 @@ class AdminMenusTwoColumnTest extends TestCase
                 ],
                 'menus' => [
                     'new_menu_1' => [
-                        'category_id' => $category->id,
+                        'category_ids' => [$category->id],
                         'name' => 'カット新規',
                         'price' => '¥6,000',
                         'sort_order' => 1,
@@ -576,12 +577,18 @@ class AdminMenusTwoColumnTest extends TestCase
             ->assertSessionHas('success', 'メニュー情報を一括保存しました。');
 
         $this->assertDatabaseHas('menus', [
-            'menu_category_id' => $category->id,
             'name' => 'カット新規',
             'price' => '¥6,000',
             'sort_order' => 1,
             'is_published' => true,
             'description' => '説明',
+        ]);
+        $createdMenu = Menu::query()->where('name', 'カット新規')->first();
+        $this->assertNotNull($createdMenu);
+        $this->assertDatabaseHas('menu_category_menu', [
+            'menu_id' => $createdMenu->id,
+            'menu_category_id' => $category->id,
+            'sort_order' => 1,
         ]);
     }
 
@@ -598,7 +605,7 @@ class AdminMenusTwoColumnTest extends TestCase
                 ],
                 'menus' => [
                     'new_menu_1' => [
-                        'category_id' => 'new_1',
+                        'category_ids' => ['new_1'],
                         'name' => 'デジタルパーマ',
                         'price' => '¥12,000',
                         'sort_order' => 1,
@@ -616,9 +623,15 @@ class AdminMenusTwoColumnTest extends TestCase
         $response->assertSessionHas('selected_category_id', $created->id);
 
         $this->assertDatabaseHas('menus', [
-            'menu_category_id' => $created->id,
             'name' => 'デジタルパーマ',
             'price' => '¥12,000',
+            'sort_order' => 1,
+        ]);
+        $createdMenu = Menu::query()->where('name', 'デジタルパーマ')->first();
+        $this->assertNotNull($createdMenu);
+        $this->assertDatabaseHas('menu_category_menu', [
+            'menu_id' => $createdMenu->id,
+            'menu_category_id' => $created->id,
             'sort_order' => 1,
         ]);
     }
@@ -639,7 +652,7 @@ class AdminMenusTwoColumnTest extends TestCase
                 ],
                 'menus' => [
                     'new_menu_1' => [
-                        'category_id' => $category->id,
+                        'category_ids' => [$category->id],
                         'name' => '',
                         'price' => '¥1,000',
                         'sort_order' => 1,
@@ -664,7 +677,7 @@ class AdminMenusTwoColumnTest extends TestCase
                     ],
                     'menus' => [
                         'new_menu_1' => [
-                            'category_id' => $category->id,
+                            'category_ids' => [$category->id],
                             'name' => '',
                             'price' => '¥1,000',
                             'sort_order' => 1,
@@ -684,7 +697,7 @@ class AdminMenusTwoColumnTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('name="menus[new_menu_1][name]"', $html);
-        $this->assertStringContainsString('name="menus[new_menu_1][category_id]"', $html);
+        $this->assertStringContainsString('name="menus[new_menu_1][category_ids][]"', $html);
         $this->assertStringContainsString('name="menus[new_menu_1][description]"', $html);
         $this->assertStringContainsString('>復元確認</textarea>', $html);
         $this->assertStringContainsString('data-new-menu="new_menu_1"', $html);
@@ -788,12 +801,12 @@ class AdminMenusTwoColumnTest extends TestCase
     {
         $category = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
         $menu = Menu::query()->create([
-            'menu_category_id' => $category->id,
             'name' => 'カットベーシック',
             'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menu->categories()->attach($category->id, ['sort_order' => 1]);
 
         $html = $this->actingAs($this->admin())
             ->withSession([
@@ -803,13 +816,14 @@ class AdminMenusTwoColumnTest extends TestCase
                     ],
                     'menus' => [
                         $menu->id => [
+                            'category_ids' => [$category->id],
                             'name' => 'カットベーシック',
                             'price' => '¥5,000',
                             'sort_order' => 1,
                             'is_published' => '1',
                         ],
                         'new_menu_1' => [
-                            'category_id' => $category->id,
+                            'category_ids' => [$category->id],
                             'name' => '新規',
                             'price' => '¥1,000',
                             'sort_order' => 2,
@@ -835,19 +849,19 @@ class AdminMenusTwoColumnTest extends TestCase
         $this->assertStringContainsString('title="ドラッグして並び替え"', $panelHtml[0]);
         $this->assertStringContainsString('class="menu-drag-handle"', $panelHtml[0]);
         $this->assertMatchesRegularExpression(
-            '/name="menus\['.$menu->id.'\]\[sort_order\]"/',
+            '/name="menus\['.$menu->id.'\]\[sorts\]\['.$category->id.'\]"/',
             $panelHtml[0]
         );
-        $this->assertStringContainsString('name="menus[new_menu_1][sort_order]"', $panelHtml[0]);
+        $this->assertStringContainsString('name="menus[new_menu_1][sorts]['.$category->id.']"', $panelHtml[0]);
         $this->assertStringContainsString('type="number"', $panelHtml[0]);
         $this->assertStringContainsString('data-menu-sort-order', $panelHtml[0]);
         $this->assertStringContainsString('>表示順</th>', $panelHtml[0]);
-        $this->assertStringNotContainsString('type="hidden" name="menus['.$menu->id.'][sort_order]"', $panelHtml[0]);
+        $this->assertStringNotContainsString('type="hidden" name="menus['.$menu->id.'][sorts]['.$category->id.']"', $panelHtml[0]);
 
         preg_match('/id="new-menu-row-template"[\s\S]*?<\/template>/', $html, $template);
         $this->assertNotEmpty($template);
         $this->assertStringContainsString('data-menu-drag-handle', $template[0]);
-        $this->assertStringContainsString('name="menus[__MENU_ID__][sort_order]"', $template[0]);
+        $this->assertStringContainsString('name="menus[__MENU_ID__][sorts][__CATEGORY_ID__]"', $template[0]);
         $this->assertStringContainsString('type="number"', $template[0]);
         $this->assertStringContainsString('aria-label="メニューを並び替え"', $template[0]);
     }
@@ -865,7 +879,7 @@ class AdminMenusTwoColumnTest extends TestCase
         $this->assertStringContainsString('function initMenuDragDrop', $html);
         $this->assertStringContainsString('initMenuDragDrop();', $html);
         $this->assertStringContainsString('[data-menu-drag-handle]', $html);
-        $this->assertStringContainsString('dragTbody.insertBefore(dragRow', $html);
+        $this->assertStringContainsString('dragList.insertBefore(dragGroup', $html);
         $this->assertStringContainsString("input.value = String(index + 1);", $html);
         $this->assertMatchesRegularExpression(
             '/function discardNewMenu[\s\S]*?renumberMenuSortOrders\(panel\);/',
@@ -883,19 +897,19 @@ class AdminMenusTwoColumnTest extends TestCase
     {
         $category = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
         $first = Menu::query()->create([
-            'menu_category_id' => $category->id,
             'name' => '先頭だった',
             'price' => '¥1,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $first->categories()->attach($category->id, ['sort_order' => 1]);
         $second = Menu::query()->create([
-            'menu_category_id' => $category->id,
             'name' => '二番目だった',
             'price' => '¥2,000',
             'sort_order' => 2,
             'is_published' => true,
         ]);
+        $second->categories()->attach($category->id, ['sort_order' => 2]);
 
         $html = $this->actingAs($this->admin())
             ->withSession([
@@ -905,15 +919,17 @@ class AdminMenusTwoColumnTest extends TestCase
                     ],
                     'menus' => [
                         $first->id => [
+                            'category_ids' => [$category->id],
                             'name' => '先頭だった',
                             'price' => '¥1,000',
-                            'sort_order' => 2,
+                            'sorts' => [$category->id => 2],
                             'is_published' => '1',
                         ],
                         $second->id => [
+                            'category_ids' => [$category->id],
                             'name' => '二番目だった',
                             'price' => '¥2,000',
-                            'sort_order' => 1,
+                            'sorts' => [$category->id => 1],
                             'is_published' => '1',
                         ],
                     ],
@@ -928,7 +944,7 @@ class AdminMenusTwoColumnTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        preg_match('/data-menu-tbody[\s\S]*?<\/tbody>/', $html, $tbody);
+        preg_match('/data-menu-table[\s\S]*?<\/table>/', $html, $tbody);
         $this->assertNotEmpty($tbody);
         $posSecond = strpos($tbody[0], 'data-menu-row="'.$second->id.'"');
         $posFirst = strpos($tbody[0], 'data-menu-row="'.$first->id.'"');
@@ -936,11 +952,11 @@ class AdminMenusTwoColumnTest extends TestCase
         $this->assertNotFalse($posFirst);
         $this->assertTrue($posSecond < $posFirst);
         $this->assertMatchesRegularExpression(
-            '/data-menu-row="'.$second->id.'"[\s\S]*?name="menus\['.$second->id.'\]\[sort_order\]"[^>]*value="1"/',
+            '/data-menu-row="'.$second->id.'"[\s\S]*?name="menus\['.$second->id.'\]\[sorts\]\['.$category->id.'\]"[^>]*value="1"/',
             $tbody[0]
         );
         $this->assertMatchesRegularExpression(
-            '/data-menu-row="'.$first->id.'"[\s\S]*?name="menus\['.$first->id.'\]\[sort_order\]"[^>]*value="2"/',
+            '/data-menu-row="'.$first->id.'"[\s\S]*?name="menus\['.$first->id.'\]\[sorts\]\['.$category->id.'\]"[^>]*value="2"/',
             $tbody[0]
         );
     }
@@ -986,19 +1002,19 @@ class AdminMenusTwoColumnTest extends TestCase
         $first = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
         $second = MenuCategory::query()->create(['name' => 'カラー', 'sort_order' => 2]);
         $menuA = Menu::query()->create([
-            'menu_category_id' => $first->id,
             'name' => 'A',
             'price' => '¥1,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menuA->categories()->attach($first->id, ['sort_order' => 1]);
         $menuB = Menu::query()->create([
-            'menu_category_id' => $first->id,
             'name' => 'B',
             'price' => '¥2,000',
             'sort_order' => 2,
             'is_published' => true,
         ]);
+        $menuB->categories()->attach($first->id, ['sort_order' => 2]);
 
         $this->actingAs($this->admin())
             ->put(route('admin.menus.bulk-update'), [
@@ -1009,12 +1025,14 @@ class AdminMenusTwoColumnTest extends TestCase
                 ],
                 'menus' => [
                     $menuA->id => [
+                        'category_ids' => [$first->id],
                         'name' => 'A',
                         'price' => '¥1,000',
                         'sort_order' => 1,
                         'is_published' => '1',
                     ],
                     $menuB->id => [
+                        'category_ids' => [$first->id],
                         'name' => 'B',
                         'price' => '¥2,000',
                         'sort_order' => 2,
@@ -1038,12 +1056,14 @@ class AdminMenusTwoColumnTest extends TestCase
                 ],
                 'menus' => [
                     $menuA->id => [
+                        'category_ids' => [$first->id],
                         'name' => 'A',
                         'price' => '¥1,000',
                         'sort_order' => 2,
                         'is_published' => '1',
                     ],
                     $menuB->id => [
+                        'category_ids' => [$first->id],
                         'name' => 'B',
                         'price' => '¥2,000',
                         'sort_order' => 2,
@@ -1064,19 +1084,19 @@ class AdminMenusTwoColumnTest extends TestCase
         $first = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
         $second = MenuCategory::query()->create(['name' => 'カラー', 'sort_order' => 2]);
         $menuA = Menu::query()->create([
-            'menu_category_id' => $first->id,
             'name' => 'カットベーシック',
             'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menuA->categories()->attach($first->id, ['sort_order' => 1]);
         $menuB = Menu::query()->create([
-            'menu_category_id' => $first->id,
             'name' => 'カットスペシャル',
             'price' => '¥7,000',
             'sort_order' => 2,
             'is_published' => true,
         ]);
+        $menuB->categories()->attach($first->id, ['sort_order' => 2]);
 
         $this->actingAs($this->admin())
             ->put(route('admin.menus.bulk-update'), [
@@ -1087,12 +1107,14 @@ class AdminMenusTwoColumnTest extends TestCase
                 ],
                 'menus' => [
                     $menuA->id => [
+                        'category_ids' => [$first->id],
                         'name' => 'カットベーシック',
                         'price' => '¥5,000',
                         'sort_order' => '',
                         'is_published' => '1',
                     ],
                     $menuB->id => [
+                        'category_ids' => [$first->id],
                         'name' => 'カットスペシャル',
                         'price' => '¥7,000',
                         'sort_order' => 0,
@@ -1115,19 +1137,19 @@ class AdminMenusTwoColumnTest extends TestCase
         $first = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
         $second = MenuCategory::query()->create(['name' => 'カラー', 'sort_order' => 2]);
         $menuA = Menu::query()->create([
-            'menu_category_id' => $first->id,
             'name' => 'A',
             'price' => '¥1,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menuA->categories()->attach($first->id, ['sort_order' => 1]);
         $menuB = Menu::query()->create([
-            'menu_category_id' => $first->id,
             'name' => 'B',
             'price' => '¥2,000',
             'sort_order' => 2,
             'is_published' => true,
         ]);
+        $menuB->categories()->attach($first->id, ['sort_order' => 2]);
 
         $this->actingAs($this->admin())
             ->put(route('admin.menus.bulk-update'), [
@@ -1138,12 +1160,14 @@ class AdminMenusTwoColumnTest extends TestCase
                 ],
                 'menus' => [
                     $menuA->id => [
+                        'category_ids' => [$first->id],
                         'name' => 'A',
                         'price' => '¥1,000',
                         'sort_order' => 1,
                         'is_published' => '1',
                     ],
                     $menuB->id => [
+                        'category_ids' => [$first->id],
                         'name' => 'B',
                         'price' => '¥2,000',
                         'sort_order' => 2,
@@ -1158,5 +1182,440 @@ class AdminMenusTwoColumnTest extends TestCase
         $this->assertSame(2, (int) $second->fresh()->sort_order);
         $this->assertSame(1, (int) $menuA->fresh()->sort_order);
         $this->assertSame(2, (int) $menuB->fresh()->sort_order);
+    }
+
+    public function test_bulk_update_syncs_multiple_categories_for_one_menu(): void
+    {
+        $cut = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
+        $spa = MenuCategory::query()->create(['name' => 'ヘッドスパ', 'sort_order' => 2]);
+        $menu = Menu::query()->create([
+            'name' => 'カット＆リラックスヘッドスパ',
+            'price' => '¥8,800',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $menu->categories()->attach($cut->id, ['sort_order' => 1]);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.menus.bulk-update'), [
+                'selected_category_id' => $cut->id,
+                'categories' => [
+                    $cut->id => ['name' => 'カット', 'sort_order' => 1],
+                    $spa->id => ['name' => 'ヘッドスパ', 'sort_order' => 2],
+                ],
+                'menus' => [
+                    $menu->id => [
+                        'category_ids' => [$cut->id, $spa->id],
+                        'name' => 'カット＆リラックスヘッドスパ',
+                        'price' => '¥8,800',
+                        'sorts' => [
+                            $cut->id => 1,
+                            $spa->id => 2,
+                        ],
+                        'is_published' => '1',
+                        'description' => '',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.menus.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('menu_category_menu', [
+            'menu_id' => $menu->id,
+            'menu_category_id' => $cut->id,
+            'sort_order' => 1,
+        ]);
+        $this->assertDatabaseHas('menu_category_menu', [
+            'menu_id' => $menu->id,
+            'menu_category_id' => $spa->id,
+            'sort_order' => 2,
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.menus.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('カテゴリ（複数選択可）', $html);
+        $this->assertSame(2, substr_count($html, 'data-menu-row="'.$menu->id.'"'));
+        $this->assertStringNotContainsString('カテゴリ設定は表示順が先のカテゴリ側で編集できます。', $html);
+        $this->assertSame(1, substr_count($html, 'data-menu-primary-editor="1"'));
+        $this->assertSame(1, substr_count($html, 'data-menu-primary-editor="0"'));
+        $this->assertSame(2, substr_count($html, 'name="menus['.$menu->id.'][name]"'));
+        $this->assertSame(2, substr_count($html, 'data-menu-category-row="'.$menu->id.'"'));
+        $this->assertStringContainsString('カテゴリ（参照専用）', $html);
+        $this->assertStringContainsString('admin-choice-choices', $html);
+        $this->assertStringContainsString('news-weekday-face', $html);
+        $this->assertStringContainsString('admin-choice-face', $html);
+    }
+
+    public function test_multi_category_menu_is_editable_only_on_primary_category_panel(): void
+    {
+        $cut = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
+        $treatment = MenuCategory::query()->create(['name' => 'トリートメント', 'sort_order' => 5]);
+        $menu = Menu::query()->create([
+            'name' => 'カット＆Link高保湿トリートメント',
+            'price' => '¥9,900',
+            'description' => 'セットメニュー',
+            'sort_order' => 6,
+            'is_published' => true,
+        ]);
+        $menu->categories()->attach([
+            $cut->id => ['sort_order' => 6],
+            $treatment->id => ['sort_order' => 4],
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.menus.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringNotContainsString('カテゴリ設定は表示順が先のカテゴリ側で編集できます。', $html);
+        $this->assertSame(2, substr_count($html, 'data-menu-row="'.$menu->id.'"'));
+        $this->assertSame(2, substr_count($html, 'name="menus['.$menu->id.'][name]"'));
+        $this->assertSame(2, substr_count($html, 'name="menus['.$menu->id.'][description]"'));
+        $this->assertSame(2, substr_count($html, 'name="menus['.$menu->id.'][price]"'));
+        $this->assertStringContainsString('name="menus['.$menu->id.'][sorts]['.$cut->id.']"', $html);
+        $this->assertStringContainsString('name="menus['.$menu->id.'][sorts]['.$treatment->id.']"', $html);
+        $this->assertStringContainsString('data-menu-primary-editor="1"', $html);
+        $this->assertStringContainsString('data-menu-primary-editor="0"', $html);
+        $this->assertStringContainsString('menu-row-group--readonly', $html);
+        $this->assertStringContainsString('カテゴリ（参照専用）', $html);
+        $this->assertStringContainsString('refreshDuplicateMenuSharedFields', $html);
+        $this->assertStringContainsString('prepareMenusFormForSubmit', $html);
+        $this->assertSame(1, substr_count($html, 'data-delete-form="delete-menu-'.$menu->id.'"'));
+        $this->assertMatchesRegularExpression(
+            '/data-category-panel="'.$treatment->id.'"[\\s\\S]*?data-menu-row="'.$menu->id.'"[\\s\\S]*?name="menus\\['.$menu->id.'\\]\\[name\\]"[^>]*\\bdisabled\\b/',
+            $html
+        );
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.menus.bulk-update'), [
+                'selected_category_id' => $treatment->id,
+                'categories' => [
+                    $cut->id => ['name' => 'カット', 'sort_order' => 1],
+                    $treatment->id => ['name' => 'トリートメント', 'sort_order' => 5],
+                ],
+                'menus' => [
+                    $menu->id => [
+                        'category_ids' => [$cut->id, $treatment->id],
+                        'name' => 'カット＆Link高保湿（更新）',
+                        'price' => '¥9,900',
+                        'description' => 'トリートメント側から更新',
+                        'sorts' => [
+                            $cut->id => 6,
+                            $treatment->id => 4,
+                        ],
+                        'is_published' => '1',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.menus.index'))
+            ->assertSessionHas('success');
+
+        $menu->refresh();
+        $this->assertSame('カット＆Link高保湿（更新）', $menu->name);
+        $this->assertSame('トリートメント側から更新', $menu->description);
+        $this->assertEqualsCanonicalizing(
+            [$cut->id, $treatment->id],
+            $menu->categories()->pluck('menu_categories.id')->all()
+        );
+        $this->assertSame(1, Menu::query()->where('name', 'カット＆Link高保湿（更新）')->count());
+    }
+
+    public function test_secondary_category_sort_order_updates_only_that_pivot(): void
+    {
+        $cut = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
+        $treatment = MenuCategory::query()->create(['name' => 'トリートメント', 'sort_order' => 5]);
+        $menu = Menu::query()->create([
+            'name' => 'カット＆Link高保湿トリートメント',
+            'price' => '¥9,900',
+            'description' => 'セットメニュー',
+            'sort_order' => 2,
+            'is_published' => true,
+        ]);
+        $menu->categories()->attach([
+            $cut->id => ['sort_order' => 2],
+            $treatment->id => ['sort_order' => 4],
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.menus.index'))
+            ->assertOk()
+            ->getContent();
+
+        // Secondary panel sort input is enabled (no disabled attribute on that sorts field).
+        $this->assertDoesNotMatchRegularExpression(
+            '/name="menus\['.$menu->id.'\]\[sorts\]\['.$treatment->id.'\]"[^>]*\\bdisabled\\b/',
+            $html
+        );
+        $this->assertMatchesRegularExpression(
+            '/data-category-panel="'.$treatment->id.'"[\\s\\S]*?name="menus\\['.$menu->id.'\\]\\[name\\]"[^>]*\\bdisabled\\b/',
+            $html
+        );
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.menus.bulk-update'), [
+                'selected_category_id' => $treatment->id,
+                'categories' => [
+                    $cut->id => ['name' => 'カット', 'sort_order' => 1],
+                    $treatment->id => ['name' => 'トリートメント', 'sort_order' => 5],
+                ],
+                'menus' => [
+                    $menu->id => [
+                        'category_ids' => [$cut->id, $treatment->id],
+                        'name' => 'カット＆Link高保湿トリートメント',
+                        'price' => '¥9,900',
+                        'description' => 'セットメニュー',
+                        'sorts' => [
+                            $cut->id => 2,
+                            $treatment->id => 3,
+                        ],
+                        'is_published' => '1',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.menus.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('menu_category_menu', [
+            'menu_id' => $menu->id,
+            'menu_category_id' => $cut->id,
+            'sort_order' => 2,
+        ]);
+        $this->assertDatabaseHas('menu_category_menu', [
+            'menu_id' => $menu->id,
+            'menu_category_id' => $treatment->id,
+            'sort_order' => 3,
+        ]);
+        // menus.sort_order follows the primary category (カット) pivot, not treatment.
+        $this->assertSame(2, (int) $menu->fresh()->sort_order);
+    }
+
+    public function test_bulk_update_from_unrelated_category_keeps_other_multi_category_menus(): void
+    {
+        $cut = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
+        $treatment = MenuCategory::query()->create(['name' => 'トリートメント', 'sort_order' => 5]);
+        $other = MenuCategory::query()->create(['name' => 'その他', 'sort_order' => 7]);
+
+        $setMenu = Menu::query()->create([
+            'name' => 'カット＆Link高保湿トリートメント',
+            'price' => '¥9,900',
+            'description' => 'セット',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $setMenu->categories()->attach([
+            $cut->id => ['sort_order' => 1],
+            $treatment->id => ['sort_order' => 1],
+        ]);
+
+        $otherMenu = Menu::query()->create([
+            'name' => '親子カット',
+            'price' => '¥9,900',
+            'description' => 'その他メニュー',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $otherMenu->categories()->attach([
+            $cut->id => ['sort_order' => 2],
+            $other->id => ['sort_order' => 1],
+        ]);
+
+        // Saving while "その他" is selected must still receive a complete payload for the
+        // cut+treatment set menu (shared fields + category_ids + per-category sorts).
+        $this->actingAs($this->admin())
+            ->put(route('admin.menus.bulk-update'), [
+                'selected_category_id' => $other->id,
+                'categories' => [
+                    $cut->id => ['name' => 'カット', 'sort_order' => 1],
+                    $treatment->id => ['name' => 'トリートメント', 'sort_order' => 5],
+                    $other->id => ['name' => 'その他', 'sort_order' => 7],
+                ],
+                'menus' => [
+                    $setMenu->id => [
+                        'category_ids' => [$cut->id, $treatment->id],
+                        'name' => 'カット＆Link高保湿トリートメント',
+                        'price' => '¥9,900',
+                        'description' => 'セット',
+                        'sorts' => [
+                            $cut->id => 1,
+                            $treatment->id => 1,
+                        ],
+                        'is_published' => '1',
+                    ],
+                    $otherMenu->id => [
+                        'category_ids' => [$cut->id, $other->id, $treatment->id],
+                        'name' => '親子カット',
+                        'price' => '¥9,900',
+                        'description' => '3カテゴリに更新',
+                        'sorts' => [
+                            $cut->id => 2,
+                            $other->id => 1,
+                            $treatment->id => 2,
+                        ],
+                        'is_published' => '1',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.menus.index'))
+            ->assertSessionHas('success')
+            ->assertSessionDoesntHaveErrors();
+
+        $this->assertEqualsCanonicalizing(
+            [$cut->id, $treatment->id],
+            $setMenu->fresh()->categories()->pluck('menu_categories.id')->all()
+        );
+        $this->assertEqualsCanonicalizing(
+            [$cut->id, $other->id, $treatment->id],
+            $otherMenu->fresh()->categories()->pluck('menu_categories.id')->all()
+        );
+        $this->assertSame('3カテゴリに更新', $otherMenu->fresh()->description);
+    }
+
+    public function test_bulk_update_shows_japanese_required_messages_when_name_missing(): void
+    {
+        $cut = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
+        $spa = MenuCategory::query()->create(['name' => 'ヘッドスパ', 'sort_order' => 2]);
+        $menu = Menu::query()->create([
+            'name' => 'カット＆リラックスヘッドスパ',
+            'price' => '¥9,900',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $menu->categories()->attach([
+            $cut->id => ['sort_order' => 1],
+            $spa->id => ['sort_order' => 1],
+        ]);
+
+        // Incomplete payload: only sorts (as when all shared inputs were disabled).
+        $this->actingAs($this->admin())
+            ->from(route('admin.menus.index'))
+            ->put(route('admin.menus.bulk-update'), [
+                'selected_category_id' => $spa->id,
+                'categories' => [
+                    $cut->id => ['name' => 'カット', 'sort_order' => 1],
+                    $spa->id => ['name' => 'ヘッドスパ', 'sort_order' => 2],
+                ],
+                'menus' => [
+                    $menu->id => [
+                        'sorts' => [
+                            $cut->id => 1,
+                            $spa->id => 1,
+                        ],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.menus.index'))
+            ->assertSessionHasErrors([
+                'menus.'.$menu->id.'.name' => 'メニュー名は必須です。',
+            ]);
+
+        $errors = session('errors');
+        $this->assertNotNull($errors);
+        $this->assertSame(['メニュー名は必須です。'], $errors->get('menus.'.$menu->id.'.name'));
+        $this->assertStringNotContainsString('validation.required', implode(' ', $errors->all()));
+    }
+
+    public function test_destroy_category_detaches_pivot_but_keeps_menu_and_other_categories(): void
+    {
+        $cut = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
+        $spa = MenuCategory::query()->create(['name' => 'ヘッドスパ', 'sort_order' => 2]);
+        $test = MenuCategory::query()->create(['name' => 'テスト', 'sort_order' => 3]);
+
+        $menu = Menu::query()->create([
+            'name' => 'メニューA',
+            'price' => '¥5,000',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $menu->categories()->attach([
+            $cut->id => ['sort_order' => 1],
+            $spa->id => ['sort_order' => 1],
+            $test->id => ['sort_order' => 1],
+        ]);
+
+        $this->actingAs($this->admin())
+            ->delete(route('admin.menus.categories.destroy', $test))
+            ->assertRedirect(route('admin.menus.index'))
+            ->assertSessionHas('success', 'カテゴリを削除しました。');
+
+        $this->assertDatabaseMissing('menu_categories', ['id' => $test->id]);
+        $this->assertDatabaseMissing('menu_category_menu', [
+            'menu_id' => $menu->id,
+            'menu_category_id' => $test->id,
+        ]);
+        $this->assertDatabaseHas('menus', ['id' => $menu->id, 'name' => 'メニューA']);
+        $this->assertEqualsCanonicalizing(
+            [$cut->id, $spa->id],
+            $menu->fresh()->categories()->pluck('menu_categories.id')->all()
+        );
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.menus.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringNotContainsString('data-select-category="'.$test->id.'"', $html);
+        $this->assertStringNotContainsString('data-category-panel="'.$test->id.'"', $html);
+        $this->assertStringNotContainsString('value="'.$test->id.'"', $html);
+        $this->assertStringContainsString('data-select-category="'.$cut->id.'"', $html);
+        $this->assertStringContainsString('メニューA', $html);
+    }
+
+    public function test_destroy_category_is_blocked_when_menu_has_only_that_category(): void
+    {
+        $cut = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
+        $other = MenuCategory::query()->create(['name' => 'カラー', 'sort_order' => 2]);
+
+        $menu = Menu::query()->create([
+            'name' => 'カットベーシック',
+            'price' => '¥5,000',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $menu->categories()->attach($cut->id, ['sort_order' => 1]);
+
+        $this->actingAs($this->admin())
+            ->delete(route('admin.menus.categories.destroy', $cut))
+            ->assertRedirect(route('admin.menus.index'))
+            ->assertSessionHas('error')
+            ->assertSessionHas('selected_category_id', $cut->id);
+
+        $this->assertDatabaseHas('menu_categories', ['id' => $cut->id]);
+        $this->assertDatabaseHas('menu_category_menu', [
+            'menu_id' => $menu->id,
+            'menu_category_id' => $cut->id,
+        ]);
+        $this->assertDatabaseHas('menus', ['id' => $menu->id]);
+
+        $error = session('error');
+        $this->assertIsString($error);
+        $this->assertStringContainsString('このカテゴリのみが設定されているメニューがあるため削除できません。', $error);
+        $this->assertStringContainsString('カットベーシック', $error);
+
+        $html = $this->actingAs($this->admin())
+            ->withSession(['selected_category_id' => $cut->id])
+            ->get(route('admin.menus.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('data-select-category="'.$cut->id.'"', $html);
+        $this->assertStringContainsString('data-select-category="'.$other->id.'"', $html);
+    }
+
+    public function test_destroy_empty_category_succeeds(): void
+    {
+        $empty = MenuCategory::query()->create(['name' => '空カテゴリ', 'sort_order' => 1]);
+        $kept = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 2]);
+
+        $this->actingAs($this->admin())
+            ->delete(route('admin.menus.categories.destroy', $empty))
+            ->assertRedirect(route('admin.menus.index'))
+            ->assertSessionHas('success', 'カテゴリを削除しました。')
+            ->assertSessionHas('selected_category_id', $kept->id);
+
+        $this->assertDatabaseMissing('menu_categories', ['id' => $empty->id]);
+        $this->assertDatabaseHas('menu_categories', ['id' => $kept->id]);
     }
 }

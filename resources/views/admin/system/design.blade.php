@@ -392,6 +392,17 @@
 
             const isValidHex = (value) => /^#[0-9a-f]{6}$/i.test(value);
 
+            const mixHexWithWhite = (hex, amount) => {
+                const normalized = normalizeHex(hex);
+                if (!isValidHex(normalized)) {
+                    return '#ffffff';
+                }
+                const weight = Math.max(0, Math.min(1, amount));
+                const channels = [1, 3, 5].map((i) => parseInt(normalized.slice(i, i + 2), 16));
+                const mixed = channels.map((channel) => Math.round((channel * weight) + (255 * (1 - weight))));
+                return '#' + mixed.map((n) => n.toString(16).padStart(2, '0')).join('');
+            };
+
             const getRadioValue = (name) => {
                 const el = form.querySelector('input[name="' + name + '"]:checked');
                 return el ? el.value : defaults[name];
@@ -424,6 +435,7 @@
                 }
                 if (isValidHex(secondary)) {
                     preview.style.setProperty('--site-secondary', secondary);
+                    preview.style.setProperty('--site-secondary-soft', mixHexWithWhite(secondary, {{ \App\Models\DesignSetting::SECONDARY_SOFT_MIX_AMOUNT }}));
                 }
                 if (isValidHex(background)) {
                     preview.style.setProperty('--site-background', background);

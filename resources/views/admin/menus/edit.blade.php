@@ -6,12 +6,14 @@
     <form method="POST" action="{{ route('admin.menus.update', $menu) }}" class="admin-card max-w-xl space-y-5">
         @csrf @method('PUT')
         <div>
-            <label for="menu_category_id" class="admin-label">カテゴリ</label>
-            <select name="menu_category_id" id="menu_category_id" class="admin-input">
-                @foreach(\App\Models\MenuCategory::orderBy('sort_order')->get() as $category)
-                    <option value="{{ $category->id }}" @selected(old('menu_category_id', $menu->menu_category_id) == $category->id)>{{ $category->name }}</option>
-                @endforeach
-            </select>
+            <p class="admin-label">カテゴリ（複数選択可）</p>
+            <x-admin.choice-toggles
+                name="category_ids[]"
+                :options="$categories->map(fn ($c) => ['value' => $c->id, 'label' => $c->name])->all()"
+                :selected="old('category_ids', $menu->categories->pluck('id')->all())"
+                aria-label="カテゴリ"
+                variant="auto"
+            />
         </div>
         @include('admin.menus._form')
         <div class="flex gap-3">

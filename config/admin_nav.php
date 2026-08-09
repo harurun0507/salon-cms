@@ -28,7 +28,7 @@ return [
                     'icon' => 'document',
                 ],
                 [
-                    'label' => 'バナー',
+                    'label' => 'キャンペーン',
                     'route' => 'admin.home.banners',
                     'active' => 'admin.home.banners*',
                     'icon' => 'megaphone',
@@ -46,6 +46,12 @@ return [
                     'route' => 'admin.news.index',
                     'active' => 'admin.news.*',
                     'icon' => 'bell',
+                ],
+                [
+                    'label' => 'ブログ',
+                    'route' => 'admin.blog.index',
+                    'active' => 'admin.blog.*',
+                    'icon' => 'blog',
                 ],
                 [
                     'label' => 'ギャラリー',

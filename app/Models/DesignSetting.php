@@ -42,6 +42,9 @@ class DesignSetting extends Model
         self::DENSITY_RELAXED,
     ];
 
+    /** Soft fill derived from accent: ~35% accent + ~65% white (hover backgrounds). */
+    public const SECONDARY_SOFT_MIX_AMOUNT = 0.35;
+
     /** Current public site tokens from resources/css/app.css @theme */
     public const DEFAULTS = [
         'primary_color' => '#5f6f52',
@@ -124,6 +127,32 @@ class DesignSetting extends Model
         return strtolower(trim($value));
     }
 
+    /**
+     * Mix a hex color toward white. $amount is the source color weight (0–1).
+     * Example: 0.35 keeps ~35% accent and ~65% white for soft hover fills.
+     */
+    public static function mixHexWithWhite(string $hex, float $amount): string
+    {
+        $normalized = self::normalizeHex($hex);
+        if (! self::isValidHex($normalized)) {
+            return '#ffffff';
+        }
+
+        $amount = max(0.0, min(1.0, $amount));
+        $r = hexdec(substr($normalized, 1, 2));
+        $g = hexdec(substr($normalized, 3, 2));
+        $b = hexdec(substr($normalized, 5, 2));
+
+        $mix = static fn (int $channel): int => (int) round(($channel * $amount) + (255 * (1 - $amount)));
+
+        return sprintf('#%02x%02x%02x', $mix($r), $mix($g), $mix($b));
+    }
+
+    public static function secondarySoftFromAccent(string $hex): string
+    {
+        return self::mixHexWithWhite($hex, self::SECONDARY_SOFT_MIX_AMOUNT);
+    }
+
     public function resolvedHeadingFontStack(): string
     {
         return self::FONT_STACKS[$this->safeEnum($this->heading_font, self::FONTS, self::DEFAULTS['heading_font'])];
@@ -176,6 +205,7 @@ class DesignSetting extends Model
         return [
             '--site-primary' => $primary,
             '--site-secondary' => $secondary,
+            '--site-secondary-soft' => self::secondarySoftFromAccent($secondary),
             '--site-background' => $background,
             '--site-text' => $text,
             '--site-scrollbar-thumb' => $scrollbarThumb,

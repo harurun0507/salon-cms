@@ -78,14 +78,15 @@ class HomeNavigationAndNewsTest extends TestCase
         $response->assertSee('id="news"', false);
         $response->assertSee('新しいお知らせ', false);
         $response->assertDontSee('>非公開<', false);
-        $response->assertSee('一覧を見る →', false);
+        $response->assertSee('すべて見る →', false);
         $response->assertSee('btn-outline', false);
         $response->assertSee(route('news.show', 'new-news'), false);
+        $response->assertSee(route('news.index'), false);
 
         $html = $response->getContent();
         $this->assertLessThan(strpos($html, '追加1'), strpos($html, '新しいお知らせ'));
         // Default top-page news display_count is 3.
-        $this->assertSame(3, substr_count($html, 'font-medium leading-relaxed'));
+        $this->assertSame(3, substr_count($html, 'tracking-widest text-salon-accent">NEWS</'));
     }
 
     public function test_home_news_section_hides_empty_list_when_no_published_news(): void
@@ -93,10 +94,30 @@ class HomeNavigationAndNewsTest extends TestCase
         SalonSetting::current();
 
         $html = $this->get(route('home'))->assertOk()->getContent();
-        $this->assertStringContainsString('id="news"', $html);
-        $this->assertStringContainsString('一覧を見る →', $html);
-        $this->assertStringContainsString('btn-outline', $html);
+        $this->assertStringNotContainsString('tracking-widest text-salon-accent">NEWS</', $html);
+        $this->assertStringNotContainsString(route('news.index'), $html);
         $this->assertStringNotContainsString('お知らせはありません。', $html);
         $this->assertStringNotContainsString('<ul class="divide-y', $html);
+    }
+
+    public function test_home_shows_news_row_when_published_in_japan_timezone(): void
+    {
+        SalonSetting::current();
+        $this->assertSame('Asia/Tokyo', config('app.timezone'));
+
+        News::query()->create([
+            'title' => '定休日のお知らせ',
+            'slug' => 'closed-day',
+            'body' => '本文',
+            'is_published' => true,
+            'published_at' => now('Asia/Tokyo')->subMinute(),
+            'display_order' => 1,
+        ]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+        $this->assertStringContainsString('定休日のお知らせ', $html);
+        $this->assertStringContainsString('tracking-widest text-salon-accent">NEWS</', $html);
+        $this->assertStringContainsString(route('news.index'), $html);
+        $this->assertStringContainsString('すべて見る →', $html);
     }
 }

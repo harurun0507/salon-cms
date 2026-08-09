@@ -36,18 +36,32 @@
 
 @section('content')
     @php
-        $menuIdToCategoryId = [];
+        $menuIdToPrimaryCategoryId = [];
+        $menuCategoryIdsByMenuId = [];
         foreach ($categories as $cat) {
             foreach ($cat->menus as $menu) {
-                $menuIdToCategoryId[$menu->id] = $cat->id;
+                $menuCategoryIdsByMenuId[$menu->id] = $menuCategoryIdsByMenuId[$menu->id] ?? [];
+                $menuCategoryIdsByMenuId[$menu->id][] = (string) $cat->id;
+                if (! isset($menuIdToPrimaryCategoryId[$menu->id])) {
+                    $menuIdToPrimaryCategoryId[$menu->id] = $cat->id;
+                }
             }
         }
+
+        $allCategoryOptions = $categories->map(fn ($c) => [
+            'id' => (string) $c->id,
+            'name' => $c->name,
+        ])->values();
 
         $oldCategories = old('categories', []);
         $restoredNewCategories = [];
         foreach ($oldCategories as $key => $data) {
             if (preg_match('/^new_\d+$/', (string) $key)) {
                 $restoredNewCategories[(string) $key] = is_array($data) ? $data : [];
+                $allCategoryOptions->push([
+                    'id' => (string) $key,
+                    'name' => is_array($data) ? (string) ($data['name'] ?? '新しいカテゴリ') : '新しいカテゴリ',
+                ]);
             }
         }
 
@@ -59,11 +73,22 @@
                 continue;
             }
             $nextNewMenuIndex = max($nextNewMenuIndex, ((int) $m[1]) + 1);
-            $catRef = is_array($data) ? (string) ($data['category_id'] ?? '') : '';
-            if ($catRef === '') {
+            if (! is_array($data)) {
                 continue;
             }
-            $restoredNewMenusByCategory[$catRef][(string) $key] = is_array($data) ? $data : [];
+            $catRefs = [];
+            if (isset($data['category_ids']) && is_array($data['category_ids'])) {
+                foreach ($data['category_ids'] as $ref) {
+                    if ($ref !== null && $ref !== '') {
+                        $catRefs[] = (string) $ref;
+                    }
+                }
+            } elseif (! empty($data['category_id'])) {
+                $catRefs[] = (string) $data['category_id'];
+            }
+            foreach (array_unique($catRefs) as $catRef) {
+                $restoredNewMenusByCategory[$catRef][(string) $key] = $data;
+            }
         }
 
         $errorCategoryId = null;
@@ -79,18 +104,21 @@
                 }
                 if (preg_match('/^menus\.(new_menu_\d+)(\.|$)/', $key, $m)) {
                     $menuKey = $m[1];
-                    $catRef = old('menus.'.$menuKey.'.category_id');
-                    if ($catRef !== null && $catRef !== '') {
-                        $errorCategoryId = preg_match('/^new_\d+$/', (string) $catRef)
-                            ? (string) $catRef
-                            : (int) $catRef;
+                    $catRefs = old('menus.'.$menuKey.'.category_ids', []);
+                    if (! is_array($catRefs) || $catRefs === []) {
+                        $legacy = old('menus.'.$menuKey.'.category_id');
+                        $catRefs = $legacy !== null && $legacy !== '' ? [$legacy] : [];
+                    }
+                    if ($catRefs !== []) {
+                        $catRef = (string) $catRefs[0];
+                        $errorCategoryId = preg_match('/^new_\d+$/', $catRef) ? $catRef : (int) $catRef;
                         break;
                     }
                 }
                 if (preg_match('/^menus\.(\d+)(\.|$)/', $key, $m)) {
                     $menuId = (int) $m[1];
-                    if (isset($menuIdToCategoryId[$menuId])) {
-                        $errorCategoryId = $menuIdToCategoryId[$menuId];
+                    if (isset($menuIdToPrimaryCategoryId[$menuId])) {
+                        $errorCategoryId = $menuIdToPrimaryCategoryId[$menuId];
                         break;
                     }
                 }
@@ -153,23 +181,61 @@
         }
         unset($displayEntry);
 
-        // カテゴリ内メニューを old() sort_order で並べ直し（既存・new_menu_* 混在）
+        // 紐づきカテゴリのうち、カテゴリ表示順が最も先のものを主編集側とする
+        $resolvePrimaryCategoryId = function (array $selectedIds) use ($displayCategories): ?string {
+            $selected = [];
+            foreach ($selectedIds as $id) {
+                if ($id !== null && $id !== '') {
+                    $selected[] = (string) $id;
+                }
+            }
+            foreach ($displayCategories as $entry) {
+                if (in_array((string) $entry['id'], $selected, true)) {
+                    return (string) $entry['id'];
+                }
+            }
+
+            return $selected[0] ?? null;
+        };
+
+        // カテゴリ内メニューを old() sorts[category] で並べ直し（既存・new_menu_* 混在）
         $orderedMenusByCategory = [];
         foreach ($categories as $category) {
             $rows = [];
             foreach ($category->menus as $menu) {
+                $selectedIds = old(
+                    'menus.'.$menu->id.'.category_ids',
+                    $menuCategoryIdsByMenuId[$menu->id] ?? [(string) $category->id]
+                );
+                if (! is_array($selectedIds)) {
+                    $selectedIds = [(string) $category->id];
+                }
+                $primaryCategoryId = $resolvePrimaryCategoryId($selectedIds)
+                    ?? (string) ($menuIdToPrimaryCategoryId[$menu->id] ?? $category->id);
                 $rows[] = [
                     'kind' => 'existing',
                     'menu' => $menu,
-                    'sort' => (int) old('menus.'.$menu->id.'.sort_order', $menu->sort_order),
+                    'sort' => (int) old(
+                        'menus.'.$menu->id.'.sorts.'.$category->id,
+                        $menu->pivot->sort_order ?? $menu->sort_order
+                    ),
+                    'selected_category_ids' => $selectedIds,
+                    'is_primary_editor' => $primaryCategoryId === (string) $category->id,
                 ];
             }
             foreach ($restoredNewMenusByCategory[(string) $category->id] ?? [] as $newMenuKey => $newMenuData) {
+                $selectedIds = $newMenuData['category_ids'] ?? [(string) $category->id];
+                if (! is_array($selectedIds)) {
+                    $selectedIds = [(string) $category->id];
+                }
+                $primaryCategoryId = $resolvePrimaryCategoryId($selectedIds) ?? (string) $category->id;
                 $rows[] = [
                     'kind' => 'new',
                     'key' => $newMenuKey,
                     'data' => $newMenuData,
-                    'sort' => (int) ($newMenuData['sort_order'] ?? 1),
+                    'sort' => (int) ($newMenuData['sorts'][(string) $category->id] ?? $newMenuData['sort_order'] ?? 1),
+                    'selected_category_ids' => $selectedIds,
+                    'is_primary_editor' => $primaryCategoryId === (string) $category->id,
                 ];
             }
             usort($rows, fn ($a, $b) => $a['sort'] <=> $b['sort']);
@@ -182,11 +248,18 @@
         foreach ($restoredNewCategories as $newKey => $newData) {
             $rows = [];
             foreach ($restoredNewMenusByCategory[(string) $newKey] ?? [] as $newMenuKey => $newMenuData) {
+                $selectedIds = $newMenuData['category_ids'] ?? [(string) $newKey];
+                if (! is_array($selectedIds)) {
+                    $selectedIds = [(string) $newKey];
+                }
+                $primaryCategoryId = $resolvePrimaryCategoryId($selectedIds) ?? (string) $newKey;
                 $rows[] = [
                     'kind' => 'new',
                     'key' => $newMenuKey,
                     'data' => $newMenuData,
-                    'sort' => (int) ($newMenuData['sort_order'] ?? 1),
+                    'sort' => (int) ($newMenuData['sorts'][(string) $newKey] ?? $newMenuData['sort_order'] ?? 1),
+                    'selected_category_ids' => $selectedIds,
+                    'is_primary_editor' => $primaryCategoryId === (string) $newKey,
                 ];
             }
             usort($rows, fn ($a, $b) => $a['sort'] <=> $b['sort']);
@@ -288,7 +361,6 @@
                                                     value="{{ $entry['sort'] }}"
                                                     min="1"
                                                     step="1"
-                                                    required
                                                     class="admin-input category-sort-order-input w-10 py-1 text-center"
                                                     data-category-sort-order
                                                     aria-label="表示順"
@@ -298,7 +370,7 @@
                                                     class="category-delete-x"
                                                     data-admin-delete-trigger
                                                     data-delete-form="delete-category-{{ $category->id }}"
-                                                    data-delete-message="「{{ $category->name }}」カテゴリと配下のメニューを削除しますか？"
+                                                    data-delete-message="「{{ $category->name }}」カテゴリを削除しますか？&#10;このカテゴリのみに属するメニューがある場合は削除できません。"
                                                     aria-label="カテゴリを削除"
                                                     title="カテゴリを削除"
                                                 >
@@ -306,9 +378,6 @@
                                                 </button>
                                             </div>
                                         </div>
-                                        @error('categories.'.$category->id.'.sort_order')
-                                            <p class="max-w-[7.5rem] text-right text-[10px] leading-tight text-admin-danger">{{ $message }}</p>
-                                        @enderror
                                     </div>
                                 </li>
                             @else
@@ -354,7 +423,6 @@
                                                     value="{{ $entry['sort'] }}"
                                                     min="1"
                                                     step="1"
-                                                    required
                                                     class="admin-input category-sort-order-input w-10 py-1 text-center"
                                                     data-category-sort-order
                                                     aria-label="表示順"
@@ -370,9 +438,6 @@
                                                 </button>
                                             </div>
                                         </div>
-                                        @error('categories.'.$entry['id'].'.sort_order')
-                                            <p class="max-w-[7.5rem] text-right text-[10px] leading-tight text-admin-danger">{{ $message }}</p>
-                                        @enderror
                                     </div>
                                 </li>
                             @endif
@@ -421,7 +486,6 @@
                                     id="category-name-{{ $category->id }}"
                                     name="categories[{{ $category->id }}][name]"
                                     value="{{ old('categories.'.$category->id.'.name', $category->name) }}"
-                                    required
                                     class="admin-input font-medium"
                                     data-category-name-input="{{ $category->id }}"
                                 >
@@ -432,7 +496,7 @@
                                     class="category-delete-x !opacity-100"
                                     data-admin-delete-trigger
                                     data-delete-form="delete-category-{{ $category->id }}"
-                                    data-delete-message="「{{ $category->name }}」カテゴリと配下のメニューを削除しますか？"
+                                    data-delete-message="「{{ $category->name }}」カテゴリを削除しますか？&#10;このカテゴリのみに属するメニューがある場合は削除できません。"
                                     aria-label="カテゴリを削除"
                                     title="カテゴリを削除"
                                 >
@@ -456,7 +520,7 @@
                             </x-admin.empty-state>
                         </div>
 
-                        <table class="admin-table menu-list-table table-fixed w-full {{ $hasMenus ? '' : 'hidden' }}" data-menu-table @if(! $hasMenus) hidden @endif>
+                        <table class="admin-table menu-list-table table-fixed w-full {{ $hasMenus ? '' : 'hidden' }}" data-menu-table data-menu-tbody @if(! $hasMenus) hidden @endif>
                             <colgroup>
                                 <col class="menu-col-handle">
                                 <col class="menu-col-name">
@@ -477,11 +541,20 @@
                                     <th class="!pb-3 !pl-0 !pr-4 text-center whitespace-nowrap">操作</th>
                                 </tr>
                             </thead>
-                            <tbody data-menu-tbody>
                                 @foreach($menuRows as $row)
                                     @if($row['kind'] === 'existing')
-                                        @php $menu = $row['menu']; @endphp
-                                        <tr class="align-top menu-list-row" data-menu-row="{{ $menu->id }}">
+                                        @php
+                                            $menu = $row['menu'];
+                                            $selectedCategoryIds = $row['selected_category_ids'] ?? [(string) $category->id];
+                                            $isPrimaryEditor = (bool) ($row['is_primary_editor'] ?? true);
+                                        @endphp
+                                        <tbody
+                                            class="menu-row-group{{ $isPrimaryEditor ? '' : ' menu-row-group--readonly' }}"
+                                            data-menu-row="{{ $menu->id }}"
+                                            data-menu-primary-editor="{{ $isPrimaryEditor ? '1' : '0' }}"
+                                            @if(! $isPrimaryEditor) aria-label="参照専用" @endif
+                                        >
+                                        <tr class="align-top menu-list-row menu-list-row--fields">
                                             <td class="!py-3 !pr-1">
                                                 <span
                                                     class="menu-drag-handle"
@@ -503,39 +576,44 @@
                                                     </svg>
                                                 </span>
                                             </td>
-                                            <td class="!py-3 !pr-3 min-w-0">
+                                            <td class="!py-3 !pb-1 !pr-3 min-w-0">
                                                 <textarea
                                                     name="menus[{{ $menu->id }}][name]"
                                                     rows="3"
-                                                    required
                                                     class="admin-input menu-name-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
+                                                    data-menu-shared-field="name"
+                                                    @disabled(! $isPrimaryEditor)
                                                 >{{ old('menus.'.$menu->id.'.name', $menu->name) }}</textarea>
                                             </td>
-                                            <td class="!py-3 !pr-3 min-w-0">
+                                            <td class="!py-3 !pb-1 !pr-3 min-w-0">
                                                 <textarea
                                                     name="menus[{{ $menu->id }}][description]"
-                                                    id="menu-description-{{ $menu->id }}"
+                                                    id="menu-description-{{ $menu->id }}-{{ $category->id }}"
                                                     rows="3"
                                                     class="admin-input menu-description-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
                                                     placeholder="説明（任意）"
+                                                    data-menu-shared-field="description"
+                                                    @disabled(! $isPrimaryEditor)
                                                 >{{ old('menus.'.$menu->id.'.description', $menu->description) }}</textarea>
                                             </td>
-                                            <td class="!py-3 !pr-3 min-w-0">
-                                                <input type="text" name="menus[{{ $menu->id }}][price]" value="{{ old('menus.'.$menu->id.'.price', $menu->price) }}" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。">
+                                            <td class="!py-3 !pb-1 !pr-3 min-w-0">
+                                                <input type="text" name="menus[{{ $menu->id }}][price]" value="{{ old('menus.'.$menu->id.'.price', $menu->price) }}" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。" data-menu-shared-field="price" @disabled(! $isPrimaryEditor)>
                                             </td>
-                                            <td class="!py-3 !pr-3">
+                                            <td class="!py-3 !pb-1 !pr-3">
                                                 @php
                                                     $menuPublished = old('menus.'.$menu->id.'.is_published', $menu->is_published ? '1' : '0') == '1';
                                                 @endphp
-                                                <label class="admin-switch admin-switch--compact" data-published-control>
-                                                    <input type="hidden" name="menus[{{ $menu->id }}][is_published]" value="0">
+                                                <label class="admin-switch admin-switch--compact{{ $isPrimaryEditor ? '' : ' pointer-events-none' }}" data-published-control>
+                                                    <input type="hidden" name="menus[{{ $menu->id }}][is_published]" value="0" data-menu-shared-field="is_published_hidden" @disabled(! $isPrimaryEditor)>
                                                     <input
                                                         type="checkbox"
                                                         name="menus[{{ $menu->id }}][is_published]"
                                                         value="1"
                                                         class="admin-switch-input"
                                                         data-published-checkbox
+                                                        data-menu-shared-field="is_published"
                                                         @checked($menuPublished)
+                                                        @disabled(! $isPrimaryEditor)
                                                         aria-label="公開状態"
                                                     >
                                                     <span class="admin-switch-track" aria-hidden="true">
@@ -544,42 +622,56 @@
                                                     <span class="admin-switch-text" data-published-text>{{ $menuPublished ? '公開' : '非公開' }}</span>
                                                 </label>
                                             </td>
-                                            <td class="!py-3 !pl-1 !pr-2 text-center">
+                                            <td class="!py-3 !pb-1 !pl-1 !pr-2 text-center">
                                                 <input
                                                     type="number"
-                                                    name="menus[{{ $menu->id }}][sort_order]"
+                                                    name="menus[{{ $menu->id }}][sorts][{{ $category->id }}]"
                                                     value="{{ $row['sort'] }}"
                                                     min="1"
                                                     step="1"
-                                                    required
                                                     class="admin-input menu-sort-order-input w-10 py-1.5 text-center"
                                                     data-menu-sort-order
                                                     aria-label="表示順"
                                                 >
-                                                @error('menus.'.$menu->id.'.sort_order')
-                                                    <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
-                                                @enderror
                                             </td>
-                                            <td class="!py-3 !pl-0 !pr-4 text-left">
-                                                <button
-                                                    type="button"
-                                                    class="category-delete-x"
-                                                    data-admin-delete-trigger
-                                                    data-delete-form="delete-menu-{{ $menu->id }}"
-                                                    data-delete-message="「{{ $menu->name }}」を削除しますか？"
-                                                    aria-label="メニューを削除"
-                                                    title="メニューを削除"
-                                                >
-                                                    <span aria-hidden="true">&times;</span>
-                                                </button>
+                                            <td class="!py-3 !pb-1 !pl-0 !pr-4 text-left">
+                                                @if($isPrimaryEditor)
+                                                    <button
+                                                        type="button"
+                                                        class="category-delete-x"
+                                                        data-admin-delete-trigger
+                                                        data-delete-form="delete-menu-{{ $menu->id }}"
+                                                        data-delete-message="「{{ $menu->name }}」を削除しますか？"
+                                                        aria-label="メニューを削除"
+                                                        title="メニューを削除"
+                                                    >
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                @endif
                                             </td>
                                         </tr>
+                                        @include('admin.menus.partials.category-row', [
+                                            'menuKey' => $menu->id,
+                                            'selectedIds' => $selectedCategoryIds,
+                                            'allCategories' => $allCategoryOptions,
+                                            'currentCategoryId' => $category->id,
+                                            'isPrimaryEditor' => $isPrimaryEditor,
+                                        ])
+                                        </tbody>
                                     @else
                                         @php
                                             $newMenuKey = $row['key'];
                                             $newMenuData = $row['data'];
+                                            $isPrimaryEditor = (bool) ($row['is_primary_editor'] ?? true);
                                         @endphp
-                                        <tr class="align-top menu-list-row" data-menu-row="{{ $newMenuKey }}" data-new-menu="{{ $newMenuKey }}">
+                                        <tbody
+                                            class="menu-row-group{{ $isPrimaryEditor ? '' : ' menu-row-group--readonly' }}"
+                                            data-menu-row="{{ $newMenuKey }}"
+                                            data-new-menu="{{ $newMenuKey }}"
+                                            data-menu-primary-editor="{{ $isPrimaryEditor ? '1' : '0' }}"
+                                            @if(! $isPrimaryEditor) aria-label="参照専用" @endif
+                                        >
+                                        <tr class="align-top menu-list-row menu-list-row--fields">
                                             <td class="!py-3 !pr-1">
                                                 <span
                                                     class="menu-drag-handle"
@@ -601,43 +693,44 @@
                                                     </svg>
                                                 </span>
                                             </td>
-                                            <td class="!py-3 !pr-3 min-w-0">
-                                                <input type="hidden" name="menus[{{ $newMenuKey }}][category_id]" value="{{ $category->id }}">
+                                            <td class="!py-3 !pb-1 !pr-3 min-w-0">
                                                 <textarea
                                                     name="menus[{{ $newMenuKey }}][name]"
                                                     rows="3"
-                                                    required
                                                     class="admin-input menu-name-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
                                                     data-menu-name-input
+                                                    data-menu-shared-field="name"
+                                                    @disabled(! $isPrimaryEditor)
                                                 >{{ $newMenuData['name'] ?? '' }}</textarea>
-                                                @error('menus.'.$newMenuKey.'.name')
-                                                    <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
-                                                @enderror
                                             </td>
-                                            <td class="!py-3 !pr-3 min-w-0">
+                                            <td class="!py-3 !pb-1 !pr-3 min-w-0">
                                                 <textarea
                                                     name="menus[{{ $newMenuKey }}][description]"
                                                     rows="3"
                                                     class="admin-input menu-description-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
                                                     placeholder="説明（任意）"
+                                                    data-menu-shared-field="description"
+                                                    @disabled(! $isPrimaryEditor)
                                                 >{{ $newMenuData['description'] ?? '' }}</textarea>
                                             </td>
-                                            <td class="!py-3 !pr-3 min-w-0">
-                                                <input type="text" name="menus[{{ $newMenuKey }}][price]" value="{{ $newMenuData['price'] ?? '' }}" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。">
+                                            <td class="!py-3 !pb-1 !pr-3 min-w-0">
+                                                <input type="text" name="menus[{{ $newMenuKey }}][price]" value="{{ $newMenuData['price'] ?? '' }}" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。" data-menu-shared-field="price" @disabled(! $isPrimaryEditor)>
                                             </td>
-                                            <td class="!py-3 !pr-3">
+                                            <td class="!py-3 !pb-1 !pr-3">
                                                 @php
                                                     $newMenuPublished = ($newMenuData['is_published'] ?? '1') == '1';
                                                 @endphp
-                                                <label class="admin-switch admin-switch--compact" data-published-control>
-                                                    <input type="hidden" name="menus[{{ $newMenuKey }}][is_published]" value="0">
+                                                <label class="admin-switch admin-switch--compact{{ $isPrimaryEditor ? '' : ' pointer-events-none' }}" data-published-control>
+                                                    <input type="hidden" name="menus[{{ $newMenuKey }}][is_published]" value="0" data-menu-shared-field="is_published_hidden" @disabled(! $isPrimaryEditor)>
                                                     <input
                                                         type="checkbox"
                                                         name="menus[{{ $newMenuKey }}][is_published]"
                                                         value="1"
                                                         class="admin-switch-input"
                                                         data-published-checkbox
+                                                        data-menu-shared-field="is_published"
                                                         @checked($newMenuPublished)
+                                                        @disabled(! $isPrimaryEditor)
                                                         aria-label="公開状態"
                                                     >
                                                     <span class="admin-switch-track" aria-hidden="true">
@@ -646,37 +739,42 @@
                                                     <span class="admin-switch-text" data-published-text>{{ $newMenuPublished ? '公開' : '非公開' }}</span>
                                                 </label>
                                             </td>
-                                            <td class="!py-3 !pl-1 !pr-2 text-center">
+                                            <td class="!py-3 !pb-1 !pl-1 !pr-2 text-center">
                                                 <input
                                                     type="number"
-                                                    name="menus[{{ $newMenuKey }}][sort_order]"
+                                                    name="menus[{{ $newMenuKey }}][sorts][{{ $category->id }}]"
                                                     value="{{ $row['sort'] }}"
                                                     min="1"
                                                     step="1"
-                                                    required
                                                     class="admin-input menu-sort-order-input w-10 py-1.5 text-center"
                                                     data-menu-sort-order
                                                     aria-label="表示順"
                                                 >
-                                                @error('menus.'.$newMenuKey.'.sort_order')
-                                                    <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
-                                                @enderror
                                             </td>
-                                            <td class="!py-3 !pl-0 !pr-4 text-left">
-                                                <button
-                                                    type="button"
-                                                    class="category-delete-x"
-                                                    data-discard-menu="{{ $newMenuKey }}"
-                                                    aria-label="メニュー追加を取り消す"
-                                                    title="メニュー追加を取り消す"
-                                                >
-                                                    <span aria-hidden="true">&times;</span>
-                                                </button>
+                                            <td class="!py-3 !pb-1 !pl-0 !pr-4 text-left">
+                                                @if($isPrimaryEditor)
+                                                    <button
+                                                        type="button"
+                                                        class="category-delete-x"
+                                                        data-discard-menu="{{ $newMenuKey }}"
+                                                        aria-label="メニュー追加を取り消す"
+                                                        title="メニュー追加を取り消す"
+                                                    >
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                @endif
                                             </td>
                                         </tr>
+                                        @include('admin.menus.partials.category-row', [
+                                            'menuKey' => $newMenuKey,
+                                            'selectedIds' => $row['selected_category_ids'] ?? [(string) $category->id],
+                                            'allCategories' => $allCategoryOptions,
+                                            'currentCategoryId' => $category->id,
+                                            'isPrimaryEditor' => $isPrimaryEditor,
+                                        ])
+                                        </tbody>
                                     @endif
                                 @endforeach
-                            </tbody>
                         </table>
                     </div>
                 @endforeach
@@ -700,13 +798,9 @@
                                     id="category-name-{{ $newKey }}"
                                     name="categories[{{ $newKey }}][name]"
                                     value="{{ $newData['name'] ?? '' }}"
-                                    required
                                     class="admin-input font-medium"
                                     data-category-name-input="{{ $newKey }}"
                                 >
-                                @error('categories.'.$newKey.'.name')
-                                    <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
-                                @enderror
                             </div>
                             <div class="md:hidden">
                                 <button
@@ -733,7 +827,7 @@
                                 <x-admin.create-button data-menu-add-btn>メニュー追加</x-admin.create-button>
                             </x-admin.empty-state>
                         </div>
-                        <table class="admin-table menu-list-table table-fixed w-full {{ $hasMenus ? '' : 'hidden' }}" data-menu-table @if(! $hasMenus) hidden @endif>
+                        <table class="admin-table menu-list-table table-fixed w-full {{ $hasMenus ? '' : 'hidden' }}" data-menu-table data-menu-tbody @if(! $hasMenus) hidden @endif>
                             <colgroup>
                                 <col class="menu-col-handle">
                                 <col class="menu-col-name">
@@ -754,13 +848,20 @@
                                     <th class="!pb-3 !pl-0 !pr-4 text-center whitespace-nowrap">操作</th>
                                 </tr>
                             </thead>
-                            <tbody data-menu-tbody>
                                 @foreach($menuRows as $row)
                                     @php
                                         $newMenuKey = $row['key'];
                                         $newMenuData = $row['data'];
+                                        $isPrimaryEditor = (bool) ($row['is_primary_editor'] ?? true);
                                     @endphp
-                                    <tr class="align-top menu-list-row" data-menu-row="{{ $newMenuKey }}" data-new-menu="{{ $newMenuKey }}">
+                                    <tbody
+                                        class="menu-row-group{{ $isPrimaryEditor ? '' : ' menu-row-group--readonly' }}"
+                                        data-menu-row="{{ $newMenuKey }}"
+                                        data-new-menu="{{ $newMenuKey }}"
+                                        data-menu-primary-editor="{{ $isPrimaryEditor ? '1' : '0' }}"
+                                        @if(! $isPrimaryEditor) aria-label="参照専用" @endif
+                                    >
+                                        <tr class="align-top menu-list-row menu-list-row--fields">
                                         <td class="!py-3 !pr-1">
                                             <span
                                                 class="menu-drag-handle"
@@ -782,43 +883,44 @@
                                                 </svg>
                                             </span>
                                         </td>
-                                        <td class="!py-3 !pr-3 min-w-0">
-                                            <input type="hidden" name="menus[{{ $newMenuKey }}][category_id]" value="{{ $newKey }}">
+                                        <td class="!py-3 !pb-1 !pr-3 min-w-0">
                                             <textarea
                                                 name="menus[{{ $newMenuKey }}][name]"
                                                 rows="3"
-                                                required
                                                 class="admin-input menu-name-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
                                                 data-menu-name-input
+                                                data-menu-shared-field="name"
+                                                @disabled(! $isPrimaryEditor)
                                             >{{ $newMenuData['name'] ?? '' }}</textarea>
-                                            @error('menus.'.$newMenuKey.'.name')
-                                                <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
-                                            @enderror
                                         </td>
-                                        <td class="!py-3 !pr-3 min-w-0">
+                                        <td class="!py-3 !pb-1 !pr-3 min-w-0">
                                             <textarea
                                                 name="menus[{{ $newMenuKey }}][description]"
                                                 rows="3"
                                                 class="admin-input menu-description-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
                                                 placeholder="説明（任意）"
+                                                data-menu-shared-field="description"
+                                                @disabled(! $isPrimaryEditor)
                                             >{{ $newMenuData['description'] ?? '' }}</textarea>
                                         </td>
-                                        <td class="!py-3 !pr-3 min-w-0">
-                                            <input type="text" name="menus[{{ $newMenuKey }}][price]" value="{{ $newMenuData['price'] ?? '' }}" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。">
+                                        <td class="!py-3 !pb-1 !pr-3 min-w-0">
+                                            <input type="text" name="menus[{{ $newMenuKey }}][price]" value="{{ $newMenuData['price'] ?? '' }}" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。" data-menu-shared-field="price" @disabled(! $isPrimaryEditor)>
                                         </td>
-                                        <td class="!py-3 !pr-3">
+                                        <td class="!py-3 !pb-1 !pr-3">
                                             @php
                                                 $newMenuPublished = ($newMenuData['is_published'] ?? '1') == '1';
                                             @endphp
-                                            <label class="admin-switch admin-switch--compact" data-published-control>
-                                                <input type="hidden" name="menus[{{ $newMenuKey }}][is_published]" value="0">
+                                            <label class="admin-switch admin-switch--compact{{ $isPrimaryEditor ? '' : ' pointer-events-none' }}" data-published-control>
+                                                <input type="hidden" name="menus[{{ $newMenuKey }}][is_published]" value="0" data-menu-shared-field="is_published_hidden" @disabled(! $isPrimaryEditor)>
                                                 <input
                                                     type="checkbox"
                                                     name="menus[{{ $newMenuKey }}][is_published]"
                                                     value="1"
                                                     class="admin-switch-input"
                                                     data-published-checkbox
+                                                    data-menu-shared-field="is_published"
                                                     @checked($newMenuPublished)
+                                                    @disabled(! $isPrimaryEditor)
                                                     aria-label="公開状態"
                                                 >
                                                 <span class="admin-switch-track" aria-hidden="true">
@@ -827,36 +929,41 @@
                                                 <span class="admin-switch-text" data-published-text>{{ $newMenuPublished ? '公開' : '非公開' }}</span>
                                             </label>
                                         </td>
-                                        <td class="!py-3 !pl-1 !pr-2 text-center">
+                                        <td class="!py-3 !pb-1 !pl-1 !pr-2 text-center">
                                             <input
                                                 type="number"
-                                                name="menus[{{ $newMenuKey }}][sort_order]"
+                                                name="menus[{{ $newMenuKey }}][sorts][{{ $newKey }}]"
                                                 value="{{ $row['sort'] }}"
                                                 min="1"
                                                 step="1"
-                                                required
                                                 class="admin-input menu-sort-order-input w-10 py-1.5 text-center"
                                                 data-menu-sort-order
                                                 aria-label="表示順"
                                             >
-                                            @error('menus.'.$newMenuKey.'.sort_order')
-                                                <p class="mt-1 text-xs text-admin-danger">{{ $message }}</p>
-                                            @enderror
                                         </td>
-                                        <td class="!py-3 !pl-0 !pr-4 text-left">
-                                            <button
-                                                type="button"
-                                                class="category-delete-x"
-                                                data-discard-menu="{{ $newMenuKey }}"
-                                                aria-label="メニュー追加を取り消す"
-                                                title="メニュー追加を取り消す"
-                                            >
-                                                <span aria-hidden="true">&times;</span>
-                                            </button>
+                                        <td class="!py-3 !pb-1 !pl-0 !pr-4 text-left">
+                                            @if($isPrimaryEditor)
+                                                <button
+                                                    type="button"
+                                                    class="category-delete-x"
+                                                    data-discard-menu="{{ $newMenuKey }}"
+                                                    aria-label="メニュー追加を取り消す"
+                                                    title="メニュー追加を取り消す"
+                                                >
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            @endif
                                         </td>
                                     </tr>
+                                    @include('admin.menus.partials.category-row', [
+                                        'menuKey' => $newMenuKey,
+                                        'selectedIds' => $row['selected_category_ids'] ?? [(string) $newKey],
+                                        'allCategories' => $allCategoryOptions,
+                                        'currentCategoryId' => $newKey,
+                                        'isPrimaryEditor' => $isPrimaryEditor,
+                                    ])
+                                    </tbody>
                                 @endforeach
-                            </tbody>
                         </table>
                     </div>
                 @endforeach
@@ -932,7 +1039,6 @@
                             value="1"
                             min="1"
                             step="1"
-                            required
                             class="admin-input category-sort-order-input w-10 py-1 text-center"
                             data-category-sort-order
                             aria-label="表示順"
@@ -974,7 +1080,6 @@
                         id="category-name-__ID__"
                         name="categories[__ID__][name]"
                         value=""
-                        required
                         class="admin-input font-medium"
                         data-category-name-input="__ID__"
                         placeholder="カテゴリ名を入力"
@@ -1025,7 +1130,7 @@
                     </div>
                 </div>
             </div>
-            <table class="admin-table menu-list-table table-fixed w-full hidden" data-menu-table hidden>
+            <table class="admin-table menu-list-table table-fixed w-full hidden" data-menu-table data-menu-tbody hidden>
                 <colgroup>
                     <col class="menu-col-handle">
                     <col class="menu-col-name">
@@ -1046,13 +1151,13 @@
                         <th class="!pb-3 !pl-0 !pr-4 text-center whitespace-nowrap">操作</th>
                     </tr>
                 </thead>
-                <tbody data-menu-tbody></tbody>
             </table>
         </div>
     </template>
 
     <template id="new-menu-row-template">
-        <tr class="align-top menu-list-row" data-menu-row="__MENU_ID__" data-new-menu="__MENU_ID__">
+        <tbody class="menu-row-group" data-menu-row="__MENU_ID__" data-new-menu="__MENU_ID__">
+        <tr class="align-top menu-list-row menu-list-row--fields">
             <td class="!py-3 !pr-1">
                 <span
                     class="menu-drag-handle"
@@ -1074,36 +1179,37 @@
                     </svg>
                 </span>
             </td>
-            <td class="!py-3 !pr-3 min-w-0">
-                <input type="hidden" name="menus[__MENU_ID__][category_id]" value="__CATEGORY_ID__">
+            <td class="!py-3 !pb-1 !pr-3 min-w-0">
                 <textarea
                     name="menus[__MENU_ID__][name]"
                     rows="3"
-                    required
                     class="admin-input menu-name-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
                     data-menu-name-input
+                    data-menu-shared-field="name"
                 ></textarea>
             </td>
-            <td class="!py-3 !pr-3 min-w-0">
+            <td class="!py-3 !pb-1 !pr-3 min-w-0">
                 <textarea
                     name="menus[__MENU_ID__][description]"
                     rows="3"
                     class="admin-input menu-description-textarea w-full min-w-0 min-h-[76px] resize-none overflow-y-auto py-1.5"
                     placeholder="説明（任意）"
+                    data-menu-shared-field="description"
                 ></textarea>
             </td>
-            <td class="!py-3 !pr-3 min-w-0">
-                <input type="text" name="menus[__MENU_ID__][price]" value="" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。">
+            <td class="!py-3 !pb-1 !pr-3 min-w-0">
+                <input type="text" name="menus[__MENU_ID__][price]" value="" maxlength="100" placeholder="例: ¥5,500" class="admin-input min-w-0 py-1.5" title="公開サイトへそのまま表示されます。" data-menu-shared-field="price">
             </td>
-            <td class="!py-3 !pr-3">
+            <td class="!py-3 !pb-1 !pr-3">
                 <label class="admin-switch admin-switch--compact" data-published-control>
-                    <input type="hidden" name="menus[__MENU_ID__][is_published]" value="0">
+                    <input type="hidden" name="menus[__MENU_ID__][is_published]" value="0" data-menu-shared-field="is_published_hidden">
                     <input
                         type="checkbox"
                         name="menus[__MENU_ID__][is_published]"
                         value="1"
                         class="admin-switch-input"
                         data-published-checkbox
+                        data-menu-shared-field="is_published"
                         checked
                         aria-label="公開状態"
                     >
@@ -1113,20 +1219,19 @@
                     <span class="admin-switch-text" data-published-text>公開</span>
                 </label>
             </td>
-            <td class="!py-3 !pl-1 !pr-2 text-center">
+            <td class="!py-3 !pb-1 !pl-1 !pr-2 text-center">
                 <input
                     type="number"
-                    name="menus[__MENU_ID__][sort_order]"
+                    name="menus[__MENU_ID__][sorts][__CATEGORY_ID__]"
                     value="__SORT__"
                     min="1"
                     step="1"
-                    required
                     class="admin-input menu-sort-order-input w-10 py-1.5 text-center"
                     data-menu-sort-order
                     aria-label="表示順"
                 >
             </td>
-            <td class="!py-3 !pl-0 !pr-4 text-left">
+            <td class="!py-3 !pb-1 !pl-0 !pr-4 text-left">
                 <button
                     type="button"
                     class="category-delete-x"
@@ -1138,6 +1243,21 @@
                 </button>
             </td>
         </tr>
+        <tr class="menu-list-row menu-list-row--categories" data-menu-category-row="__MENU_ID__">
+            <td class="!py-0 !pr-1" aria-hidden="true"></td>
+            <td colspan="6" class="!pt-1 !pb-3 !pr-4 min-w-0">
+                <div class="mt-0" data-menu-category-checkboxes>
+                    <p class="mb-1.5 text-xs font-medium text-admin-muted">カテゴリ（複数選択可）</p>
+                    <div
+                        class="admin-choice-choices admin-choice-choices--auto news-weekday-choices news-weekday-choices--auto"
+                        role="group"
+                        aria-label="カテゴリ"
+                        data-menu-category-checkbox-list
+                    ></div>
+                </div>
+            </td>
+        </tr>
+        </tbody>
     </template>
 
     <style>
@@ -1182,6 +1302,16 @@
             overflow: hidden;
         }
 
+        [data-menu-category-checkboxes] {
+            max-width: 100%;
+            min-width: 0;
+        }
+
+        [data-menu-category-checkboxes] .admin-choice-choices,
+        [data-menu-category-checkboxes] .news-weekday-choices {
+            width: 100%;
+        }
+
         .menu-list-table .menu-col-actions,
         .menu-list-table th:last-child,
         .menu-list-table td:last-child {
@@ -1205,28 +1335,124 @@
             overflow-wrap: anywhere;
         }
 
-        .menu-list-row {
-            position: relative;
+        /*
+         * Borders:
+         * - Source of the inner line: `.admin-table tbody { divide-y }` (tr+tr border-top)
+         * - Keep between-menu lines via `.admin-table { divide-y }` (tbody+tbody)
+         * - On hover, kill any remaining inner borders so the shared bg looks seamless
+         */
+        .menu-list-table.admin-table {
+            border-collapse: collapse;
+        }
+
+        .menu-list-table.admin-table > tbody.menu-row-group {
+            border-style: solid;
+            border-left-width: 0;
+            border-right-width: 0;
+            border-bottom-width: 0;
+        }
+
+        /* Neutralize intra-menu divide-y from `.admin-table tbody`. */
+        .menu-list-table.admin-table > tbody.menu-row-group > tr,
+        .menu-list-table.admin-table > tbody.menu-row-group > tr:hover,
+        .menu-list-table.admin-table > tbody.menu-row-group > tr + tr,
+        .menu-list-table.admin-table > tbody.menu-row-group > :not([hidden]) ~ :not([hidden]),
+        .menu-list-table.admin-table > tbody.menu-row-group > tr > th,
+        .menu-list-table.admin-table > tbody.menu-row-group > tr > td,
+        .menu-list-table.admin-table > tbody.menu-row-group > tr + tr > th,
+        .menu-list-table.admin-table > tbody.menu-row-group > tr + tr > td,
+        .menu-list-table.admin-table > tbody.menu-row-group > tr.menu-list-row--fields > td,
+        .menu-list-table.admin-table > tbody.menu-row-group > tr.menu-list-row--categories > td {
+            border-top-width: 0 !important;
+            border-bottom-width: 0 !important;
+            border-top-style: none !important;
+            border-bottom-style: none !important;
+            border-top-color: transparent !important;
+            border-bottom-color: transparent !important;
+            box-shadow: none;
+        }
+
+        /* Explicit separator only between menu groups (tbody + tbody).
+           Reinforces `.admin-table { divide-y }` so group edges stay visible
+           even if intra-row border resets interact oddly with collapse. */
+        .menu-list-table.admin-table > thead + tbody.menu-row-group,
+        .menu-list-table.admin-table > tbody.menu-row-group + tbody.menu-row-group {
+            border-top-width: 1px;
+            border-top-style: solid;
+            border-top-color: rgb(229 224 215 / 0.4);
+        }
+
+        /*
+         * Hover/selected: paint the tbody group as one block so row seams cannot show.
+         * Keep tr/td transparent (override `.admin-table tbody tr:hover`).
+         */
+        .menu-list-table.admin-table .menu-row-group,
+        .menu-list-table.admin-table .menu-row-group > tr,
+        .menu-list-table.admin-table .menu-row-group > tr:hover,
+        .menu-list-table.admin-table .menu-row-group > tr > td {
+            background-color: transparent;
             transition: background-color 0.15s ease;
         }
 
-        .menu-list-row:hover {
+        .menu-list-table.admin-table .menu-row-group:hover {
             background-color: #EEF1E8;
         }
 
-        .menu-list-row.is-selected {
+        .menu-list-table.admin-table .menu-row-group.is-selected {
             background-color: #E5EADD;
         }
 
-        .menu-list-row.is-dragging {
+        .menu-list-table.admin-table .menu-row-group.is-dragging {
             background-color: #E8EDE3;
-            box-shadow: 0 2px 8px rgba(61, 56, 51, 0.08);
-            opacity: 0.92;
-            z-index: 1;
         }
 
-        .menu-list-row.drag-insert-before::before,
-        .menu-list-row.drag-insert-after::after {
+        .menu-list-table.admin-table .menu-row-group:hover > tr,
+        .menu-list-table.admin-table .menu-row-group:hover > tr:hover,
+        .menu-list-table.admin-table .menu-row-group:hover > tr > td,
+        .menu-list-table.admin-table .menu-row-group.is-selected > tr,
+        .menu-list-table.admin-table .menu-row-group.is-selected > tr:hover,
+        .menu-list-table.admin-table .menu-row-group.is-selected > tr > td,
+        .menu-list-table.admin-table .menu-row-group.is-dragging > tr,
+        .menu-list-table.admin-table .menu-row-group.is-dragging > tr:hover,
+        .menu-list-table.admin-table .menu-row-group.is-dragging > tr > td {
+            background-color: transparent;
+        }
+
+        .menu-row-group {
+            position: relative;
+        }
+
+        .menu-row-group--readonly .admin-input:not(.menu-sort-order-input),
+        .menu-row-group--readonly .admin-switch-text,
+        .menu-row-group--readonly .admin-choice-face {
+            color: #6b7280;
+        }
+
+        .menu-row-group--readonly .admin-input:disabled:not(.menu-sort-order-input) {
+            background-color: #f3f4f6;
+            cursor: default;
+        }
+
+        .menu-row-group--readonly .menu-sort-order-input {
+            color: inherit;
+            background-color: #fff;
+            opacity: 1;
+        }
+
+        .menu-row-group--readonly .menu-drag-handle {
+            opacity: 1;
+            cursor: grab;
+            pointer-events: auto;
+        }
+
+        .menu-row-group.is-dragging {
+            z-index: 1;
+            opacity: 0.92;
+            box-shadow: 0 2px 8px rgba(61, 56, 51, 0.08);
+        }
+
+        .menu-row-group.drag-insert-before::before,
+        .menu-row-group.drag-insert-after::after {
             content: '';
             position: absolute;
             left: 0.5rem;
@@ -1238,12 +1464,24 @@
             z-index: 2;
         }
 
-        .menu-list-row.drag-insert-before::before {
+        .menu-row-group.drag-insert-before::before {
             top: 0;
         }
 
-        .menu-list-row.drag-insert-after::after {
+        .menu-row-group.drag-insert-after::after {
             bottom: 0;
+        }
+
+        .menu-list-row--fields > td {
+            padding-bottom: 0.35rem !important;
+        }
+
+        .menu-list-row--categories > td {
+            padding-top: 0.35rem !important;
+        }
+
+        .menu-list-row {
+            transition: background-color 0.15s ease;
         }
 
         .menu-drag-handle {
@@ -1407,8 +1645,8 @@
 
         .menu-category-row:hover .category-delete-x,
         .menu-category-row.is-selected .category-delete-x,
-        .menu-list-row:hover .category-delete-x,
-        .menu-list-row.is-selected .category-delete-x,
+        .menu-row-group:hover .category-delete-x,
+        .menu-row-group.is-selected .category-delete-x,
         .category-delete-x:focus,
         .category-delete-x:focus-visible {
             opacity: 1;
@@ -1423,6 +1661,8 @@
             box-shadow: 0 0 0 3px rgba(105, 122, 85, 0.15);
         }
     </style>
+
+    <script type="application/json" id="menu-category-options-json">@json($allCategoryOptions)</script>
 
     <script>
         (function () {
@@ -1462,6 +1702,156 @@
                 }
             }
 
+            /**
+             * Multi-category menus render once per panel. Shared fields are editable only
+             * on the primary category panel; other copies are read-only for shared data.
+             * Per-category sort_order (and drag reorder) stays editable on every panel.
+             */
+            function applyMenuRowEditability(group, editable) {
+                group.classList.toggle('menu-row-group--readonly', !editable);
+                group.querySelectorAll('input, textarea, select').forEach(function (el) {
+                    if (el.matches('[data-menu-sort-order]')) {
+                        el.disabled = false;
+                        return;
+                    }
+                    el.disabled = !editable;
+                });
+
+                const handle = group.querySelector('[data-menu-drag-handle]');
+                if (handle) {
+                    handle.setAttribute('draggable', 'true');
+                    handle.setAttribute('tabindex', '0');
+                    handle.classList.remove('is-disabled');
+                    handle.removeAttribute('aria-disabled');
+                    handle.setAttribute('title', 'ドラッグして並び替え');
+                }
+
+                const publishedControl = group.querySelector('[data-published-control]');
+                if (publishedControl) {
+                    publishedControl.classList.toggle('pointer-events-none', !editable);
+                }
+
+                const categoryList = group.querySelector('[data-menu-category-checkbox-list]');
+                if (categoryList) {
+                    categoryList.classList.toggle('pointer-events-none', !editable);
+                    categoryList.classList.toggle('opacity-80', !editable);
+                    if (editable) {
+                        categoryList.removeAttribute('aria-disabled');
+                    } else {
+                        categoryList.setAttribute('aria-disabled', 'true');
+                    }
+                }
+
+                const categoryHeading = group.querySelector('[data-menu-category-checkboxes] > p');
+                if (categoryHeading) {
+                    categoryHeading.textContent = editable ? 'カテゴリ（複数選択可）' : 'カテゴリ（参照専用）';
+                }
+
+                if (editable) {
+                    group.removeAttribute('aria-label');
+                } else {
+                    group.setAttribute('aria-label', '参照専用');
+                }
+            }
+
+            function refreshDuplicateMenuSharedFields() {
+                const groupsByMenu = {};
+                document.querySelectorAll('[data-menu-row]').forEach(function (group) {
+                    const menuId = group.getAttribute('data-menu-row');
+                    if (!menuId) {
+                        return;
+                    }
+                    if (!groupsByMenu[menuId]) {
+                        groupsByMenu[menuId] = [];
+                    }
+                    groupsByMenu[menuId].push(group);
+                });
+
+                Object.keys(groupsByMenu).forEach(function (menuId) {
+                    const groups = groupsByMenu[menuId];
+                    if (groups.length < 2) {
+                        applyMenuRowEditability(groups[0], true);
+                        return;
+                    }
+
+                    let canonical = null;
+                    groups.forEach(function (group) {
+                        if (!canonical && group.getAttribute('data-menu-primary-editor') === '1') {
+                            canonical = group;
+                        }
+                    });
+                    if (!canonical) {
+                        canonical = groups[0];
+                    }
+
+                    groups.forEach(function (group) {
+                        applyMenuRowEditability(group, group === canonical);
+                    });
+                    syncMenuSharedFieldsFrom(canonical);
+                });
+            }
+
+            function prepareMenusFormForSubmit() {
+                syncAllSortOrdersFromDom();
+                refreshDuplicateMenuSharedFields();
+                document.querySelectorAll('[data-menu-sort-order]').forEach(function (el) {
+                    el.disabled = false;
+                });
+            }
+
+            function syncMenuSharedFieldsFrom(sourceGroup) {
+                const menuId = sourceGroup.getAttribute('data-menu-row');
+                if (!menuId) {
+                    return;
+                }
+
+                const targets = document.querySelectorAll('[data-menu-row="' + menuId.replace(/"/g, '\\"') + '"]');
+                if (targets.length < 2) {
+                    return;
+                }
+
+                const sourceName = sourceGroup.querySelector('[data-menu-shared-field="name"]');
+                const sourceDesc = sourceGroup.querySelector('[data-menu-shared-field="description"]');
+                const sourcePrice = sourceGroup.querySelector('[data-menu-shared-field="price"]');
+                const sourcePublished = sourceGroup.querySelector('[data-menu-shared-field="is_published"]');
+                const sourceCategoryChecks = sourceGroup.querySelectorAll('[data-menu-category-checkbox]');
+                const selectedCategoryValues = {};
+                sourceCategoryChecks.forEach(function (input) {
+                    selectedCategoryValues[String(input.value)] = !!input.checked;
+                });
+
+                targets.forEach(function (target) {
+                    if (target === sourceGroup) {
+                        return;
+                    }
+
+                    const nameField = target.querySelector('[data-menu-shared-field="name"]');
+                    const descField = target.querySelector('[data-menu-shared-field="description"]');
+                    const priceField = target.querySelector('[data-menu-shared-field="price"]');
+                    const publishedField = target.querySelector('[data-menu-shared-field="is_published"]');
+
+                    if (nameField && sourceName) {
+                        nameField.value = sourceName.value;
+                    }
+                    if (descField && sourceDesc) {
+                        descField.value = sourceDesc.value;
+                    }
+                    if (priceField && sourcePrice) {
+                        priceField.value = sourcePrice.value;
+                    }
+                    if (publishedField && sourcePublished) {
+                        publishedField.checked = sourcePublished.checked;
+                        syncPublishedLabel(publishedField);
+                    }
+
+                    target.querySelectorAll('[data-menu-category-checkbox]').forEach(function (input) {
+                        if (Object.prototype.hasOwnProperty.call(selectedCategoryValues, String(input.value))) {
+                            input.checked = selectedCategoryValues[String(input.value)];
+                        }
+                    });
+                });
+            }
+
             function closeModals() {
                 document.querySelectorAll('.menu-modal').forEach(function (el) {
                     el.classList.add('hidden');
@@ -1489,6 +1879,20 @@
 
             function selectCategory(categoryId, options) {
                 options = options || {};
+
+                // Flush edits from the primary copy before switching panels.
+                if (selectedCategoryId) {
+                    const previousPanel = document.querySelector('[data-category-panel="' + selectedCategoryId + '"]');
+                    if (previousPanel) {
+                        previousPanel.querySelectorAll('[data-menu-row]').forEach(function (group) {
+                            if (group.getAttribute('data-menu-primary-editor') === '0') {
+                                return;
+                            }
+                            syncMenuSharedFieldsFrom(group);
+                        });
+                    }
+                }
+
                 selectedCategoryId = categoryId ? String(categoryId) : null;
 
                 if (selectedInput) {
@@ -1514,6 +1918,8 @@
                     row.classList.toggle('is-selected', selectedCategoryId && row.getAttribute('data-category-row') === selectedCategoryId);
                 });
 
+                refreshDuplicateMenuSharedFields();
+
                 if (options.scrollInvalid) {
                     const target = options.scrollInvalid;
                     if (typeof target.scrollIntoView === 'function') {
@@ -1538,6 +1944,26 @@
                 document.querySelectorAll('[data-menu-row]').forEach(function (row) {
                     row.classList.toggle('is-selected', selectedMenuId && row.getAttribute('data-menu-row') === selectedMenuId);
                 });
+            }
+
+            function resolveMenuGroup(el) {
+                return el ? el.closest('[data-menu-row]') : null;
+            }
+
+            function previousMenuGroup(group) {
+                let el = group ? group.previousElementSibling : null;
+                while (el && !el.hasAttribute('data-menu-row')) {
+                    el = el.previousElementSibling;
+                }
+                return el;
+            }
+
+            function nextMenuGroup(group) {
+                let el = group ? group.nextElementSibling : null;
+                while (el && !el.hasAttribute('data-menu-row')) {
+                    el = el.nextElementSibling;
+                }
+                return el;
             }
 
             function syncCategoryLabel(categoryId, value) {
@@ -1665,8 +2091,8 @@
                 if (!panel) {
                     return;
                 }
-                const tbody = panel.querySelector('[data-menu-tbody]');
-                if (!tbody) {
+                const list = panel.querySelector('[data-menu-tbody]');
+                if (!list) {
                     return;
                 }
 
@@ -1681,38 +2107,99 @@
                     .split('__MENU_ID__').join(menuId)
                     .split('__CATEGORY_ID__').join(selectedCategoryId)
                     .split('__SORT__').join(String(sortOrder));
-                const wrap = document.createElement('tbody');
-                wrap.innerHTML = html.trim();
-                const row = wrap.firstElementChild;
-                tbody.appendChild(row);
+                const tpl = document.createElement('template');
+                tpl.innerHTML = html.trim();
+                const group = tpl.content.firstElementChild;
+                if (!group) {
+                    return;
+                }
+                fillMenuCategoryCheckboxes(group, menuId, selectedCategoryId);
+                list.appendChild(group);
                 renumberMenuSortOrders(panel);
 
                 syncCategoryMenuCount(selectedCategoryId);
 
-                const nameInput = row.querySelector('[data-menu-name-input]');
+                const nameInput = group.querySelector('[data-menu-name-input]');
                 if (nameInput) {
                     nameInput.focus();
                 }
                 selectMenu(menuId);
             }
 
-            function discardNewMenu(menuId) {
-                const row = document.querySelector('[data-new-menu="' + menuId + '"]');
-                if (!row) {
+            function fillMenuCategoryCheckboxes(row, menuId, selectedCategoryId) {
+                const list = row.querySelector('[data-menu-category-checkbox-list]');
+                if (!list) {
                     return;
                 }
-                const panel = row.closest('[data-category-panel]');
-                const categoryId = panel ? panel.getAttribute('data-category-panel') : null;
+                let options = [];
+                try {
+                    const raw = document.getElementById('menu-category-options-json');
+                    options = raw ? JSON.parse(raw.textContent || '[]') : [];
+                } catch (e) {
+                    options = [];
+                }
+
+                // Include unsaved category panels currently in the DOM.
+                document.querySelectorAll('[data-category-panel]').forEach(function (panelEl) {
+                    const id = panelEl.getAttribute('data-category-panel');
+                    if (!id) {
+                        return;
+                    }
+                    if (options.some(function (opt) { return String(opt.id) === String(id); })) {
+                        return;
+                    }
+                    const nameInput = panelEl.querySelector('[data-category-name-input="' + id + '"]');
+                    options.push({
+                        id: String(id),
+                        name: nameInput && nameInput.value ? nameInput.value : '新しいカテゴリ',
+                    });
+                });
+
+                list.innerHTML = '';
+                options.forEach(function (opt) {
+                    const label = document.createElement('label');
+                    label.className = 'admin-choice-option news-weekday-option';
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.name = 'menus[' + menuId + '][category_ids][]';
+                    input.value = String(opt.id);
+                    input.className = 'admin-choice-input news-weekday-input';
+                    input.setAttribute('data-menu-category-checkbox', '');
+                    if (String(opt.id) === String(selectedCategoryId)) {
+                        input.checked = true;
+                    }
+                    const span = document.createElement('span');
+                    span.className = 'admin-choice-face news-weekday-face';
+                    span.textContent = opt.name || ('カテゴリ ' + opt.id);
+                    label.appendChild(input);
+                    label.appendChild(span);
+                    list.appendChild(label);
+                });
+            }
+
+            function discardNewMenu(menuId) {
+                const groups = document.querySelectorAll('[data-new-menu="' + menuId + '"]');
+                if (!groups.length) {
+                    return;
+                }
                 if (selectedMenuId && selectedMenuId === String(menuId)) {
                     selectedMenuId = null;
                 }
-                row.remove();
-                if (panel) {
+                const panelsToRenumber = [];
+                groups.forEach(function (group) {
+                    const panel = group.closest('[data-category-panel]');
+                    const categoryId = panel ? panel.getAttribute('data-category-panel') : null;
+                    group.remove();
+                    if (panel && panelsToRenumber.indexOf(panel) === -1) {
+                        panelsToRenumber.push(panel);
+                    }
+                    if (categoryId) {
+                        syncCategoryMenuCount(categoryId);
+                    }
+                });
+                panelsToRenumber.forEach(function (panel) {
                     renumberMenuSortOrders(panel);
-                }
-                if (categoryId) {
-                    syncCategoryMenuCount(categoryId);
-                }
+                });
             }
 
             function addNewCategory() {
@@ -1899,11 +2386,11 @@
                 });
             }
 
-            function clearMenuDragIndicators(tbody) {
-                if (!tbody) {
+            function clearMenuDragIndicators(list) {
+                if (!list) {
                     return;
                 }
-                tbody.querySelectorAll('.drag-insert-before, .drag-insert-after').forEach(function (row) {
+                list.querySelectorAll('.drag-insert-before, .drag-insert-after').forEach(function (row) {
                     row.classList.remove('drag-insert-before', 'drag-insert-after');
                 });
             }
@@ -1913,90 +2400,90 @@
                     return;
                 }
 
-                let dragRow = null;
-                let dragTbody = null;
+                let dragGroup = null;
+                let dragList = null;
 
                 panelsWrap.addEventListener('dragstart', function (e) {
                     const handle = e.target.closest('[data-menu-drag-handle]');
                     if (!handle || !panelsWrap.contains(handle)) {
                         return;
                     }
-                    const row = handle.closest('[data-menu-row]');
-                    const tbody = row ? row.closest('[data-menu-tbody]') : null;
-                    if (!row || !tbody) {
+                    const group = handle.closest('[data-menu-row]');
+                    const list = group ? group.closest('[data-menu-tbody]') : null;
+                    if (!group || !list) {
                         e.preventDefault();
                         return;
                     }
-                    dragRow = row;
-                    dragTbody = tbody;
-                    row.classList.add('is-dragging');
+                    dragGroup = group;
+                    dragList = list;
+                    group.classList.add('is-dragging');
                     e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', row.getAttribute('data-menu-row') || '');
+                    e.dataTransfer.setData('text/plain', group.getAttribute('data-menu-row') || '');
                     try {
-                        e.dataTransfer.setDragImage(row, 16, 20);
+                        e.dataTransfer.setDragImage(group, 16, 20);
                     } catch (err) {
                         // ignore browsers that reject custom drag images
                     }
                 });
 
                 panelsWrap.addEventListener('dragend', function () {
-                    if (dragRow) {
-                        dragRow.classList.remove('is-dragging');
+                    if (dragGroup) {
+                        dragGroup.classList.remove('is-dragging');
                     }
-                    clearMenuDragIndicators(dragTbody);
-                    dragRow = null;
-                    dragTbody = null;
+                    clearMenuDragIndicators(dragList);
+                    dragGroup = null;
+                    dragList = null;
                 });
 
                 panelsWrap.addEventListener('dragover', function (e) {
-                    if (!dragRow || !dragTbody) {
+                    if (!dragGroup || !dragList) {
                         return;
                     }
-                    const overRow = e.target.closest('[data-menu-row]');
-                    if (!overRow || !dragTbody.contains(overRow)) {
+                    const overGroup = resolveMenuGroup(e.target);
+                    if (!overGroup || !dragList.contains(overGroup)) {
                         return;
                     }
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
-                    clearMenuDragIndicators(dragTbody);
-                    if (overRow === dragRow) {
+                    clearMenuDragIndicators(dragList);
+                    if (overGroup === dragGroup) {
                         return;
                     }
-                    const rect = overRow.getBoundingClientRect();
+                    const rect = overGroup.getBoundingClientRect();
                     const before = e.clientY < rect.top + rect.height / 2;
-                    overRow.classList.add(before ? 'drag-insert-before' : 'drag-insert-after');
+                    overGroup.classList.add(before ? 'drag-insert-before' : 'drag-insert-after');
                 });
 
                 panelsWrap.addEventListener('dragleave', function (e) {
-                    if (dragTbody && !dragTbody.contains(e.relatedTarget)) {
-                        clearMenuDragIndicators(dragTbody);
+                    if (dragList && !dragList.contains(e.relatedTarget)) {
+                        clearMenuDragIndicators(dragList);
                     }
                 });
 
                 panelsWrap.addEventListener('drop', function (e) {
-                    if (!dragRow || !dragTbody) {
+                    if (!dragGroup || !dragList) {
                         return;
                     }
-                    const overRow = e.target.closest('[data-menu-row]');
-                    if (!overRow || !dragTbody.contains(overRow)) {
+                    const overGroup = resolveMenuGroup(e.target);
+                    if (!overGroup || !dragList.contains(overGroup)) {
                         return;
                     }
                     e.preventDefault();
-                    if (overRow !== dragRow) {
-                        const rect = overRow.getBoundingClientRect();
+                    if (overGroup !== dragGroup) {
+                        const rect = overGroup.getBoundingClientRect();
                         const before = e.clientY < rect.top + rect.height / 2;
                         if (before) {
-                            dragTbody.insertBefore(dragRow, overRow);
+                            dragList.insertBefore(dragGroup, overGroup);
                         } else {
-                            dragTbody.insertBefore(dragRow, overRow.nextSibling);
+                            dragList.insertBefore(dragGroup, overGroup.nextElementSibling);
                         }
-                        const panel = dragTbody.closest('[data-category-panel]');
+                        const panel = dragList.closest('[data-category-panel]');
                         renumberMenuSortOrders(panel);
                     }
-                    clearMenuDragIndicators(dragTbody);
-                    dragRow.classList.remove('is-dragging');
-                    dragRow = null;
-                    dragTbody = null;
+                    clearMenuDragIndicators(dragList);
+                    dragGroup.classList.remove('is-dragging');
+                    dragGroup = null;
+                    dragList = null;
                 });
 
                 panelsWrap.addEventListener('keydown', function (e) {
@@ -2008,19 +2495,27 @@
                         return;
                     }
                     e.preventDefault();
-                    const row = handle.closest('[data-menu-row]');
-                    const tbody = row ? row.closest('[data-menu-tbody]') : null;
-                    if (!row || !tbody) {
+                    const group = handle.closest('[data-menu-row]');
+                    const list = group ? group.closest('[data-menu-tbody]') : null;
+                    if (!group || !list) {
                         return;
                     }
-                    if (e.key === 'ArrowUp' && row.previousElementSibling) {
-                        tbody.insertBefore(row, row.previousElementSibling);
-                    } else if (e.key === 'ArrowDown' && row.nextElementSibling) {
-                        tbody.insertBefore(row.nextElementSibling, row);
+                    if (e.key === 'ArrowUp') {
+                        const prev = previousMenuGroup(group);
+                        if (!prev) {
+                            return;
+                        }
+                        list.insertBefore(group, prev);
+                    } else if (e.key === 'ArrowDown') {
+                        const next = nextMenuGroup(group);
+                        if (!next) {
+                            return;
+                        }
+                        list.insertBefore(group, next.nextElementSibling);
                     } else {
                         return;
                     }
-                    const panel = tbody.closest('[data-category-panel]');
+                    const panel = list.closest('[data-category-panel]');
                     renumberMenuSortOrders(panel);
                     handle.focus();
                 });
@@ -2096,8 +2591,36 @@
                 if (bulkSaveBtn) {
                     bulkSaveBtn.addEventListener('click', function () {
                         syncAllSortOrdersFromDom();
+                        refreshDuplicateMenuSharedFields();
                     }, true);
                 }
+
+                workspace.addEventListener('submit', function () {
+                    prepareMenusFormForSubmit();
+                });
+
+                workspace.addEventListener('input', function (e) {
+                    const field = e.target.closest('[data-menu-shared-field="name"], [data-menu-shared-field="description"], [data-menu-shared-field="price"]');
+                    if (!field) {
+                        return;
+                    }
+                    const group = field.closest('[data-menu-row]');
+                    if (group) {
+                        syncMenuSharedFieldsFrom(group);
+                    }
+                });
+
+                workspace.addEventListener('change', function (e) {
+                    const published = e.target.closest('[data-menu-shared-field="is_published"]');
+                    const categoryCheckbox = e.target.closest('[data-menu-category-checkbox]');
+                    if (!published && !categoryCheckbox) {
+                        return;
+                    }
+                    const group = e.target.closest('[data-menu-row]');
+                    if (group) {
+                        syncMenuSharedFieldsFrom(group);
+                    }
+                });
 
                 document.querySelectorAll('[data-add-category]').forEach(function (btn) {
                     btn.addEventListener('click', function (e) {
@@ -2159,7 +2682,7 @@
                     return;
                 }
 
-                const menuRow = e.target.closest('[data-menu-row]');
+                const menuRow = resolveMenuGroup(e.target);
                 if (menuRow) {
                     selectMenu(menuRow.getAttribute('data-menu-row'));
                 }

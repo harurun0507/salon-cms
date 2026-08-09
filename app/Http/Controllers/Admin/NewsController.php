@@ -8,35 +8,97 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class NewsController extends AdminController
 {
     public function index(): View
     {
-        $newsList = News::query()->ordered()->get();
+        $newsList = News::query()->with(['closedDates', 'closedWeekdays'])->ordered()->get();
+        $categories = News::CATEGORIES;
+        $weekdayLabels = News::WEEKDAY_SHORT_LABELS;
 
-        return view('admin.news.index', compact('newsList'));
+        return view('admin.news.index', compact('newsList', 'categories', 'weekdayLabels'));
     }
 
     public function update(Request $request): RedirectResponse
     {
+        $categoryRule = ['required', 'string', Rule::in(News::categoryKeys())];
+
         $validator = Validator::make($request->all(), [
             'news' => ['nullable', 'array'],
             'news.*.title' => ['required', 'string', 'max:255'],
-            'news.*.body' => ['required', 'string'],
-            'news.*.published_at' => ['nullable', 'date'],
-            'news.*.is_published' => ['nullable', 'in:0,1'],
+            'news.*.body' => ['nullable', 'string'],
+            'news.*.category' => $categoryRule,
+            'news.*.closed_dates' => ['nullable', 'array'],
+            'news.*.closed_dates.*' => ['nullable', 'date_format:Y-m-d'],
+            'news.*.closed_weekdays' => ['nullable', 'array'],
+            'news.*.closed_weekdays.*' => ['nullable', 'integer', 'between:0,6'],
+            'news.*.published_at' => ['required', 'date'],
+            'news.*.is_published' => ['required', 'in:0,1'],
             'news.*.display_order' => ['nullable', 'integer', 'min:0'],
             'new_news' => ['nullable', 'array'],
             'new_news.*.title' => ['required', 'string', 'max:255'],
-            'new_news.*.body' => ['required', 'string'],
-            'new_news.*.published_at' => ['nullable', 'date'],
-            'new_news.*.is_published' => ['nullable', 'in:0,1'],
+            'new_news.*.body' => ['nullable', 'string'],
+            'new_news.*.category' => $categoryRule,
+            'new_news.*.closed_dates' => ['nullable', 'array'],
+            'new_news.*.closed_dates.*' => ['nullable', 'date_format:Y-m-d'],
+            'new_news.*.closed_weekdays' => ['nullable', 'array'],
+            'new_news.*.closed_weekdays.*' => ['nullable', 'integer', 'between:0,6'],
+            'new_news.*.published_at' => ['required', 'date'],
+            'new_news.*.is_published' => ['required', 'in:0,1'],
             'new_news.*.display_order' => ['nullable', 'integer', 'min:0'],
             'deleted_ids' => ['nullable', 'array'],
             'deleted_ids.*' => ['integer', 'exists:news,id'],
-        ]);
+        ], $this->validationMessages());
+
+        $validator->after(function ($validator) use ($request) {
+            foreach (['news', 'new_news'] as $group) {
+                $items = $request->input($group, []);
+                if (! is_array($items)) {
+                    continue;
+                }
+
+                foreach ($items as $key => $data) {
+                    if (! is_array($data)) {
+                        continue;
+                    }
+
+                    $category = $data['category'] ?? null;
+
+                    if (News::usesClosedWeekdays($category)) {
+                        $weekdays = collect($data['closed_weekdays'] ?? [])
+                            ->filter(fn ($value) => $value !== null && $value !== '')
+                            ->map(fn ($value) => (int) $value)
+                            ->filter(fn (int $value) => $value >= 0 && $value <= 6)
+                            ->unique()
+                            ->values();
+
+                        if ($weekdays->isEmpty()) {
+                            $validator->errors()->add(
+                                "{$group}.{$key}.closed_weekdays",
+                                '定休日の曜日を1つ以上選択してください。'
+                            );
+                        }
+                    }
+
+                    if (News::usesClosedDates($category)) {
+                        $dates = collect($data['closed_dates'] ?? [])
+                            ->filter(fn ($value) => is_string($value) && $value !== '')
+                            ->unique()
+                            ->values();
+
+                        if ($dates->isEmpty()) {
+                            $validator->errors()->add(
+                                "{$group}.{$key}.closed_dates",
+                                '休業日を1件以上選択してください。'
+                            );
+                        }
+                    }
+                }
+            }
+        });
 
         $validated = $validator->validate();
 
@@ -93,16 +155,38 @@ class NewsController extends AdminController
                         'slug' => $this->uniqueSlug(News::class, $attrs['title'], $news->id),
                     ]));
                 } else {
-                    News::query()->create(array_merge($attrs, [
+                    $news = News::query()->create(array_merge($attrs, [
                         'slug' => $this->uniqueSlug(News::class, $attrs['title']),
                     ]));
                 }
+
+                $this->syncClosureSelections($news, $data);
 
                 $order++;
             }
         });
 
         return redirect()->route('admin.news.index')->with('success', 'お知らせを保存しました。');
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function validationMessages(): array
+    {
+        $messages = [];
+
+        foreach (['news', 'new_news'] as $group) {
+            $messages["{$group}.*.title.required"] = 'タイトルは必須です。';
+            $messages["{$group}.*.category.required"] = 'お知らせの種類は必須です。';
+            $messages["{$group}.*.category.in"] = 'お知らせの種類を選択してください。';
+            $messages["{$group}.*.published_at.required"] = '公開日時は必須です。';
+            $messages["{$group}.*.published_at.date"] = '公開日時の形式が正しくありません。';
+            $messages["{$group}.*.is_published.required"] = '公開状態を選択してください。';
+            $messages["{$group}.*.is_published.in"] = '公開状態を選択してください。';
+        }
+
+        return $messages;
     }
 
     /**
@@ -113,11 +197,80 @@ class NewsController extends AdminController
     {
         return [
             'title' => $data['title'],
-            'body' => $data['body'],
+            'body' => (string) ($data['body'] ?? ''),
+            'category' => $data['category'] ?? News::CATEGORY_OTHER,
             'published_at' => $this->nullableDate($data['published_at'] ?? null),
             'is_published' => ($data['is_published'] ?? '0') === '1',
             'display_order' => $displayOrder,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function syncClosureSelections(News $news, array $data): void
+    {
+        $category = $data['category'] ?? null;
+
+        if (News::usesClosedWeekdays($category)) {
+            $news->closedDates()->delete();
+            $this->syncClosedWeekdays($news, $data);
+
+            return;
+        }
+
+        if (News::usesClosedDates($category)) {
+            $news->closedWeekdays()->delete();
+            $this->syncClosedDates($news, $data);
+
+            return;
+        }
+
+        $news->closedDates()->delete();
+        $news->closedWeekdays()->delete();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function syncClosedDates(News $news, array $data): void
+    {
+        $news->closedDates()->delete();
+
+        $dates = collect($data['closed_dates'] ?? [])
+            ->filter(fn ($value) => is_string($value) && $value !== '')
+            ->map(fn (string $value) => Carbon::parse($value)->toDateString())
+            ->unique()
+            ->sort()
+            ->values();
+
+        foreach ($dates as $date) {
+            $news->closedDates()->create([
+                'closed_date' => $date,
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function syncClosedWeekdays(News $news, array $data): void
+    {
+        $news->closedWeekdays()->delete();
+
+        $weekdays = collect($data['closed_weekdays'] ?? [])
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => (int) $value)
+            ->filter(fn (int $value) => $value >= 0 && $value <= 6)
+            ->unique()
+            ->sort()
+            ->values();
+
+        foreach ($weekdays as $weekday) {
+            $news->closedWeekdays()->create([
+                'weekday' => $weekday,
+            ]);
+        }
     }
 
     private function nullableDate(mixed $value): ?Carbon

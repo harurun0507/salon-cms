@@ -100,7 +100,7 @@
         <div class="admin-card space-y-5">
             <div>
                 <h2 class="text-base font-medium text-admin-text">トップページ表示件数</h2>
-                <p class="mt-1 text-sm text-admin-muted">各セクションをトップページに何件表示するかを設定します。バナー・アクセスは件数設定の対象外です。</p>
+                <p class="mt-1 text-sm text-admin-muted">各セクションをトップページに何件表示するかを設定します。キャンペーン・アクセスは件数設定の対象外です。</p>
             </div>
             <div class="count-fields-grid">
                 @foreach($countSections as $section)
@@ -138,7 +138,7 @@
             <div>
                 <h2 class="text-base font-medium text-admin-text">トップページの表示順</h2>
                 <p class="mt-1 text-sm text-admin-muted">トップページに表示する各セクションの表示・非表示と表示順を設定します。ドラッグで並び替え、スイッチで表示を切り替えられます。</p>
-                <p class="mt-1 text-xs text-admin-muted">お知らせ・ギャラリー・メニュー・スタッフの一覧・詳細ページには影響しません。</p>
+                <p class="mt-1 text-xs text-admin-muted">お知らせ・ブログ・ギャラリー・メニュー・スタッフの一覧・詳細ページには影響しません。</p>
             </div>
 
             @error('section_order')

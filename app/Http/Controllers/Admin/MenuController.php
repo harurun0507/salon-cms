@@ -13,7 +13,10 @@ class MenuController extends AdminController
 {
     public function index(): View
     {
-        $categories = MenuCategory::query()->with(['menus' => fn ($q) => $q->orderBy('sort_order')])->orderBy('sort_order')->get();
+        $categories = MenuCategory::query()
+            ->with(['menus' => fn ($q) => $q->orderBy('menu_category_menu.sort_order')->orderBy('menus.id')])
+            ->orderBy('sort_order')
+            ->get();
 
         return view('admin.menus.index', compact('categories'));
     }
@@ -34,38 +37,46 @@ class MenuController extends AdminController
             'menus' => ['nullable', 'array'],
             'menus.*.name' => ['required', 'string', 'max:255'],
             'menus.*.price' => ['nullable', 'string', 'max:100'],
-            'menus.*.sort_order' => ['nullable', 'integer', 'min:1'],
             'menus.*.is_published' => ['nullable', 'in:0,1'],
             'menus.*.description' => ['nullable', 'string'],
-            'menus.*.category_id' => ['nullable'],
+            'menus.*.category_ids' => ['nullable', 'array'],
+            'menus.*.category_ids.*' => ['nullable'],
+            'menus.*.sorts' => ['nullable', 'array'],
+            'menus.*.sorts.*' => ['nullable', 'integer', 'min:1'],
             'selected_category_id' => ['nullable'],
+        ], [
+            'categories.*.name.required' => 'カテゴリ名は必須です。',
+            'menus.*.name.required' => 'メニュー名は必須です。',
+            'menus.*.sorts.*.required' => '表示順は必須です。',
+            'menus.*.sorts.*.integer' => '表示順は整数で入力してください。',
+            'menus.*.sorts.*.min' => '表示順は1以上で入力してください。',
+            'menus.*.is_published.in' => '公開状態を選択してください。',
         ]);
 
         $categoryPayload = $validated['categories'] ?? [];
         $menuPayload = $validated['menus'] ?? [];
+        $existingCategoryIds = MenuCategory::query()->pluck('id')->map(fn ($id) => (int) $id)->all();
 
         foreach ($menuPayload as $key => $data) {
-            if (! preg_match('/^new_menu_\d+$/', (string) $key)) {
-                continue;
-            }
-
-            $categoryRef = $data['category_id'] ?? null;
-            if ($categoryRef === null || $categoryRef === '') {
+            $categoryRefs = $this->normalizedCategoryRefs($data['category_ids'] ?? null);
+            if ($categoryRefs === []) {
                 return back()
-                    ->withErrors(["menus.{$key}.category_id" => 'カテゴリを指定してください。'])
+                    ->withErrors(["menus.{$key}.category_ids" => 'カテゴリを1つ以上選択してください。'])
                     ->withInput();
             }
 
-            if (preg_match('/^new_\d+$/', (string) $categoryRef)) {
-                if (! array_key_exists((string) $categoryRef, $categoryPayload)) {
+            foreach ($categoryRefs as $categoryRef) {
+                if (preg_match('/^new_\d+$/', $categoryRef)) {
+                    if (! array_key_exists($categoryRef, $categoryPayload)) {
+                        return back()
+                            ->withErrors(["menus.{$key}.category_ids" => 'カテゴリを指定してください。'])
+                            ->withInput();
+                    }
+                } elseif (! in_array((int) $categoryRef, $existingCategoryIds, true)) {
                     return back()
-                        ->withErrors(["menus.{$key}.category_id" => 'カテゴリを指定してください。'])
+                        ->withErrors(["menus.{$key}.category_ids" => '選択されたカテゴリは無効です。'])
                         ->withInput();
                 }
-            } elseif (! MenuCategory::query()->whereKey($categoryRef)->exists()) {
-                return back()
-                    ->withErrors(["menus.{$key}.category_id" => '選択されたカテゴリは無効です。'])
-                    ->withInput();
             }
         }
 
@@ -102,13 +113,25 @@ class MenuController extends AdminController
                     continue;
                 }
 
-                Menu::query()->whereKey($id)->update([
+                $menu = Menu::query()->find($id);
+                if (! $menu) {
+                    continue;
+                }
+
+                $sync = $this->buildCategorySyncPayload(
+                    $data['category_ids'] ?? [],
+                    $data['sorts'] ?? [],
+                    $newCategoryMap
+                );
+
+                $menu->update([
                     'name' => $data['name'],
                     'price' => $data['price'],
-                    'sort_order' => $data['sort_order'] ?? 1,
+                    'sort_order' => $this->primarySortOrder($sync),
                     'is_published' => ($data['is_published'] ?? '0') === '1',
                     'description' => $data['description'] ?? null,
                 ]);
+                $menu->categories()->sync($sync);
             }
 
             foreach ($menuPayload as $id => $data) {
@@ -116,21 +139,20 @@ class MenuController extends AdminController
                     continue;
                 }
 
-                $categoryRef = (string) ($data['category_id'] ?? '');
-                if (preg_match('/^new_\d+$/', $categoryRef)) {
-                    $resolvedCategoryId = $newCategoryMap[$categoryRef];
-                } else {
-                    $resolvedCategoryId = (int) $categoryRef;
-                }
+                $sync = $this->buildCategorySyncPayload(
+                    $data['category_ids'] ?? [],
+                    $data['sorts'] ?? [],
+                    $newCategoryMap
+                );
 
-                Menu::query()->create([
-                    'menu_category_id' => $resolvedCategoryId,
+                $menu = Menu::query()->create([
                     'name' => $data['name'],
                     'price' => $data['price'],
-                    'sort_order' => $data['sort_order'] ?? 1,
+                    'sort_order' => $this->primarySortOrder($sync),
                     'is_published' => ($data['is_published'] ?? '0') === '1',
                     'description' => $data['description'] ?? null,
                 ]);
+                $menu->categories()->sync($sync);
             }
         });
 
@@ -206,34 +228,34 @@ class MenuController extends AdminController
             return [];
         }
 
-        $existingIds = [];
-        foreach (array_keys($menus) as $key) {
-            if (! preg_match('/^new_menu_\d+$/', (string) $key)) {
-                $existingIds[] = $key;
-            }
-        }
-        $categoryByMenuId = $existingIds === []
-            ? collect()
-            : Menu::query()->whereIn('id', $existingIds)->pluck('menu_category_id', 'id');
-
         $groups = [];
         foreach ($menus as $key => $data) {
             if (! is_array($data)) {
                 continue;
             }
-            if (preg_match('/^new_menu_\d+$/', (string) $key)) {
-                $categoryRef = (string) ($data['category_id'] ?? '');
-            } else {
-                $categoryRef = (string) ($categoryByMenuId[$key] ?? '');
+
+            $sorts = is_array($data['sorts'] ?? null) ? $data['sorts'] : [];
+            if ($sorts === []) {
+                $categoryRefs = $this->normalizedCategoryRefs($data['category_ids'] ?? null);
+                $fallbackSort = $data['sort_order'] ?? 1;
+                foreach ($categoryRefs as $categoryRef) {
+                    $menus[$key]['sorts'][$categoryRef] = $fallbackSort;
+                    $groups[$categoryRef][] = (string) $key;
+                }
+                continue;
             }
-            $groups[$categoryRef][] = (string) $key;
+
+            foreach ($sorts as $categoryRef => $sort) {
+                $groups[(string) $categoryRef][] = (string) $key;
+            }
         }
 
-        foreach ($groups as $keys) {
+        foreach ($groups as $categoryRef => $keys) {
+            $keys = array_values(array_unique($keys));
             $needsRenumber = false;
             $seen = [];
             foreach ($keys as $key) {
-                $raw = $menus[$key]['sort_order'] ?? null;
+                $raw = $menus[$key]['sorts'][$categoryRef] ?? null;
                 if ($raw === null || $raw === '' || ! is_numeric($raw) || (int) $raw < 1 || isset($seen[(int) $raw])) {
                     $needsRenumber = true;
                     break;
@@ -245,11 +267,88 @@ class MenuController extends AdminController
             }
             $i = 1;
             foreach ($keys as $key) {
-                $menus[$key]['sort_order'] = $i++;
+                $menus[$key]['sorts'][$categoryRef] = $i++;
             }
         }
 
         return $menus;
+    }
+
+    /**
+     * @param  mixed  $categoryIds
+     * @return list<string>
+     */
+    private function normalizedCategoryRefs(mixed $categoryIds): array
+    {
+        if (! is_array($categoryIds)) {
+            return [];
+        }
+
+        $refs = [];
+        foreach ($categoryIds as $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+            $refs[] = (string) $value;
+        }
+
+        return array_values(array_unique($refs));
+    }
+
+    /**
+     * @param  mixed  $categoryIds
+     * @param  mixed  $sorts
+     * @param  array<string, int>  $newCategoryMap
+     * @return array<int, array{sort_order: int}>
+     */
+    private function buildCategorySyncPayload(mixed $categoryIds, mixed $sorts, array $newCategoryMap): array
+    {
+        $refs = $this->normalizedCategoryRefs($categoryIds);
+        $sorts = is_array($sorts) ? $sorts : [];
+        $sync = [];
+        $i = 1;
+
+        foreach ($refs as $ref) {
+            if (preg_match('/^new_\d+$/', $ref)) {
+                $categoryId = $newCategoryMap[$ref] ?? null;
+            } else {
+                $categoryId = (int) $ref;
+            }
+
+            if (! $categoryId) {
+                continue;
+            }
+
+            $sort = $sorts[$ref] ?? $sorts[(string) $categoryId] ?? $i;
+            $sync[$categoryId] = ['sort_order' => max(1, (int) $sort)];
+            $i++;
+        }
+
+        return $sync;
+    }
+
+    /**
+     * @param  array<int, array{sort_order: int}>  $sync
+     */
+    private function primarySortOrder(array $sync): int
+    {
+        if ($sync === []) {
+            return 1;
+        }
+
+        // menus.sort_order follows the earliest category (by category display order),
+        // so updating a secondary category's pivot sort does not rewrite it.
+        $primaryCategoryId = MenuCategory::query()
+            ->whereIn('id', array_keys($sync))
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->value('id');
+
+        if ($primaryCategoryId !== null && isset($sync[(int) $primaryCategoryId])) {
+            return max(1, (int) $sync[(int) $primaryCategoryId]['sort_order']);
+        }
+
+        return max(1, (int) reset($sync)['sort_order']);
     }
 
     public function createCategory(): View
@@ -297,14 +396,52 @@ class MenuController extends AdminController
 
     public function destroyCategory(MenuCategory $category): RedirectResponse
     {
+        $soleMenus = $category->menus()
+            ->whereDoesntHave('categories', function ($query) use ($category) {
+                $query->where('menu_categories.id', '!=', $category->id);
+            })
+            ->orderBy('menus.id')
+            ->get(['menus.id', 'menus.name']);
+
+        if ($soleMenus->isNotEmpty()) {
+            $names = $soleMenus->pluck('name')->take(5)->implode('、');
+            $suffix = $soleMenus->count() > 5 ? ' など' : '';
+
+            return redirect()
+                ->route('admin.menus.index')
+                ->with('selected_category_id', $category->id)
+                ->with(
+                    'error',
+                    'このカテゴリのみが設定されているメニューがあるため削除できません。（'.$names.$suffix.'）'
+                );
+        }
+
+        $nextCategoryId = MenuCategory::query()
+            ->where('id', '!=', $category->id)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->value('id');
+
+        // Pivot rows are removed by FK ON DELETE CASCADE on menu_category_menu.
+        // Menus that still belong to other categories are kept as-is.
         $category->delete();
 
-        return redirect()->route('admin.menus.index')->with('success', 'カテゴリを削除しました。');
+        $redirect = redirect()
+            ->route('admin.menus.index')
+            ->with('success', 'カテゴリを削除しました。');
+
+        if ($nextCategoryId !== null) {
+            $redirect->with('selected_category_id', $nextCategoryId);
+        }
+
+        return $redirect;
     }
 
     public function create(MenuCategory $category): View
     {
-        return view('admin.menus.create', compact('category'));
+        $categories = MenuCategory::query()->orderBy('sort_order')->get();
+
+        return view('admin.menus.create', compact('category', 'categories'));
     }
 
     public function store(Request $request, MenuCategory $category): RedirectResponse
@@ -319,15 +456,32 @@ class MenuController extends AdminController
             'description' => ['nullable', 'string'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'is_published' => ['sometimes', 'boolean'],
+            'category_ids' => ['nullable', 'array'],
+            'category_ids.*' => ['integer', 'exists:menu_categories,id'],
         ]);
 
-        $category->menus()->create([
+        $categoryIds = collect($validated['category_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->push((int) $category->id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $sortOrder = $validated['sort_order'] ?? 0;
+
+        $menu = Menu::query()->create([
             'name' => $validated['name'],
             'price' => $validated['price'] ?? null,
             'description' => $validated['description'] ?? null,
-            'sort_order' => $validated['sort_order'] ?? 0,
+            'sort_order' => $sortOrder,
             'is_published' => $request->boolean('is_published', true),
         ]);
+
+        $sync = [];
+        foreach ($categoryIds as $index => $categoryId) {
+            $sync[$categoryId] = ['sort_order' => $categoryId === (int) $category->id ? max(1, (int) $sortOrder) : ($index + 1)];
+        }
+        $menu->categories()->sync($sync);
 
         return redirect()
             ->route('admin.menus.index')
@@ -337,7 +491,10 @@ class MenuController extends AdminController
 
     public function edit(Menu $menu): View
     {
-        return view('admin.menus.edit', compact('menu'));
+        $menu->load('categories');
+        $categories = MenuCategory::query()->orderBy('sort_order')->get();
+
+        return view('admin.menus.edit', compact('menu', 'categories'));
     }
 
     public function update(Request $request, Menu $menu): RedirectResponse
@@ -347,7 +504,8 @@ class MenuController extends AdminController
         ]);
 
         $validated = $request->validate([
-            'menu_category_id' => ['required', 'exists:menu_categories,id'],
+            'category_ids' => ['required', 'array', 'min:1'],
+            'category_ids.*' => ['integer', 'exists:menu_categories,id'],
             'name' => ['required', 'string', 'max:255'],
             'price' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string'],
@@ -355,10 +513,25 @@ class MenuController extends AdminController
             'is_published' => ['sometimes', 'boolean'],
         ]);
 
+        $categoryIds = array_values(array_unique(array_map('intval', $validated['category_ids'])));
+        $sortOrder = max(1, (int) ($validated['sort_order'] ?? 1));
+        $existingSorts = $menu->categories()->pluck('menu_category_menu.sort_order', 'menu_categories.id');
+
+        $sync = [];
+        foreach ($categoryIds as $index => $categoryId) {
+            $sync[$categoryId] = [
+                'sort_order' => (int) ($existingSorts[$categoryId] ?? ($index === 0 ? $sortOrder : ($index + 1))),
+            ];
+        }
+
         $menu->update([
-            ...$validated,
+            'name' => $validated['name'],
+            'price' => $validated['price'] ?? null,
+            'description' => $validated['description'] ?? null,
+            'sort_order' => $sortOrder,
             'is_published' => $request->boolean('is_published'),
         ]);
+        $menu->categories()->sync($sync);
 
         return redirect()->route('admin.menus.index')->with('success', 'メニューを更新しました。');
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Banner;
+use App\Models\Blog;
 use App\Models\Gallery;
 use App\Models\MenuCategory;
 use App\Models\News;
@@ -22,6 +23,7 @@ class HomeController extends Controller
 
         $banners = collect();
         $newsList = collect();
+        $blogList = collect();
         $categories = collect();
         $galleries = collect();
         $staffMembers = collect();
@@ -37,6 +39,11 @@ class HomeController extends Controller
         if ($sectionMap->has(TopPageSection::KEY_NEWS)) {
             $count = max(1, (int) $sectionMap->get(TopPageSection::KEY_NEWS)->display_count);
             $newsList = News::published()->limit($count)->get();
+        }
+
+        if ($sectionMap->has(TopPageSection::KEY_BLOG)) {
+            $count = max(1, (int) $sectionMap->get(TopPageSection::KEY_BLOG)->display_count);
+            $blogList = Blog::published()->limit($count)->get();
         }
 
         if ($sectionMap->has(TopPageSection::KEY_MENU)) {
@@ -60,6 +67,7 @@ class HomeController extends Controller
             'topSections' => $topSections,
             'banners' => $banners,
             'newsList' => $newsList,
+            'blogList' => $blogList,
             'categories' => $categories,
             'galleries' => $galleries,
             'staffMembers' => $staffMembers,

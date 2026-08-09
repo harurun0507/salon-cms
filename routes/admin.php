@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AnalyticsSettingController;
 use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\BlogController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DesignSettingController;
 use App\Http\Controllers\Admin\GalleryController;
@@ -22,6 +23,8 @@ Route::middleware(['web', 'auth', 'active'])->prefix('admin')->name('admin.')->g
 
     Route::get('news', [NewsController::class, 'index'])->name('news.index');
     Route::put('news', [NewsController::class, 'update'])->name('news.update');
+    Route::get('blog', [BlogController::class, 'index'])->name('blog.index');
+    Route::put('blog', [BlogController::class, 'update'])->name('blog.update');
     Route::put('galleries/bulk', [GalleryController::class, 'bulkUpdate'])->name('galleries.bulk-update');
     Route::resource('galleries', GalleryController::class)->except(['show']);
 

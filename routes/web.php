@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AccessPageController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\BlogPageController;
+use App\Http\Controllers\CampaignPageController;
 use App\Http\Controllers\GalleryPageController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MenuPageController;
@@ -26,6 +28,7 @@ Route::middleware('web')->group(function () {
 });
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/campaign', [CampaignPageController::class, 'index'])->name('campaign');
 Route::get('/menu', [MenuPageController::class, 'index'])->name('menu');
 Route::get('/staff', [StaffPageController::class, 'index'])->name('staff');
 Route::get('/gallery', [GalleryPageController::class, 'index'])->name('gallery');
@@ -33,6 +36,8 @@ Route::get('/gallery/{gallery}', [GalleryPageController::class, 'show'])->name('
 Route::get('/access', [AccessPageController::class, 'index'])->name('access');
 Route::get('/news', [NewsPageController::class, 'index'])->name('news.index');
 Route::get('/news/{slug}', [NewsPageController::class, 'show'])->name('news.show');
+Route::get('/blog', [BlogPageController::class, 'index'])->name('blog.index');
+Route::get('/blog/{slug}', [BlogPageController::class, 'show'])->name('blog.show');
 Route::get('/privacy', [PrivacyPageController::class, 'index'])->name('privacy');
 Route::get('/robots.txt', RobotsTxtController::class)->name('robots');
 Route::get('/sitemap.xml', SitemapXmlController::class)->name('sitemap');

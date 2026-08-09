@@ -9,6 +9,7 @@
 :root {
     --site-primary: #5F6F52;
     --site-secondary: #7C8A6A;
+    --site-secondary-soft: #D1D6CB;
     --site-background: #FAF7F1;
     --site-text: #3A332E;
     --site-scrollbar-thumb: #C8C0B2;
@@ -66,6 +67,13 @@
     #access,
     #news {
         scroll-margin-top: 5.5rem;
+    }
+
+    [id^="menu-category-"] {
+        scroll-margin-top: var(
+            --menu-category-scroll-margin,
+            calc(var(--site-header-offset, 5.5rem) + var(--menu-category-nav-height, 4.5rem) + 0.75rem)
+        );
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -188,6 +196,235 @@ html:not(:has(body.admin-page))::-webkit-scrollbar-thumb:hover {
         outline-offset: 2px;
     }
 
+    .menu-category-nav-bar {
+        position: sticky;
+        top: var(--site-header-offset, 5.5rem);
+        z-index: 40;
+        margin: 0 -1rem 3rem;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid color-mix(in srgb, var(--site-text, #3A332E) 10%, transparent);
+        background-color: var(--site-background, var(--color-salon-bg, #FAF7F1));
+    }
+
+    @media (min-width: 768px) {
+        .menu-category-nav-bar {
+            margin-left: -1.5rem;
+            margin-right: -1.5rem;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+        }
+    }
+
+    .menu-category-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.625rem 0.75rem;
+    }
+
+    @media (max-width: 767px) {
+        .menu-category-nav {
+            flex-wrap: nowrap;
+            gap: 0.5rem;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding-bottom: 0.125rem;
+        }
+
+        .menu-category-nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .menu-category-nav-link {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+    }
+
+    .menu-category-nav-link {
+        display: inline-flex;
+        min-height: 2.5rem;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--site-secondary, #7C8A6A);
+        border-radius: var(--site-button-radius, 9999px);
+        background-color: #fff;
+        color: var(--site-secondary, #7C8A6A);
+        font-size: 0.875rem;
+        font-weight: 500;
+        line-height: 1.25;
+        text-align: center;
+        text-decoration: none;
+        transition:
+            background-color 0.2s ease,
+            border-color 0.2s ease,
+            color 0.2s ease;
+    }
+
+    .menu-category-nav-link:hover {
+        background-color: var(--site-secondary-soft, #D1D6CB);
+        border-color: var(--site-secondary, #7C8A6A);
+        color: var(--site-secondary, #7C8A6A);
+    }
+
+    .menu-category-nav-link.is-active,
+    .menu-category-nav-link[aria-current="true"] {
+        background-color: var(--site-secondary, #7C8A6A);
+        border-color: var(--site-secondary, #7C8A6A);
+        color: #fff;
+    }
+
+    .menu-category-nav-link.is-active:hover,
+    .menu-category-nav-link[aria-current="true"]:hover {
+        background-color: var(--site-secondary, #7C8A6A);
+        border-color: var(--site-secondary, #7C8A6A);
+        color: #fff;
+    }
+
+    .menu-category-nav-link:focus-visible {
+        outline: 2px solid var(--site-secondary, #7C8A6A);
+        outline-offset: 2px;
+    }
+
+    .menu-category-block {
+        padding-bottom: 2.75rem;
+        margin-bottom: 2.75rem;
+        border-bottom: 1px solid color-mix(in srgb, var(--site-text, #3A332E) 10%, transparent);
+    }
+
+    .menu-category-block:last-of-type {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: 0;
+    }
+
+    .menu-category-heading {
+        margin-bottom: 1.75rem;
+    }
+
+    .menu-category-heading-en {
+        margin-bottom: 0.35rem;
+        color: var(--site-secondary, #7C8A6A);
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.22em;
+        line-height: 1.2;
+    }
+
+    .menu-category-heading-ja {
+        color: var(--site-text, #3A332E);
+        font-family: var(--site-heading-font, var(--font-serif));
+        font-size: 1.625rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        line-height: 1.35;
+    }
+
+    @media (min-width: 768px) {
+        .menu-category-heading-ja {
+            font-size: 1.875rem;
+        }
+    }
+
+    .menu-price-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .menu-price-item {
+        min-width: 0;
+    }
+
+    .menu-price-row {
+        display: flex;
+        align-items: baseline;
+        gap: 0.75rem;
+        min-width: 0;
+    }
+
+    .menu-price-name {
+        flex: 0 1 auto;
+        min-width: 0;
+        color: var(--site-text, #3A332E);
+        font-size: 1.05rem;
+        font-weight: 500;
+        line-height: 1.5;
+        word-break: break-word;
+    }
+
+    .menu-price-leader {
+        flex: 1 0 1.5rem;
+        min-width: 1.25rem;
+        height: 0;
+        border-bottom: 1px dotted color-mix(in srgb, var(--site-text, #3A332E) 28%, transparent);
+        transform: translateY(-0.4em);
+    }
+
+    .menu-price-value {
+        flex: 0 0 auto;
+        color: var(--site-secondary, #7C8A6A);
+        font-size: 1.05rem;
+        font-weight: 500;
+        line-height: 1.5;
+        text-align: right;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .menu-price-inquiry {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        min-height: 1.75rem;
+        padding: 0.15rem 0.65rem;
+        border: 1px solid color-mix(in srgb, var(--site-secondary, #7C8A6A) 35%, white);
+        border-radius: 9999px;
+        background-color: color-mix(in srgb, var(--site-secondary, #7C8A6A) 8%, white);
+        color: var(--site-secondary, #7C8A6A);
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        line-height: 1.3;
+        white-space: nowrap;
+    }
+
+    .menu-price-desc {
+        margin-top: 0.45rem;
+        padding-right: 6.5rem;
+        max-width: 42rem;
+        color: var(--color-salon-muted, #6B635C);
+        font-size: 0.8125rem;
+        line-height: 1.75;
+        white-space: pre-line;
+    }
+
+    /* PC: widen description so typical copy fits in 1–2 lines.
+       (Layout is flex, not grid; the previous admin % column tweak did not apply here.) */
+    @media (min-width: 640px) {
+        .menu-price-desc {
+            max-width: 52rem; /* 832px: +160px vs previous 42rem / 672px */
+        }
+    }
+
+    @media (max-width: 639px) {
+        .menu-price-name,
+        .menu-price-value {
+            font-size: 1rem;
+        }
+
+        .menu-price-desc {
+            padding-right: 0;
+            margin-top: 0.5rem;
+        }
+
+        .menu-price-leader {
+            min-width: 0.75rem;
+        }
+    }
+
     .site-back-link {
         display: inline-flex;
         align-items: center;
@@ -246,6 +483,66 @@ html:not(:has(body.admin-page))::-webkit-scrollbar-thumb:hover {
             white
         );
         outline-offset: 2px;
+    }
+
+    .hero-slider-controls {
+        position: absolute;
+        right: 1.5rem;
+        bottom: 1.5rem;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        gap: 1.875rem;
+    }
+
+    @media (min-width: 768px) {
+        .hero-slider-controls {
+            right: 2rem;
+            bottom: 2rem;
+        }
+    }
+
+    .hero-slider-nav {
+        display: inline-flex;
+        height: 1.75rem;
+        width: 1.75rem;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        border: 0;
+        background-color: rgb(255 255 255 / 0.65);
+        color: rgb(90 86 80 / 0.5);
+        box-shadow: none;
+        cursor: pointer;
+        transition:
+            background-color 0.2s ease,
+            color 0.2s ease;
+    }
+
+    .hero-slider-nav:hover {
+        background-color: rgb(255 255 255 / 0.9);
+        color: rgb(90 86 80 / 0.72);
+    }
+
+    .hero-slider-nav:focus-visible {
+        outline: 2px solid color-mix(
+            in srgb,
+            var(--site-primary, #5F6F52) 45%,
+            white
+        );
+        outline-offset: 2px;
+    }
+
+    .hero-slider-nav-icon {
+        width: 0.75rem;
+        height: 0.75rem;
+    }
+
+    .hero-slider-navs {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
     }
 
     .section-title {
@@ -424,6 +721,142 @@ html:not(:has(body.admin-page))::-webkit-scrollbar-thumb:hover {
 
     .admin-icon-btn-edit svg {
         @apply h-3.5 w-3.5 shrink-0;
+    }
+
+    /*
+     * Multi-select toggle buttons (news closed weekdays / menu categories).
+     * Visually hides the checkbox; the face span looks like a tappable button.
+     */
+    .admin-choice-choices,
+    .news-weekday-choices {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .admin-choice-option,
+    .news-weekday-option {
+        position: relative;
+        display: block;
+        margin: 0;
+        cursor: pointer;
+        flex: 1 1 calc(14.28% - 0.45rem);
+        min-width: 2.5rem;
+    }
+
+    .admin-choice-choices--auto .admin-choice-option,
+    .admin-choice-choices--auto .news-weekday-option,
+    .news-weekday-choices--auto .admin-choice-option,
+    .news-weekday-choices--auto .news-weekday-option {
+        flex: 0 0 auto;
+        min-width: 0;
+        flex-shrink: 0;
+    }
+
+    /* Menu categories: one row on desktop, wrap on small screens (no horizontal scroll). */
+    .admin-choice-choices--auto,
+    .news-weekday-choices--auto {
+        display: flex;
+        flex-wrap: nowrap;
+        width: 100%;
+        max-width: 100%;
+        gap: 0.3rem;
+        overflow: visible;
+    }
+
+    .admin-choice-choices--auto .admin-choice-face,
+    .admin-choice-choices--auto .news-weekday-face,
+    .news-weekday-choices--auto .admin-choice-face,
+    .news-weekday-choices--auto .news-weekday-face {
+        min-height: 2.25rem;
+        padding-left: 0.45rem;
+        padding-right: 0.45rem;
+        font-size: 0.8125rem;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 767px) {
+        .admin-choice-choices--auto,
+        .news-weekday-choices--auto {
+            flex-wrap: wrap;
+            gap: 0.375rem;
+        }
+
+        .admin-choice-choices--auto .admin-choice-option,
+        .admin-choice-choices--auto .news-weekday-option,
+        .news-weekday-choices--auto .admin-choice-option,
+        .news-weekday-choices--auto .news-weekday-option {
+            flex: 1 1 calc(33.333% - 0.375rem);
+            min-width: 5.25rem;
+            max-width: calc(50% - 0.2rem);
+        }
+
+        .admin-choice-choices--auto .admin-choice-face,
+        .admin-choice-choices--auto .news-weekday-face,
+        .news-weekday-choices--auto .admin-choice-face,
+        .news-weekday-choices--auto .news-weekday-face {
+            min-height: 2.5rem;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            font-size: 0.875rem;
+        }
+    }
+
+    [data-menu-category-checkboxes] {
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .admin-choice-input,
+    .news-weekday-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+        appearance: none;
+    }
+
+    .admin-choice-face,
+    .news-weekday-face {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 2.5rem;
+        border: 1px solid #E5E0D7;
+        border-radius: 0.5rem;
+        background-color: #ffffff;
+        color: #3D3833;
+        font-size: 0.875rem;
+        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .admin-choice-option:hover .admin-choice-face,
+    .admin-choice-option:hover .news-weekday-face,
+    .news-weekday-option:hover .admin-choice-face,
+    .news-weekday-option:hover .news-weekday-face {
+        background-color: #F7F5F0;
+    }
+
+    .admin-choice-input:checked + .admin-choice-face,
+    .admin-choice-input:checked + .news-weekday-face,
+    .news-weekday-input:checked + .admin-choice-face,
+    .news-weekday-input:checked + .news-weekday-face {
+        background-color: #E5EADD;
+        border-color: #697A55;
+        color: #556344;
+        font-weight: 600;
+    }
+
+    .admin-choice-input:focus-visible + .admin-choice-face,
+    .admin-choice-input:focus-visible + .news-weekday-face,
+    .news-weekday-input:focus-visible + .admin-choice-face,
+    .news-weekday-input:focus-visible + .news-weekday-face {
+        box-shadow: 0 0 0 2px rgba(105, 122, 85, 0.35);
     }
 
     .btn-admin-delete {

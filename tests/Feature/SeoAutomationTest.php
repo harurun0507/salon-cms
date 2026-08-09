@@ -88,6 +88,7 @@ class SeoAutomationTest extends TestCase
         $xml = $response->getContent();
         $this->assertStringContainsString('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">', $xml);
         $this->assertStringContainsString('<loc>'.e(route('home')).'</loc>', $xml);
+        $this->assertStringContainsString('<loc>'.e(route('campaign')).'</loc>', $xml);
         $this->assertStringContainsString('<loc>'.e(route('news.index')).'</loc>', $xml);
         $this->assertStringContainsString('<loc>'.e(route('menu')).'</loc>', $xml);
         $this->assertStringContainsString('<loc>'.e(route('gallery')).'</loc>', $xml);

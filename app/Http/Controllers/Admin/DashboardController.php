@@ -147,7 +147,7 @@ class DashboardController extends AdminController
         $menus = MenuCategory::query()
             ->orderBy('sort_order')
             ->orderBy('id')
-            ->with(['menus' => fn ($q) => $q->orderBy('sort_order')->orderBy('id')])
+            ->with(['menus' => fn ($q) => $q->orderBy('menu_category_menu.sort_order')->orderBy('menus.id')])
             ->get()
             ->flatMap(fn (MenuCategory $category) => $category->menus);
 
@@ -287,8 +287,8 @@ class DashboardController extends AdminController
 
                 return [
                     'type' => 'banner',
-                    'type_label' => 'バナー',
-                    'title' => $this->resolveRecentTitle($banner->title, 'バナー', $sortIndex),
+                    'type_label' => 'キャンペーン',
+                    'title' => $this->resolveRecentTitle($banner->title, 'キャンペーン', $sortIndex),
                     'updated_at' => $banner->updated_at,
                     'is_published' => $isPublished,
                     'edit_url' => route('admin.home.banners'),

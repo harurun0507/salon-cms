@@ -81,13 +81,13 @@ class AdminConfirmModalTest extends TestCase
     public function test_menus_bulk_save_uses_confirm_modal_without_browser_confirm(): void
     {
         $category = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
-        Menu::query()->create([
-            'menu_category_id' => $category->id,
+        $menu = Menu::query()->create([
             'name' => 'カットベーシック',
             'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menu->categories()->attach($category->id, ['sort_order' => 1]);
 
         $html = $this->actingAs($this->admin())
             ->get(route('admin.menus.index'))
@@ -265,7 +265,7 @@ class AdminConfirmModalTest extends TestCase
         $this->assertStringContainsString('admin-save-bar sticky top-0', $html);
         $this->assertStringContainsString('data-admin-confirm-trigger', $html);
         $this->assertStringContainsString('data-confirm-form="banners-bulk-form"', $html);
-        $this->assertStringContainsString('data-confirm-title="バナー保存の確認"', $html);
+        $this->assertStringContainsString('data-confirm-title="キャンペーン保存の確認"', $html);
         $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
         if (\App\Models\Banner::DISPLAY_LOCATION_UI_ENABLED) {
             $this->assertStringContainsString('画像、タイトル、リンク、表示場所、公開期間、公開状態、表示順、削除など', $html);
@@ -290,7 +290,7 @@ class AdminConfirmModalTest extends TestCase
         $this->assertStringContainsString('data-confirm-form="news-bulk-form"', $html);
         $this->assertStringContainsString('data-confirm-title="お知らせ保存の確認"', $html);
         $this->assertStringContainsString('data-confirm-submit-label="保存する"', $html);
-        $this->assertStringContainsString('タイトル、本文、公開日時、公開状態、表示順、削除など', $html);
+        $this->assertStringContainsString('タイトル、お知らせの種類、休業日、本文、公開日時、公開状態、表示順、削除など', $html);
         $this->assertStringContainsString('公開サイトに表示するお知らせを登録・編集します。', $html);
         $this->assertStringNotContainsString('return confirm(', $html);
         $this->assertSame(1, substr_count($html, 'data-confirm-form="news-bulk-form"'));

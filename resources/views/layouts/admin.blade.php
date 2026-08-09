@@ -90,6 +90,22 @@
                 .admin-icon-btn-edit:active { background-color: #EEF1E8; border-color: #B8BFA8; color: #4F5640; }
                 .admin-icon-btn-edit:focus, .admin-icon-btn-edit:focus-visible { outline: none; background-color: #F5F6F1; border-color: #C4C9B8; color: #5A6248; box-shadow: 0 0 0 3px rgba(107, 115, 85, 0.15); }
                 .admin-icon-btn-edit svg { height: 0.875rem; width: 0.875rem; flex-shrink: 0; }
+                .admin-choice-choices, .news-weekday-choices { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+                .admin-choice-option, .news-weekday-option { position: relative; display: block; margin: 0; cursor: pointer; flex: 1 1 calc(14.28% - 0.45rem); min-width: 2.5rem; }
+                .admin-choice-choices--auto .admin-choice-option, .admin-choice-choices--auto .news-weekday-option, .news-weekday-choices--auto .admin-choice-option, .news-weekday-choices--auto .news-weekday-option { flex: 0 0 auto; min-width: 0; flex-shrink: 0; }
+                .admin-choice-choices--auto, .news-weekday-choices--auto { display: flex; flex-wrap: nowrap; width: 100%; max-width: 100%; gap: 0.3rem; overflow: visible; }
+                .admin-choice-choices--auto .admin-choice-face, .admin-choice-choices--auto .news-weekday-face, .news-weekday-choices--auto .admin-choice-face, .news-weekday-choices--auto .news-weekday-face { min-height: 2.25rem; padding-left: 0.45rem; padding-right: 0.45rem; font-size: 0.8125rem; white-space: nowrap; }
+                @media (max-width: 767px) {
+                    .admin-choice-choices--auto, .news-weekday-choices--auto { flex-wrap: wrap; gap: 0.375rem; }
+                    .admin-choice-choices--auto .admin-choice-option, .admin-choice-choices--auto .news-weekday-option, .news-weekday-choices--auto .admin-choice-option, .news-weekday-choices--auto .news-weekday-option { flex: 1 1 calc(33.333% - 0.375rem); min-width: 5.25rem; max-width: calc(50% - 0.2rem); }
+                    .admin-choice-choices--auto .admin-choice-face, .admin-choice-choices--auto .news-weekday-face, .news-weekday-choices--auto .admin-choice-face, .news-weekday-choices--auto .news-weekday-face { min-height: 2.5rem; padding-left: 0.5rem; padding-right: 0.5rem; font-size: 0.875rem; }
+                }
+                [data-menu-category-checkboxes] { max-width: 100%; min-width: 0; }
+                .admin-choice-input, .news-weekday-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; appearance: none; }
+                .admin-choice-face, .news-weekday-face { display: flex; align-items: center; justify-content: center; min-height: 2.5rem; border: 1px solid #E5E0D7; border-radius: 0.5rem; background-color: #ffffff; color: #3D3833; font-size: 0.875rem; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+                .admin-choice-option:hover .admin-choice-face, .admin-choice-option:hover .news-weekday-face, .news-weekday-option:hover .admin-choice-face, .news-weekday-option:hover .news-weekday-face { background-color: #F7F5F0; }
+                .admin-choice-input:checked + .admin-choice-face, .admin-choice-input:checked + .news-weekday-face, .news-weekday-input:checked + .admin-choice-face, .news-weekday-input:checked + .news-weekday-face { background-color: #E5EADD; border-color: #697A55; color: #556344; font-weight: 600; }
+                .admin-choice-input:focus-visible + .admin-choice-face, .admin-choice-input:focus-visible + .news-weekday-face, .news-weekday-input:focus-visible + .admin-choice-face, .news-weekday-input:focus-visible + .news-weekday-face { box-shadow: 0 0 0 2px rgba(105, 122, 85, 0.35); }
                 .btn-admin-delete { @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-admin-danger/70 bg-admin-card px-3 text-sm font-medium text-admin-danger shadow-[0_2px_10px_rgba(0,0,0,0.04)] transition duration-150 hover:-translate-y-0.5 hover:border-admin-danger-dark hover:bg-admin-danger hover:text-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-admin-danger/40 focus:ring-offset-1 focus:ring-offset-admin-bg; }
                 .admin-nav-link { @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm leading-snug text-admin-text/90 transition-colors duration-150 hover:bg-admin-hover hover:text-admin-text; }
                 .admin-nav-link svg { @apply text-admin-icon; }
@@ -855,7 +871,19 @@
                 @endif
 
                 <div class="p-4 md:p-8">
-                    @if($errors->any())
+                    @php
+                        $toastValidationRoutes = ['admin.news.*', 'admin.home.banners', 'admin.home.banners.update', 'admin.menus.*'];
+                        $toastValidationErrors = [];
+                        if (request()->routeIs($toastValidationRoutes)) {
+                            $errorBag = (isset($errors) && $errors->any())
+                                ? $errors
+                                : (session()->get('errors') ?: null);
+                            if ($errorBag && $errorBag->any()) {
+                                $toastValidationErrors = array_values(array_unique($errorBag->all()));
+                            }
+                        }
+                    @endphp
+                    @if($errors->any() && ! request()->routeIs($toastValidationRoutes))
                         <div class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                             <ul class="list-disc pl-5">
                                 @foreach($errors->all() as $error)
@@ -1111,7 +1139,7 @@
             bottom: 1rem;
             z-index: 70;
             display: flex;
-            width: min(100% - 2rem, 22rem);
+            width: min(100% - 2rem, 26rem);
             flex-direction: column;
             gap: 0.75rem;
             pointer-events: none;
@@ -1194,6 +1222,7 @@
             font-size: 0.875rem;
             line-height: 1.5;
             color: #3D3833;
+            white-space: pre-line;
         }
 
         .admin-toast-item--error .admin-toast-text {
@@ -1234,6 +1263,7 @@
         'success' => session('success'),
         'error' => session('error'),
         'status' => session('status'),
+        'validationErrors' => $toastValidationErrors ?? [],
     ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 
     <script>
@@ -1320,14 +1350,17 @@
             }
 
             window.AdminToast = {
-                show: function (message, type) {
+                show: function (message, type, options) {
                     const stack = document.getElementById('admin-toast-stack');
                     if (!stack || !message) {
                         return null;
                     }
 
+                    const opts = options || {};
                     const tone = type === 'error' ? 'error' : 'success';
-                    const duration = tone === 'error' ? 5000 : 3000;
+                    const duration = Object.prototype.hasOwnProperty.call(opts, 'duration')
+                        ? opts.duration
+                        : (tone === 'error' ? 12000 : 3000);
 
                     const item = document.createElement('div');
                     item.className = 'admin-toast-item admin-toast-item--' + tone;
@@ -1346,8 +1379,17 @@
                         '</button>';
 
                     item.querySelector('.admin-toast-text').textContent = message;
-                    item.querySelector('.admin-toast-close').addEventListener('click', function () {
+                    item.querySelector('.admin-toast-close').addEventListener('click', function (event) {
+                        event.stopPropagation();
                         dismissToast(item);
+                    });
+
+                    item.addEventListener('click', function (event) {
+                        // 将来のリンク／操作ボタン等はトースト全体の閉じる処理を発火させない
+                        if (event.target.closest('a, button, input, select, textarea, label, [data-toast-keep-open]')) {
+                            return;
+                        }
+                        dismissToast(item, true);
                     });
 
                     item.addEventListener('mouseenter', function () {
@@ -1374,8 +1416,8 @@
                 },
             };
 
-            window.showToast = function (message, type) {
-                return window.AdminToast.show(message, type);
+            window.showToast = function (message, type, options) {
+                return window.AdminToast.show(message, type, options);
             };
 
             try {
@@ -1385,6 +1427,14 @@
                 }
                 if (flash.error) {
                     window.showToast(flash.error, 'error');
+                }
+                if (Array.isArray(flash.validationErrors) && flash.validationErrors.length) {
+                    const lines = ['入力内容を確認してください。'].concat(
+                        flash.validationErrors.map(function (error) {
+                            return '・' + error;
+                        })
+                    );
+                    window.showToast(lines.join('\n'), 'error', { duration: 12000 });
                 }
                 if (flash.status && flash.status !== flash.success) {
                     window.showToast(flash.status, 'success');

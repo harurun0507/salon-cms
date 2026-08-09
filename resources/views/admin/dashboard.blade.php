@@ -329,7 +329,7 @@
                 <span class="dashboard-quick-action-icon" aria-hidden="true">
                     <x-admin.nav-icon name="megaphone" class="h-4 w-4" />
                 </span>
-                バナー追加
+                キャンペーン追加
             </a>
             <a href="{{ route('admin.staff.index') }}" class="dashboard-quick-action">
                 <span class="dashboard-quick-action-icon" aria-hidden="true">

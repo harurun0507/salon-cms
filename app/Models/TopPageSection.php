@@ -12,6 +12,8 @@ class TopPageSection extends Model
 
     public const KEY_NEWS = 'news';
 
+    public const KEY_BLOG = 'blog';
+
     public const KEY_MENU = 'menu';
 
     public const KEY_GALLERY = 'gallery';
@@ -23,6 +25,7 @@ class TopPageSection extends Model
     public const KEYS = [
         self::KEY_BANNER,
         self::KEY_NEWS,
+        self::KEY_BLOG,
         self::KEY_MENU,
         self::KEY_GALLERY,
         self::KEY_STAFF,
@@ -30,8 +33,9 @@ class TopPageSection extends Model
     ];
 
     public const LABELS = [
-        self::KEY_BANNER => 'バナー',
+        self::KEY_BANNER => 'キャンペーン',
         self::KEY_NEWS => 'お知らせ',
+        self::KEY_BLOG => 'NEWS & BLOG',
         self::KEY_MENU => 'メニュー',
         self::KEY_GALLERY => 'ギャラリー',
         self::KEY_STAFF => 'スタッフ',
@@ -41,14 +45,16 @@ class TopPageSection extends Model
     public const DEFAULTS = [
         self::KEY_BANNER => ['is_visible' => true, 'display_order' => 0, 'display_count' => null],
         self::KEY_NEWS => ['is_visible' => true, 'display_order' => 1, 'display_count' => 3],
-        self::KEY_MENU => ['is_visible' => true, 'display_order' => 2, 'display_count' => 6],
-        self::KEY_GALLERY => ['is_visible' => true, 'display_order' => 3, 'display_count' => 6],
-        self::KEY_STAFF => ['is_visible' => true, 'display_order' => 4, 'display_count' => 4],
-        self::KEY_ACCESS => ['is_visible' => true, 'display_order' => 5, 'display_count' => null],
+        self::KEY_BLOG => ['is_visible' => true, 'display_order' => 2, 'display_count' => 3],
+        self::KEY_MENU => ['is_visible' => true, 'display_order' => 3, 'display_count' => 6],
+        self::KEY_GALLERY => ['is_visible' => true, 'display_order' => 4, 'display_count' => 6],
+        self::KEY_STAFF => ['is_visible' => true, 'display_order' => 5, 'display_count' => 4],
+        self::KEY_ACCESS => ['is_visible' => true, 'display_order' => 6, 'display_count' => null],
     ];
 
     public const COUNT_MAX = [
         self::KEY_NEWS => 20,
+        self::KEY_BLOG => 12,
         self::KEY_MENU => 30,
         self::KEY_GALLERY => 24,
         self::KEY_STAFF => 20,

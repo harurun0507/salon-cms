@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Blog;
 use App\Models\News;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Response;
@@ -78,6 +79,18 @@ class SitemapXmlController extends Controller
             ];
         }
 
+        foreach (Blog::published()->get(['slug', 'published_at', 'updated_at']) as $blog) {
+            $slug = trim((string) $blog->slug);
+            if ($slug === '') {
+                continue;
+            }
+
+            $urls[] = [
+                'loc' => route('blog.show', ['slug' => $slug]),
+                'lastmod' => $this->formatLastmod($blog->updated_at ?? $blog->published_at),
+            ];
+        }
+
         return $urls;
     }
 
@@ -88,7 +101,9 @@ class SitemapXmlController extends Controller
     {
         return [
             'home',
+            'campaign',
             'news.index',
+            'blog.index',
             'menu',
             'gallery',
             'staff',

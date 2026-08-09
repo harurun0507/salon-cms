@@ -16,7 +16,10 @@ class NewsPageController extends Controller
 
     public function show(string $slug): View
     {
-        $news = News::published()->where('slug', $slug)->firstOrFail();
+        $news = News::published()
+            ->with(['closedDates', 'closedWeekdays'])
+            ->where('slug', $slug)
+            ->firstOrFail();
 
         return view('public.news.show', compact('news'));
     }

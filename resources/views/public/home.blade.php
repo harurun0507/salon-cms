@@ -46,22 +46,26 @@
         </div>
 
         @if($heroSliderEnabled)
-            <button type="button" id="hero-prev" class="absolute left-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white transition hover:bg-black/50 md:left-6" aria-label="前の画像">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7"/></svg>
-            </button>
-            <button type="button" id="hero-next" class="absolute right-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white transition hover:bg-black/50 md:right-6" aria-label="次の画像">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/></svg>
-            </button>
-            <div id="hero-dots" class="absolute bottom-5 left-0 right-0 z-30 flex justify-center gap-2" role="tablist" aria-label="メインビジュアルの位置">
-                @foreach($heroImages as $index => $heroImage)
-                    <button
-                        type="button"
-                        class="hero-dot site-carousel-dot {{ $index === 0 ? 'is-active' : '' }}"
-                        data-hero-dot="{{ $index }}"
-                        aria-label="画像{{ $index + 1 }}"
-                        @if($index === 0) aria-current="true" @endif
-                    ></button>
-                @endforeach
+            <div class="hero-slider-controls" data-hero-controls>
+                <div id="hero-dots" class="flex items-center gap-2" role="tablist" aria-label="メインビジュアルの位置">
+                    @foreach($heroImages as $index => $heroImage)
+                        <button
+                            type="button"
+                            class="hero-dot site-carousel-dot {{ $index === 0 ? 'is-active' : '' }}"
+                            data-hero-dot="{{ $index }}"
+                            aria-label="画像{{ $index + 1 }}"
+                            @if($index === 0) aria-current="true" @endif
+                        ></button>
+                    @endforeach
+                </div>
+                <div class="hero-slider-navs">
+                    <button type="button" id="hero-prev" class="hero-slider-nav" aria-label="前の画像">
+                        <svg class="hero-slider-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <button type="button" id="hero-next" class="hero-slider-nav" aria-label="次の画像">
+                        <svg class="hero-slider-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
             </div>
         @endif
     </section>
@@ -166,58 +170,15 @@
         @switch($section->section_key)
             @case('banner')
                 @if(($banners ?? collect())->isNotEmpty())
-                    <section id="banners" class="site-section border-y border-salon-line bg-white/50">
-                        <div class="mx-auto max-w-5xl px-4 md:px-6">
-                            <div class="space-y-6">
-                                @foreach($banners as $banner)
-                                    @php
-                                        $alt = $banner->altTextOrTitle();
-                                        $imgClass = 'aspect-[3/1] w-full object-cover transition duration-500 ease-out';
-                                    @endphp
-                                    <article class="overflow-hidden rounded-sm">
-                                        @if($banner->hasLink())
-                                            <a
-                                                href="{{ $banner->link_url }}"
-                                                @if($banner->opensInNewTab()) target="_blank" rel="noopener noreferrer" @endif
-                                                class="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-salon-accent focus-visible:ring-offset-2"
-                                            >
-                                                <img
-                                                    src="{{ asset('storage/'.$banner->image_path) }}"
-                                                    alt="{{ $alt }}"
-                                                    class="{{ $imgClass }} group-hover:scale-[1.015]"
-                                                >
-                                                @if($banner->title || $banner->description)
-                                                    <div class="mt-3 text-center">
-                                                        @if($banner->title)
-                                                            <p class="font-medium text-salon-text transition group-hover:text-salon-accent">{{ $banner->title }}</p>
-                                                        @endif
-                                                        @if($banner->description)
-                                                            <p class="mt-1 text-sm leading-relaxed text-salon-muted whitespace-pre-line">{{ $banner->description }}</p>
-                                                        @endif
-                                                    </div>
-                                                @endif
-                                            </a>
-                                        @else
-                                            <div>
-                                                <img
-                                                    src="{{ asset('storage/'.$banner->image_path) }}"
-                                                    alt="{{ $alt }}"
-                                                    class="{{ $imgClass }}"
-                                                >
-                                                @if($banner->title || $banner->description)
-                                                    <div class="mt-3 text-center">
-                                                        @if($banner->title)
-                                                            <p class="font-medium text-salon-text">{{ $banner->title }}</p>
-                                                        @endif
-                                                        @if($banner->description)
-                                                            <p class="mt-1 text-sm leading-relaxed text-salon-muted whitespace-pre-line">{{ $banner->description }}</p>
-                                                        @endif
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        @endif
-                                    </article>
-                                @endforeach
+                    <section id="banners" class="site-section">
+                        <div class="mx-auto max-w-6xl px-4 md:px-6">
+                            <div class="mb-12 text-center">
+                                <p class="mb-2 text-sm tracking-widest text-salon-accent">Campaign</p>
+                                <h2 class="section-title">キャンペーン</h2>
+                            </div>
+                            @include('public.partials.campaign-cards', ['banners' => $banners])
+                            <div class="mt-10 text-center">
+                                <x-section-more-link :href="route('campaign')">すべて見る →</x-section-more-link>
                             </div>
                         </div>
                     </section>
@@ -225,29 +186,17 @@
                 @break
 
             @case('news')
-                <section id="news" class="site-section border-y border-salon-line bg-white/60">
-                    <div class="mx-auto max-w-4xl px-4 md:px-6">
-                        <div class="mb-8 text-center md:mb-10">
-                            <p class="mb-2 text-sm tracking-widest text-salon-accent">News</p>
-                            <h2 class="section-title">お知らせ</h2>
-                        </div>
-                        @if($newsList->isNotEmpty())
-                            <ul class="divide-y divide-salon-line">
-                                @foreach($newsList as $news)
-                                    <li>
-                                        <a href="{{ route('news.show', $news->slug) }}" class="flex flex-col gap-1 py-4 transition hover:text-salon-accent sm:flex-row sm:items-baseline sm:gap-6">
-                                            <time class="shrink-0 text-sm tabular-nums text-salon-muted">{{ $news->published_at?->format('Y.m.d') }}</time>
-                                            <span class="font-medium leading-relaxed">{{ $news->title }}</span>
-                                        </a>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        @endif
-                        <div class="mt-8 text-center">
-                            <x-section-more-link :href="route('news.index')">一覧を見る →</x-section-more-link>
-                        </div>
-                    </div>
-                </section>
+            @case('blog')
+                @php
+                    $newsBlogKeys = ($topSections ?? collect())
+                        ->pluck('section_key')
+                        ->filter(fn ($key) => in_array($key, ['news', 'blog'], true))
+                        ->values();
+                    $shouldRenderNewsBlog = $newsBlogKeys->first() === $section->section_key;
+                @endphp
+                @if($shouldRenderNewsBlog)
+                    @include('public.partials.home-news-blog')
+                @endif
                 @break
 
             @case('menu')

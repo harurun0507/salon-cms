@@ -161,6 +161,12 @@
         }
         html { scroll-behavior: smooth; }
         #concept, #menu, #gallery, #staff, #access, #news { scroll-margin-top: 5.5rem; }
+        [id^="menu-category-"] {
+            scroll-margin-top: var(
+                --menu-category-scroll-margin,
+                calc(var(--site-header-offset, 5.5rem) + var(--menu-category-nav-height, 4.5rem) + 0.75rem)
+            );
+        }
         @media (prefers-reduced-motion: reduce) {
             html { scroll-behavior: auto; }
         }

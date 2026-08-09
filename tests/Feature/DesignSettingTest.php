@@ -218,6 +218,10 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('id="site-design-vars"', $html);
         $this->assertStringContainsString('--site-primary: #abcdef;', $html);
         $this->assertStringContainsString('--site-secondary: #fedcba;', $html);
+        $this->assertStringContainsString(
+            '--site-secondary-soft: '.DesignSetting::secondarySoftFromAccent('#fedcba').';',
+            $html
+        );
         $this->assertStringContainsString('--site-background: #010203;', $html);
         $this->assertStringContainsString('--site-text: #040506;', $html);
         $this->assertStringContainsString('--site-scrollbar-thumb: #111213;', $html);
@@ -239,6 +243,10 @@ class DesignSettingTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('--site-primary: #5f6f52;', $html);
+        $this->assertStringContainsString(
+            '--site-secondary-soft: '.DesignSetting::secondarySoftFromAccent(DesignSetting::DEFAULTS['secondary_color']).';',
+            $html
+        );
         $this->assertStringContainsString('--site-scrollbar-thumb: #c8c0b2;', $html);
         $this->assertStringContainsString('--site-scrollbar-track: #f1ece3;', $html);
         $this->assertStringContainsString('--site-scrollbar-thumb-hover: #afa692;', $html);

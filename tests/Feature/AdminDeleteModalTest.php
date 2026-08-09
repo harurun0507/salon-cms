@@ -125,13 +125,13 @@ class AdminDeleteModalTest extends TestCase
     public function test_menus_delete_uses_external_form_triggers(): void
     {
         $category = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
-        Menu::query()->create([
-            'menu_category_id' => $category->id,
+        $menu = Menu::query()->create([
             'name' => 'カットベーシック',
             'price' => '¥5,000',
             'sort_order' => 1,
             'is_published' => true,
         ]);
+        $menu->categories()->attach($category->id, ['sort_order' => 1]);
 
         $html = $this->actingAs($this->admin())
             ->get(route('admin.menus.index'))
@@ -139,7 +139,11 @@ class AdminDeleteModalTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString(
-            'data-delete-message="「カット」カテゴリと配下のメニューを削除しますか？"',
+            'data-delete-message="「カット」カテゴリを削除しますか？',
+            $html
+        );
+        $this->assertStringContainsString(
+            'このカテゴリのみに属するメニューがある場合は削除できません。"',
             $html
         );
         $this->assertStringContainsString(
