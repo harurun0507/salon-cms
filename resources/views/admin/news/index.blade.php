@@ -3,20 +3,25 @@
 @section('heading', 'お知らせ')
 
 @section('save-bar')
-    <div class="flex min-w-0 flex-wrap items-center gap-3">
-        <button
-            type="button"
-            class="admin-btn shadow-md shrink-0"
-            data-admin-confirm-trigger
-            data-confirm-form="news-bulk-form"
-            data-confirm-title="お知らせ保存の確認"
-            data-confirm-message="変更内容を保存します。&#10;よろしいですか？"
-            data-confirm-note="タイトル、お知らせの種類、休業日、本文、公開日時、公開状態、表示順、削除など、現在入力されている内容が反映されます。"
-            data-confirm-submit-label="保存する"
-        >保存する</button>
-        <p class="text-sm text-admin-muted">
-            公開サイトに表示するお知らせを登録・編集します。
-        </p>
+    <div class="flex min-w-0 flex-wrap items-center justify-between gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-3">
+            <button
+                type="button"
+                class="admin-btn shadow-md shrink-0"
+                data-admin-confirm-trigger
+                data-confirm-form="news-bulk-form"
+                data-confirm-title="お知らせ保存の確認"
+                data-confirm-message="変更内容を保存します。&#10;よろしいですか？"
+                data-confirm-note="タイトル、お知らせの種類、休業日、本文、公開日時、公開状態、表示順、削除など、現在入力されている内容が反映されます。"
+                data-confirm-submit-label="保存する"
+            >保存する</button>
+            <p class="text-sm text-admin-muted">
+                公開サイトに表示するお知らせを登録・編集します。
+            </p>
+        </div>
+        <x-admin.create-button data-news-add-top class="shrink-0">
+            お知らせを追加
+        </x-admin.create-button>
     </div>
 
 @endsection
@@ -666,6 +671,7 @@
             const deletedIdsWrap = document.getElementById('news-deleted-ids');
             const addCard = document.getElementById('news-add-card');
             const addButton = addCard ? addCard.querySelector('[data-news-add]') : null;
+            const addTopButton = document.querySelector('[data-news-add-top]');
             const emptyHeading = '新規お知らせ';
             const categories = @json($categories);
             const closedDateCategories = (@json($closedDateCategoryKeys)).slice();
@@ -1071,7 +1077,8 @@
                 });
             }
 
-            function createEmptyCard() {
+            function createEmptyCard(placement) {
+                const insertAtStart = placement === 'start';
                 const key = 'new_' + nextNewIndex;
                 nextNewIndex += 1;
                 form.setAttribute('data-next-new-index', String(nextNewIndex));
@@ -1156,9 +1163,25 @@
                         '</div>' +
                     '</div>';
 
-                addCard.before(card);
+                if (insertAtStart) {
+                    const firstCard = grid.querySelector('[data-news-card]');
+                    if (firstCard) {
+                        firstCard.before(card);
+                    } else {
+                        addCard.before(card);
+                    }
+                } else {
+                    addCard.before(card);
+                }
+
                 bindCard(card);
                 syncDisplayOrders();
+
+                if (insertAtStart) {
+                    requestAnimationFrame(function () {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+                    });
+                }
             }
 
             grid.addEventListener('dragstart', function (e) {
@@ -1224,8 +1247,15 @@
 
             addButton.addEventListener('click', function (e) {
                 e.preventDefault();
-                createEmptyCard();
+                createEmptyCard('end');
             });
+
+            if (addTopButton) {
+                addTopButton.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    createEmptyCard('start');
+                });
+            }
         })();
     </script>
 @endsection

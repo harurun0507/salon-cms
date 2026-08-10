@@ -43,6 +43,8 @@ class NewsAdminTest extends TestCase
         $this->assertStringContainsString('id="news-bulk-form"', $html);
         $this->assertStringContainsString('grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3', $html);
         $this->assertStringContainsString('id="news-add-card"', $html);
+        $this->assertStringContainsString('data-news-add', $html);
+        $this->assertStringContainsString('data-news-add-top', $html);
         $this->assertStringContainsString('お知らせを追加', $html);
         $this->assertStringContainsString('カードを追加し、保存で登録できます。', $html);
         $this->assertStringContainsString('data-news-drag-handle', $html);
@@ -98,6 +100,7 @@ class NewsAdminTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('id="news-add-card"', $html);
+        $this->assertStringContainsString('data-news-add-top', $html);
         $this->assertStringContainsString('お知らせを追加', $html);
         $this->assertStringNotContainsString('ありません', $html);
     }
