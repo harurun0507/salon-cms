@@ -34,6 +34,7 @@ class MenuController extends AdminController
             'categories' => ['nullable', 'array'],
             'categories.*.name' => ['required', 'string', 'max:255'],
             'categories.*.sort_order' => ['nullable', 'integer', 'min:1'],
+            'categories.*.allow_multiple_selection' => ['nullable', 'in:0,1'],
             'menus' => ['nullable', 'array'],
             'menus.*.name' => ['required', 'string', 'max:255'],
             'menus.*.price' => ['nullable', 'string', 'max:100'],
@@ -56,6 +57,12 @@ class MenuController extends AdminController
         $categoryPayload = $validated['categories'] ?? [];
         $menuPayload = $validated['menus'] ?? [];
         $existingCategoryIds = MenuCategory::query()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $existingAllowMultiple = MenuCategory::query()
+            ->pluck('allow_multiple_selection', 'id')
+            ->mapWithKeys(fn ($value, $id) => [(int) $id => (bool) $value])
+            ->all();
+
+        $categoryPayload = $this->enforceExclusiveAllowMultiple($categoryPayload, $existingAllowMultiple);
 
         foreach ($menuPayload as $key => $data) {
             $categoryRefs = $this->normalizedCategoryRefs($data['category_ids'] ?? null);
@@ -78,6 +85,14 @@ class MenuController extends AdminController
                         ->withInput();
                 }
             }
+
+            if (! $this->categorySelectionAllowsMultiple($categoryRefs, $categoryPayload, $existingAllowMultiple)) {
+                return back()
+                    ->withErrors([
+                        "menus.{$key}.category_ids" => '複数設定不可のカテゴリは1つだけ選択できます。',
+                    ])
+                    ->withInput();
+            }
         }
 
         $newCategoryMap = [];
@@ -92,6 +107,7 @@ class MenuController extends AdminController
                 MenuCategory::query()->whereKey($key)->update([
                     'name' => $data['name'],
                     'sort_order' => $data['sort_order'] ?? 1,
+                    'allow_multiple_selection' => ($data['allow_multiple_selection'] ?? '0') === '1',
                 ]);
             }
 
@@ -103,6 +119,7 @@ class MenuController extends AdminController
                 $cat = MenuCategory::query()->create([
                     'name' => $data['name'],
                     'sort_order' => $data['sort_order'] ?? 1,
+                    'allow_multiple_selection' => ($data['allow_multiple_selection'] ?? '0') === '1',
                 ]);
                 $newCategoryMap[(string) $key] = (int) $cat->id;
                 $lastCreatedId = (int) $cat->id;
@@ -275,6 +292,60 @@ class MenuController extends AdminController
     }
 
     /**
+     * @param  list<string>  $categoryRefs
+     * @param  array<string, array<string, mixed>>  $categoryPayload
+     * @param  array<int, bool>  $existingAllowMultiple
+     */
+    private function categorySelectionAllowsMultiple(
+        array $categoryRefs,
+        array $categoryPayload,
+        array $existingAllowMultiple
+    ): bool {
+        $hasMultiAllow = false;
+        $exclusiveCount = 0;
+
+        foreach ($categoryRefs as $ref) {
+            $allowsMultiple = $this->resolveAllowMultipleSelection(
+                $ref,
+                $categoryPayload,
+                $existingAllowMultiple
+            );
+
+            if ($allowsMultiple) {
+                $hasMultiAllow = true;
+            } else {
+                $exclusiveCount++;
+            }
+        }
+
+        if ($hasMultiAllow) {
+            return true;
+        }
+
+        return $exclusiveCount <= 1;
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $categoryPayload
+     * @param  array<int, bool>  $existingAllowMultiple
+     */
+    private function resolveAllowMultipleSelection(
+        string $ref,
+        array $categoryPayload,
+        array $existingAllowMultiple
+    ): bool {
+        if (array_key_exists($ref, $categoryPayload)) {
+            return ($categoryPayload[$ref]['allow_multiple_selection'] ?? '0') === '1';
+        }
+
+        if (ctype_digit($ref)) {
+            return (bool) ($existingAllowMultiple[(int) $ref] ?? false);
+        }
+
+        return false;
+    }
+
+    /**
      * @param  mixed  $categoryIds
      * @return list<string>
      */
@@ -361,12 +432,18 @@ class MenuController extends AdminController
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'allow_multiple_selection' => ['nullable', 'in:0,1'],
         ]);
 
         $category = MenuCategory::create([
             'name' => $validated['name'],
             'sort_order' => $validated['sort_order'] ?? 0,
+            'allow_multiple_selection' => ($validated['allow_multiple_selection'] ?? '0') === '1',
         ]);
+
+        if ($category->allow_multiple_selection) {
+            $this->clearOtherAllowMultipleSelections((int) $category->id);
+        }
 
         return redirect()
             ->route('admin.menus.index')
@@ -384,12 +461,18 @@ class MenuController extends AdminController
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'allow_multiple_selection' => ['nullable', 'in:0,1'],
         ]);
 
         $category->update([
             'name' => $validated['name'],
             'sort_order' => $validated['sort_order'] ?? 0,
+            'allow_multiple_selection' => ($validated['allow_multiple_selection'] ?? '0') === '1',
         ]);
+
+        if ($category->allow_multiple_selection) {
+            $this->clearOtherAllowMultipleSelections((int) $category->id);
+        }
 
         return redirect()->route('admin.menus.index')->with('success', 'カテゴリを更新しました。');
     }
@@ -467,6 +550,18 @@ class MenuController extends AdminController
             ->values()
             ->all();
 
+        $existingAllowMultiple = MenuCategory::query()
+            ->whereIn('id', $categoryIds)
+            ->pluck('allow_multiple_selection', 'id')
+            ->mapWithKeys(fn ($value, $id) => [(int) $id => (bool) $value])
+            ->all();
+        $categoryRefs = array_map('strval', $categoryIds);
+        if (! $this->categorySelectionAllowsMultiple($categoryRefs, [], $existingAllowMultiple)) {
+            return back()
+                ->withErrors(['category_ids' => '複数設定不可のカテゴリは1つだけ選択できます。'])
+                ->withInput();
+        }
+
         $sortOrder = $validated['sort_order'] ?? 0;
 
         $menu = Menu::query()->create([
@@ -514,6 +609,18 @@ class MenuController extends AdminController
         ]);
 
         $categoryIds = array_values(array_unique(array_map('intval', $validated['category_ids'])));
+        $existingAllowMultiple = MenuCategory::query()
+            ->whereIn('id', $categoryIds)
+            ->pluck('allow_multiple_selection', 'id')
+            ->mapWithKeys(fn ($value, $id) => [(int) $id => (bool) $value])
+            ->all();
+        $categoryRefs = array_map('strval', $categoryIds);
+        if (! $this->categorySelectionAllowsMultiple($categoryRefs, [], $existingAllowMultiple)) {
+            return back()
+                ->withErrors(['category_ids' => '複数設定不可のカテゴリは1つだけ選択できます。'])
+                ->withInput();
+        }
+
         $sortOrder = max(1, (int) ($validated['sort_order'] ?? 1));
         $existingSorts = $menu->categories()->pluck('menu_category_menu.sort_order', 'menu_categories.id');
 
@@ -579,5 +686,65 @@ class MenuController extends AdminController
         $trimmed = trim((string) $price);
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * 複数設定可 = ON は全体で最大1件。新規に ON にしたカテゴリを優先し、他は OFF にする。
+     *
+     * @param  array<string, array<string, mixed>>  $categoryPayload
+     * @param  array<int, bool>  $existingAllowMultiple
+     * @return array<string, array<string, mixed>>
+     */
+    private function enforceExclusiveAllowMultiple(array $categoryPayload, array $existingAllowMultiple): array
+    {
+        $newlyOnKeys = [];
+        $stillOnKeys = [];
+
+        foreach ($categoryPayload as $key => $data) {
+            if (! is_array($data)) {
+                continue;
+            }
+
+            $wantsOn = ($data['allow_multiple_selection'] ?? '0') === '1';
+            if (! $wantsOn) {
+                continue;
+            }
+
+            $wasOn = false;
+            if (! preg_match('/^new_\d+$/', (string) $key)) {
+                $wasOn = (bool) ($existingAllowMultiple[(int) $key] ?? false);
+            }
+
+            if ($wasOn) {
+                $stillOnKeys[] = (string) $key;
+            } else {
+                $newlyOnKeys[] = (string) $key;
+            }
+        }
+
+        $winner = null;
+        if ($newlyOnKeys !== []) {
+            $winner = $newlyOnKeys[array_key_last($newlyOnKeys)];
+        } elseif ($stillOnKeys !== []) {
+            $winner = $stillOnKeys[0];
+        }
+
+        foreach ($categoryPayload as $key => $data) {
+            if (! is_array($data)) {
+                continue;
+            }
+
+            $categoryPayload[$key]['allow_multiple_selection'] = ((string) $key === $winner) ? '1' : '0';
+        }
+
+        return $categoryPayload;
+    }
+
+    private function clearOtherAllowMultipleSelections(int $keepCategoryId): void
+    {
+        MenuCategory::query()
+            ->whereKeyNot($keepCategoryId)
+            ->where('allow_multiple_selection', true)
+            ->update(['allow_multiple_selection' => false]);
     }
 }

@@ -26,8 +26,8 @@ class TopPageSection extends Model
         self::KEY_BANNER,
         self::KEY_NEWS,
         self::KEY_BLOG,
-        self::KEY_MENU,
         self::KEY_GALLERY,
+        self::KEY_MENU,
         self::KEY_STAFF,
         self::KEY_ACCESS,
     ];
@@ -46,8 +46,8 @@ class TopPageSection extends Model
         self::KEY_BANNER => ['is_visible' => true, 'display_order' => 0, 'display_count' => null],
         self::KEY_NEWS => ['is_visible' => true, 'display_order' => 1, 'display_count' => 3],
         self::KEY_BLOG => ['is_visible' => true, 'display_order' => 2, 'display_count' => 3],
-        self::KEY_MENU => ['is_visible' => true, 'display_order' => 3, 'display_count' => 6],
-        self::KEY_GALLERY => ['is_visible' => true, 'display_order' => 4, 'display_count' => 6],
+        self::KEY_GALLERY => ['is_visible' => true, 'display_order' => 3, 'display_count' => 6],
+        self::KEY_MENU => ['is_visible' => true, 'display_order' => 4, 'display_count' => 6],
         self::KEY_STAFF => ['is_visible' => true, 'display_order' => 5, 'display_count' => 4],
         self::KEY_ACCESS => ['is_visible' => true, 'display_order' => 6, 'display_count' => null],
     ];

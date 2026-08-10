@@ -438,20 +438,39 @@ class BlogAdminTest extends TestCase
         $this->assertStringContainsString('公開ブログ', $home);
         $this->assertStringContainsString('すべて見る →', $home);
         $this->assertStringContainsString(route('blog.index'), $home);
+        $this->assertStringContainsString('blog-eyecatch-placeholder', $home);
+        $this->assertStringContainsString('blog-eyecatch--placeholder', $home);
+        $this->assertStringContainsString('blog-eyecatch-tab', $home);
+        $this->assertStringContainsString('blog-card-label', $home);
+        $this->assertStringContainsString('blog-card-title', $home);
+        $this->assertStringContainsString('blog-card-date', $home);
+        $this->assertStringContainsString('home-blog-card-more', $home);
+        $this->assertStringContainsString('home-blog-card-hit', $home);
+        $this->assertStringContainsString('blog-eyecatch-placeholder-shop', $home);
         $this->assertStringNotContainsString('下書き', $home);
         $this->assertStringNotContainsString('予約投稿', $home);
 
-        $this->get(route('blog.index'))
+        $indexHtml = $this->get(route('blog.index'))
             ->assertOk()
             ->assertSee('公開ブログ', false)
             ->assertDontSee('下書き', false)
-            ->assertDontSee('予約投稿', false);
+            ->assertDontSee('予約投稿', false)
+            ->getContent();
+        $this->assertStringContainsString('blog-eyecatch-placeholder', $indexHtml);
+        $this->assertStringContainsString('blog-eyecatch-tab', $indexHtml);
+        $this->assertStringContainsString('blog-card-label', $indexHtml);
+        $this->assertStringNotContainsString('home-blog-card-more', $indexHtml);
+        $this->assertStringContainsString('blog-card-title', $indexHtml);
+        $this->assertStringContainsString('blog-card-date', $indexHtml);
+        $this->assertStringContainsString('blog-eyecatch-placeholder-shop', $indexHtml);
 
-        $this->get(route('blog.show', 'public-blog'))
+        $detailHtml = $this->get(route('blog.show', 'public-blog'))
             ->assertOk()
             ->assertSee('公開ブログ', false)
             ->assertSee('段落1', false)
-            ->assertSee('段落2', false);
+            ->assertSee('段落2', false)
+            ->getContent();
+        $this->assertStringNotContainsString('blog-eyecatch-placeholder', $detailHtml);
 
         $this->get(route('blog.show', 'draft-blog'))->assertNotFound();
         $this->get(route('blog.show', 'future-blog'))->assertNotFound();

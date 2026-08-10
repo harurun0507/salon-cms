@@ -26,6 +26,9 @@
             $value = (string) (is_array($option) ? ($option['value'] ?? $option['id'] ?? '') : ($option->id ?? ''));
             $label = (string) (is_array($option) ? ($option['label'] ?? $option['name'] ?? $value) : ($option->name ?? $value));
             $checked = in_array($value, $selectedValues, true);
+            $allowMultiple = is_array($option)
+                ? ! empty($option['allow_multiple'])
+                : (bool) ($option->allow_multiple_selection ?? false);
         @endphp
         <label class="admin-choice-option news-weekday-option">
             <input
@@ -34,6 +37,7 @@
                 value="{{ $value }}"
                 class="admin-choice-input news-weekday-input"
                 @if($inputDataAttribute) {{ $inputDataAttribute }} @endif
+                data-allow-multiple="{{ $allowMultiple ? '1' : '0' }}"
                 @checked($checked)
                 @disabled($disabled)
             >

@@ -20,6 +20,11 @@
         $siteFaviconVersion = '2';
         $canonicalUrl = url()->current();
         $gaMeasurementId = $setting->hasGaMeasurementId() ? (string) $setting->ga_measurement_id : null;
+        $showPublicGallery = $showPublicGallery
+            ?? \App\Models\Gallery::query()
+                ->where('is_published', true)
+                ->whereHas('images')
+                ->exists();
     @endphp
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -161,7 +166,7 @@
         }
         html { scroll-behavior: smooth; }
         #concept, #menu, #gallery, #staff, #access, #news { scroll-margin-top: 5.5rem; }
-        [id^="menu-category-"] {
+        [data-menu-category-section] {
             scroll-margin-top: var(
                 --menu-category-scroll-margin,
                 calc(var(--site-header-offset, 5.5rem) + var(--menu-category-nav-height, 4.5rem) + 0.75rem)
@@ -173,7 +178,7 @@
     </style>
 </head>
 <body class="font-sans">
-    <header class="sticky top-0 z-50 border-b border-salon-line bg-salon-bg/95 backdrop-blur">
+    <header class="sticky top-0 z-50 border-b border-salon-line bg-salon-bg/95 backdrop-blur" data-site-header>
         <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-6 md:py-3.5">
             <a href="{{ route('home') }}" class="inline-flex min-h-[48px] max-w-[200px] shrink-0 items-center sm:max-w-[240px] md:min-h-[64px] md:max-w-[280px]">
                 @if($setting->usesLogoInHeader())
@@ -192,7 +197,9 @@
             <nav class="hidden items-center gap-8 text-sm md:flex" aria-label="メインメニュー">
                 <a href="{{ url('/#concept') }}" class="hover:text-salon-accent">Concept</a>
                 <a href="{{ url('/#news') }}" class="hover:text-salon-accent">News</a>
-                <a href="{{ url('/#gallery') }}" class="hover:text-salon-accent">Gallery</a>
+                @if($showPublicGallery)
+                    <a href="{{ url('/#gallery') }}" class="hover:text-salon-accent">Gallery</a>
+                @endif
                 <a href="{{ url('/#menu') }}" class="hover:text-salon-accent">Menu</a>
                 <a href="{{ url('/#staff') }}" class="hover:text-salon-accent">Staff</a>
                 <a href="{{ url('/#access') }}" class="hover:text-salon-accent">Access</a>
@@ -202,25 +209,90 @@
                 <a href="{{ $setting->hot_pepper_url }}" target="_blank" rel="noopener" class="btn-primary hidden md:inline-flex">Reserve</a>
             @endif
 
-            <button type="button" id="mobile-menu-btn" class="md:hidden text-salon-text" aria-label="メニュー">
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            <button
+                type="button"
+                id="mobile-menu-btn"
+                class="inline-flex h-10 w-10 items-center justify-center text-salon-text md:hidden"
+                aria-label="メニューを開く"
+                aria-controls="mobile-menu"
+                aria-expanded="false"
+                data-mobile-menu-toggle
+            >
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <div
+        id="mobile-menu"
+        class="site-mobile-nav hidden md:hidden"
+        hidden
+        data-mobile-menu
+    >
+        <div class="site-mobile-nav-bar">
+            <a href="{{ route('home') }}" class="inline-flex min-h-[48px] max-w-[200px] shrink-0 items-center" data-nav-link>
+                @if($setting->usesLogoInHeader())
+                    <img
+                        src="{{ asset('storage/'.$setting->logo_image) }}"
+                        alt="{{ $setting->logoAlt() }}"
+                        class="h-auto max-h-[56px] w-auto max-w-full object-contain object-left"
+                        width="280"
+                        height="72"
+                    >
+                @else
+                    <span class="font-serif text-xl tracking-widest text-salon-text">{{ $setting->shop_name }}</span>
+                @endif
+            </a>
+            <button
+                type="button"
+                class="inline-flex h-10 w-10 items-center justify-center text-salon-text"
+                aria-label="メニューを閉じる"
+                data-mobile-menu-close
+            >
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 6l12 12M18 6L6 18"/>
+                </svg>
             </button>
         </div>
 
-        <div id="mobile-menu" class="hidden border-t border-salon-line md:hidden">
-            <nav class="flex flex-col gap-4 px-4 py-4 text-sm" aria-label="モバイルメニュー">
-                <a href="{{ url('/#concept') }}" data-nav-link>Concept</a>
-                <a href="{{ url('/#news') }}" data-nav-link>News</a>
-                <a href="{{ url('/#gallery') }}" data-nav-link>Gallery</a>
-                <a href="{{ url('/#menu') }}" data-nav-link>Menu</a>
-                <a href="{{ url('/#staff') }}" data-nav-link>Staff</a>
-                <a href="{{ url('/#access') }}" data-nav-link>Access</a>
-                @if($setting->hot_pepper_url)
-                    <a href="{{ $setting->hot_pepper_url }}" target="_blank" class="btn-primary text-center">Reserve</a>
+        <nav class="site-mobile-nav-panel" aria-label="モバイルメニュー">
+            <div class="site-mobile-nav-links">
+                <a href="{{ url('/#concept') }}" data-nav-link class="site-mobile-nav-link">
+                    <span>Concept</span>
+                    <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+                <a href="{{ url('/#news') }}" data-nav-link class="site-mobile-nav-link">
+                    <span>News</span>
+                    <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+                @if($showPublicGallery)
+                    <a href="{{ url('/#gallery') }}" data-nav-link class="site-mobile-nav-link">
+                        <span>Gallery</span>
+                        <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </a>
                 @endif
-            </nav>
-        </div>
-    </header>
+                <a href="{{ url('/#menu') }}" data-nav-link class="site-mobile-nav-link">
+                    <span>Menu</span>
+                    <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+                <a href="{{ url('/#staff') }}" data-nav-link class="site-mobile-nav-link">
+                    <span>Staff</span>
+                    <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+                <a href="{{ url('/#access') }}" data-nav-link class="site-mobile-nav-link">
+                    <span>Access</span>
+                    <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+            </div>
+            @if($setting->hot_pepper_url)
+                <div class="site-mobile-nav-cta">
+                    <a href="{{ $setting->hot_pepper_url }}" target="_blank" rel="noopener" class="btn-primary w-full text-center" data-nav-link>Reserve</a>
+                </div>
+            @endif
+        </nav>
+    </div>
 
     <main>@yield('content')</main>
 
@@ -242,15 +314,71 @@
 
     <script>
         (function () {
-            const mobileMenu = document.getElementById('mobile-menu');
-            document.getElementById('mobile-menu-btn')?.addEventListener('click', function () {
-                mobileMenu?.classList.toggle('hidden');
+            const mobileMenu = document.querySelector('[data-mobile-menu]');
+            const openBtn = document.querySelector('[data-mobile-menu-toggle]');
+            const closeBtns = document.querySelectorAll('[data-mobile-menu-close]');
+            const mqDesktop = window.matchMedia('(min-width: 768px)');
+            let lockedScrollY = 0;
+            let isOpen = false;
+
+            function lockScroll() {
+                lockedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+                document.documentElement.classList.add('is-mobile-menu-open');
+                document.body.classList.add('is-mobile-menu-open');
+                document.body.style.top = '-' + lockedScrollY + 'px';
+            }
+
+            function unlockScroll() {
+                document.documentElement.classList.remove('is-mobile-menu-open');
+                document.body.classList.remove('is-mobile-menu-open');
+                document.body.style.top = '';
+                window.scrollTo(0, lockedScrollY);
+            }
+
+            function setMenuOpen(open) {
+                if (!mobileMenu || !openBtn) return;
+                if (mqDesktop.matches) {
+                    open = false;
+                }
+                isOpen = Boolean(open);
+                mobileMenu.classList.toggle('hidden', !isOpen);
+                if (isOpen) {
+                    mobileMenu.removeAttribute('hidden');
+                    lockScroll();
+                } else {
+                    mobileMenu.setAttribute('hidden', '');
+                    unlockScroll();
+                }
+                openBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                openBtn.setAttribute('aria-label', isOpen ? 'メニューを閉じる' : 'メニューを開く');
+            }
+
+            function closeMenu() {
+                setMenuOpen(false);
+            }
+
+            openBtn?.addEventListener('click', function () {
+                setMenuOpen(true);
             });
 
-            document.querySelectorAll('[data-nav-link]').forEach(function (link) {
-                link.addEventListener('click', function () {
-                    mobileMenu?.classList.add('hidden');
-                });
+            closeBtns.forEach(function (btn) {
+                btn.addEventListener('click', closeMenu);
+            });
+
+            document.querySelectorAll('[data-mobile-menu] [data-nav-link]').forEach(function (link) {
+                link.addEventListener('click', closeMenu);
+            });
+
+            window.addEventListener('resize', function () {
+                if (mqDesktop.matches && isOpen) {
+                    closeMenu();
+                }
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && isOpen) {
+                    closeMenu();
+                }
             });
 
             function scrollToHashTarget() {

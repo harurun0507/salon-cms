@@ -51,6 +51,7 @@
         $allCategoryOptions = $categories->map(fn ($c) => [
             'id' => (string) $c->id,
             'name' => $c->name,
+            'allow_multiple' => (bool) $c->allow_multiple_selection,
         ])->values();
 
         $oldCategories = old('categories', []);
@@ -61,6 +62,8 @@
                 $allCategoryOptions->push([
                     'id' => (string) $key,
                     'name' => is_array($data) ? (string) ($data['name'] ?? '新しいカテゴリ') : '新しいカテゴリ',
+                    'allow_multiple' => is_array($data)
+                        && (string) ($data['allow_multiple_selection'] ?? '0') === '1',
                 ]);
             }
         }
@@ -155,24 +158,85 @@
             }
         }
 
+        $isCombinationCategoryId = function (string $id) use ($categories, $restoredNewCategories): bool {
+            foreach ($categories as $category) {
+                if ((string) $category->id === $id) {
+                    return $category->isCombination();
+                }
+            }
+
+            $data = $restoredNewCategories[$id] ?? null;
+            if (is_array($data)) {
+                return (string) ($data['allow_multiple_selection'] ?? '0') === '1';
+            }
+
+            return false;
+        };
+
+        $menuBelongsToCombination = function (array $selectedIds) use ($isCombinationCategoryId): bool {
+            foreach ($selectedIds as $id) {
+                if ($id === null || $id === '') {
+                    continue;
+                }
+                if ($isCombinationCategoryId((string) $id)) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
+        $shouldListMenuInCategory = function (string $categoryId, array $selectedIds) use ($isCombinationCategoryId, $menuBelongsToCombination): bool {
+            if ($isCombinationCategoryId($categoryId)) {
+                return true;
+            }
+
+            return ! $menuBelongsToCombination($selectedIds);
+        };
+
         // old() の sort_order でカテゴリ一覧順を復元（既存・new_* を混在可）
         $displayCategories = [];
         foreach ($categories as $category) {
+            $visibleMenuCount = $category->menus->filter(function ($menu) use ($menuCategoryIdsByMenuId, $shouldListMenuInCategory, $category) {
+                $selectedIds = $menuCategoryIdsByMenuId[$menu->id] ?? [(string) $category->id];
+
+                return $shouldListMenuInCategory((string) $category->id, $selectedIds);
+            })->count();
+            $restoredVisibleCount = 0;
+            foreach ($restoredNewMenusByCategory[(string) $category->id] ?? [] as $newMenuData) {
+                $selectedIds = $newMenuData['category_ids'] ?? [(string) $category->id];
+                if (! is_array($selectedIds)) {
+                    $selectedIds = [(string) $category->id];
+                }
+                if ($shouldListMenuInCategory((string) $category->id, $selectedIds)) {
+                    $restoredVisibleCount++;
+                }
+            }
             $displayCategories[] = [
                 'kind' => 'existing',
                 'id' => (string) $category->id,
                 'category' => $category,
                 'sort' => (int) old('categories.'.$category->id.'.sort_order', $category->sort_order),
-                'menu_count' => $category->menus->count() + count($restoredNewMenusByCategory[(string) $category->id] ?? []),
+                'menu_count' => $visibleMenuCount + $restoredVisibleCount,
             ];
         }
         foreach ($restoredNewCategories as $newKey => $newData) {
+            $restoredVisibleCount = 0;
+            foreach ($restoredNewMenusByCategory[(string) $newKey] ?? [] as $newMenuData) {
+                $selectedIds = $newMenuData['category_ids'] ?? [(string) $newKey];
+                if (! is_array($selectedIds)) {
+                    $selectedIds = [(string) $newKey];
+                }
+                if ($shouldListMenuInCategory((string) $newKey, $selectedIds)) {
+                    $restoredVisibleCount++;
+                }
+            }
             $displayCategories[] = [
                 'kind' => 'new',
                 'id' => (string) $newKey,
                 'data' => $newData,
                 'sort' => (int) ($newData['sort_order'] ?? 1),
-                'menu_count' => count($restoredNewMenusByCategory[(string) $newKey] ?? []),
+                'menu_count' => $restoredVisibleCount,
             ];
         }
         usort($displayCategories, fn ($a, $b) => $a['sort'] <=> $b['sort']);
@@ -199,6 +263,7 @@
         };
 
         // カテゴリ内メニューを old() sorts[category] で並べ直し（既存・new_menu_* 混在）
+        // 複数設定可カテゴリに属するメニューは、そのカテゴリにのみ一覧表示する
         $orderedMenusByCategory = [];
         foreach ($categories as $category) {
             $rows = [];
@@ -209,6 +274,9 @@
                 );
                 if (! is_array($selectedIds)) {
                     $selectedIds = [(string) $category->id];
+                }
+                if (! $shouldListMenuInCategory((string) $category->id, $selectedIds)) {
+                    continue;
                 }
                 $primaryCategoryId = $resolvePrimaryCategoryId($selectedIds)
                     ?? (string) ($menuIdToPrimaryCategoryId[$menu->id] ?? $category->id);
@@ -227,6 +295,9 @@
                 $selectedIds = $newMenuData['category_ids'] ?? [(string) $category->id];
                 if (! is_array($selectedIds)) {
                     $selectedIds = [(string) $category->id];
+                }
+                if (! $shouldListMenuInCategory((string) $category->id, $selectedIds)) {
+                    continue;
                 }
                 $primaryCategoryId = $resolvePrimaryCategoryId($selectedIds) ?? (string) $category->id;
                 $rows[] = [
@@ -251,6 +322,9 @@
                 $selectedIds = $newMenuData['category_ids'] ?? [(string) $newKey];
                 if (! is_array($selectedIds)) {
                     $selectedIds = [(string) $newKey];
+                }
+                if (! $shouldListMenuInCategory((string) $newKey, $selectedIds)) {
+                    continue;
                 }
                 $primaryCategoryId = $resolvePrimaryCategoryId($selectedIds) ?? (string) $newKey;
                 $rows[] = [
@@ -490,6 +564,16 @@
                                     data-category-name-input="{{ $category->id }}"
                                 >
                             </div>
+                            @php
+                                $allowMultipleOld = old(
+                                    'categories.'.$category->id.'.allow_multiple_selection',
+                                    $category->allow_multiple_selection ? '1' : '0'
+                                );
+                            @endphp
+                            @include('admin.menus.partials.category-multi-switch', [
+                                'categoryKey' => $category->id,
+                                'checked' => (string) $allowMultipleOld === '1',
+                            ])
                             <div class="md:hidden">
                                 <button
                                     type="button"
@@ -507,18 +591,9 @@
 
                         <div class="mb-3 flex items-center justify-between gap-3" data-menu-list-header>
                             <h3 class="text-sm font-medium text-admin-text">メニュー</h3>
-                            <x-admin.create-button class="{{ $hasMenus ? '' : 'hidden' }}" data-menu-add-btn>メニュー追加</x-admin.create-button>
                         </div>
 
-                        <div class="{{ $hasMenus ? 'hidden' : '' }}" data-menu-empty @if($hasMenus) hidden @endif>
-                            <x-admin.empty-state
-                                variant="menu"
-                                title="このカテゴリにメニューはありません。"
-                                description="メニューを追加してみましょう。"
-                            >
-                                <x-admin.create-button data-menu-add-btn>メニュー追加</x-admin.create-button>
-                            </x-admin.empty-state>
-                        </div>
+                        @include('admin.menus.partials.menu-empty-state', ['hasMenus' => $hasMenus])
 
                         <table class="admin-table menu-list-table table-fixed w-full {{ $hasMenus ? '' : 'hidden' }}" data-menu-table data-menu-tbody @if(! $hasMenus) hidden @endif>
                             <colgroup>
@@ -776,6 +851,7 @@
                                     @endif
                                 @endforeach
                         </table>
+                        @include('admin.menus.partials.menu-add-footer', ['hasMenus' => $hasMenus])
                     </div>
                 @endforeach
 
@@ -802,6 +878,10 @@
                                     data-category-name-input="{{ $newKey }}"
                                 >
                             </div>
+                            @include('admin.menus.partials.category-multi-switch', [
+                                'categoryKey' => $newKey,
+                                'checked' => (string) ($newData['allow_multiple_selection'] ?? '0') === '1',
+                            ])
                             <div class="md:hidden">
                                 <button
                                     type="button"
@@ -816,17 +896,8 @@
                         </div>
                         <div class="mb-3 flex items-center justify-between gap-3" data-menu-list-header>
                             <h3 class="text-sm font-medium text-admin-text">メニュー</h3>
-                            <x-admin.create-button class="{{ $hasMenus ? '' : 'hidden' }}" data-menu-add-btn>メニュー追加</x-admin.create-button>
                         </div>
-                        <div class="{{ $hasMenus ? 'hidden' : '' }}" data-menu-empty @if($hasMenus) hidden @endif>
-                            <x-admin.empty-state
-                                variant="menu"
-                                title="このカテゴリにメニューはありません。"
-                                description="メニューを追加してみましょう。"
-                            >
-                                <x-admin.create-button data-menu-add-btn>メニュー追加</x-admin.create-button>
-                            </x-admin.empty-state>
-                        </div>
+                        @include('admin.menus.partials.menu-empty-state', ['hasMenus' => $hasMenus])
                         <table class="admin-table menu-list-table table-fixed w-full {{ $hasMenus ? '' : 'hidden' }}" data-menu-table data-menu-tbody @if(! $hasMenus) hidden @endif>
                             <colgroup>
                                 <col class="menu-col-handle">
@@ -965,6 +1036,7 @@
                                     </tbody>
                                 @endforeach
                         </table>
+                        @include('admin.menus.partials.menu-add-footer', ['hasMenus' => $hasMenus])
                     </div>
                 @endforeach
             </div>
@@ -1085,6 +1157,24 @@
                         placeholder="カテゴリ名を入力"
                     >
                 </div>
+                <div class="shrink-0">
+                    <span class="admin-label mb-1.5 block">複数設定可</span>
+                    <label class="admin-switch admin-switch--compact" data-category-multi-control>
+                        <input type="hidden" name="categories[__ID__][allow_multiple_selection]" value="0">
+                        <input
+                            type="checkbox"
+                            name="categories[__ID__][allow_multiple_selection]"
+                            value="1"
+                            class="admin-switch-input"
+                            data-category-allow-multiple="__ID__"
+                            aria-label="複数設定可"
+                        >
+                        <span class="admin-switch-track" aria-hidden="true">
+                            <span class="admin-switch-thumb"></span>
+                        </span>
+                        <span class="admin-switch-text" data-category-multi-text>不可</span>
+                    </label>
+                </div>
                 <div class="md:hidden">
                     <button
                         type="button"
@@ -1099,10 +1189,6 @@
             </div>
             <div class="mb-3 flex items-center justify-between gap-3" data-menu-list-header>
                 <h3 class="text-sm font-medium text-admin-text">メニュー</h3>
-                <button type="button" class="btn-admin-create hidden" data-menu-add-btn>
-                    <svg class="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 3a1 1 0 0 1 1 1v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H4a1 1 0 1 1 0-2h5V4a1 1 0 0 1 1-1Z"/></svg>
-                    <span>メニュー追加</span>
-                </button>
             </div>
             <div data-menu-empty>
                 <div class="admin-empty-state">
@@ -1152,6 +1238,30 @@
                     </tr>
                 </thead>
             </table>
+            <div class="menu-add-footer hidden" data-menu-add-footer hidden>
+                <div class="admin-empty-state">
+                    <div class="admin-empty-state-icon" aria-hidden="true">
+                        <svg class="h-14 w-14" viewBox="0 0 80 80" fill="none" stroke="#B8B09F" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 58c-3-10-2-22 6-30 8-8 20-10 28-6" stroke-width="1.25" opacity="0.55"/>
+                            <path d="M28 36c4-6 10-10 16-10" stroke-width="1.2" opacity="0.5"/>
+                            <path d="M24 46c6-4 14-6 22-4" stroke-width="1.2" opacity="0.5"/>
+                            <circle cx="28" cy="28" r="6" stroke-width="1.4"/>
+                            <circle cx="28" cy="52" r="6" stroke-width="1.4"/>
+                            <path d="M33 32.5 56 52" stroke-width="1.4"/>
+                            <path d="M33 47.5 56 28" stroke-width="1.4"/>
+                            <path d="M40 40h.01" stroke-width="2"/>
+                            <path d="M58 24c4 2 8 7 8 13 0 4-2 8-5 10" stroke-width="1.25" opacity="0.7"/>
+                            <path d="M58 24c-1 5 1 10 5 13" stroke-width="1.2" opacity="0.55"/>
+                        </svg>
+                    </div>
+                    <div class="admin-empty-state-actions !mt-0">
+                        <button type="button" class="btn-admin-create" data-menu-add-btn>
+                            <svg class="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 3a1 1 0 0 1 1 1v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H4a1 1 0 1 1 0-2h5V4a1 1 0 0 1 1-1Z"/></svg>
+                            <span>メニュー追加</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </template>
 
@@ -1702,6 +1812,99 @@
                 }
             }
 
+            function syncCategoryMultiLabel(checkbox) {
+                const wrap = checkbox.closest('[data-category-multi-control]');
+                const text = wrap ? wrap.querySelector('[data-category-multi-text]') : null;
+                if (text) {
+                    text.textContent = checkbox.checked ? '可' : '不可';
+                }
+            }
+
+            function categoryAllowsMultiple(input) {
+                return String(input.getAttribute('data-allow-multiple') || '0') === '1';
+            }
+
+            function enforceExclusiveCategorySelection(changedInput) {
+                const group = changedInput ? changedInput.closest('[data-menu-row]') : null;
+                if (!group) {
+                    return;
+                }
+
+                const checks = Array.from(group.querySelectorAll('[data-menu-category-checkbox]'));
+                const hasMultiAllow = checks.some(function (input) {
+                    return input.checked && categoryAllowsMultiple(input);
+                });
+
+                if (hasMultiAllow) {
+                    return;
+                }
+
+                const exclusiveChecked = checks.filter(function (input) {
+                    return input.checked && !categoryAllowsMultiple(input);
+                });
+
+                if (exclusiveChecked.length <= 1) {
+                    return;
+                }
+
+                let keep = null;
+                if (changedInput && changedInput.checked && !categoryAllowsMultiple(changedInput)) {
+                    keep = changedInput;
+                } else {
+                    keep = exclusiveChecked[exclusiveChecked.length - 1];
+                }
+
+                exclusiveChecked.forEach(function (input) {
+                    if (input !== keep) {
+                        input.checked = false;
+                    }
+                });
+            }
+
+            function syncCategoryAllowMultipleAttributes(categoryId, allowsMultiple) {
+                const flag = allowsMultiple ? '1' : '0';
+                document.querySelectorAll('[data-menu-category-checkbox]').forEach(function (input) {
+                    if (String(input.value) === String(categoryId)) {
+                        input.setAttribute('data-allow-multiple', flag);
+                    }
+                });
+
+                const jsonEl = document.getElementById('menu-category-options-json');
+                if (!jsonEl) {
+                    return;
+                }
+                try {
+                    const options = JSON.parse(jsonEl.textContent || '[]');
+                    options.forEach(function (opt) {
+                        if (String(opt.id) === String(categoryId)) {
+                            opt.allow_multiple = !!allowsMultiple;
+                        }
+                    });
+                    jsonEl.textContent = JSON.stringify(options);
+                } catch (e) {
+                    // ignore malformed options payload
+                }
+            }
+
+            /** 複数設定可 ON は全体で最大1件。新規 ON 時に他カテゴリを OFF にする。 */
+            function enforceExclusiveAllowMultipleSwitch(activeInput) {
+                if (!activeInput || !activeInput.checked) {
+                    return;
+                }
+
+                document.querySelectorAll('[data-category-allow-multiple]').forEach(function (input) {
+                    if (input === activeInput || !input.checked) {
+                        return;
+                    }
+                    input.checked = false;
+                    syncCategoryMultiLabel(input);
+                    syncCategoryAllowMultipleAttributes(
+                        input.getAttribute('data-category-allow-multiple') || input.value,
+                        false
+                    );
+                });
+            }
+
             /**
              * Multi-category menus render once per panel. Shared fields are editable only
              * on the primary category panel; other copies are read-only for shared data.
@@ -2034,8 +2237,8 @@
                 });
 
                 const emptyEl = panel.querySelector('[data-menu-empty]');
+                const footerEl = panel.querySelector('[data-menu-add-footer]');
                 const tableEl = panel.querySelector('[data-menu-table]');
-                const headerAdd = panel.querySelector('[data-menu-list-header] [data-menu-add-btn]');
                 const hasMenus = count > 0;
 
                 if (emptyEl) {
@@ -2046,6 +2249,14 @@
                         emptyEl.removeAttribute('hidden');
                     }
                 }
+                if (footerEl) {
+                    footerEl.classList.toggle('hidden', !hasMenus);
+                    if (hasMenus) {
+                        footerEl.removeAttribute('hidden');
+                    } else {
+                        footerEl.setAttribute('hidden', '');
+                    }
+                }
                 if (tableEl) {
                     tableEl.classList.toggle('hidden', !hasMenus);
                     if (hasMenus) {
@@ -2053,9 +2264,6 @@
                     } else {
                         tableEl.setAttribute('hidden', '');
                     }
-                }
-                if (headerAdd) {
-                    headerAdd.classList.toggle('hidden', !hasMenus);
                 }
             }
 
@@ -2149,9 +2357,12 @@
                         return;
                     }
                     const nameInput = panelEl.querySelector('[data-category-name-input="' + id + '"]');
+                    const multiInput = panelEl.querySelector('[data-category-allow-multiple="' + id + '"]')
+                        || panelEl.querySelector('[data-category-allow-multiple]');
                     options.push({
                         id: String(id),
                         name: nameInput && nameInput.value ? nameInput.value : '新しいカテゴリ',
+                        allow_multiple: !!(multiInput && multiInput.checked),
                     });
                 });
 
@@ -2165,6 +2376,7 @@
                     input.value = String(opt.id);
                     input.className = 'admin-choice-input news-weekday-input';
                     input.setAttribute('data-menu-category-checkbox', '');
+                    input.setAttribute('data-allow-multiple', opt.allow_multiple ? '1' : '0');
                     if (String(opt.id) === String(selectedCategoryId)) {
                         input.checked = true;
                     }
@@ -2613,6 +2825,27 @@
                 workspace.addEventListener('change', function (e) {
                     const published = e.target.closest('[data-menu-shared-field="is_published"]');
                     const categoryCheckbox = e.target.closest('[data-menu-category-checkbox]');
+                    const categoryMulti = e.target.closest('[data-category-allow-multiple]');
+
+                    if (categoryMulti) {
+                        enforceExclusiveAllowMultipleSwitch(categoryMulti);
+                        syncCategoryMultiLabel(categoryMulti);
+                        syncCategoryAllowMultipleAttributes(
+                            categoryMulti.getAttribute('data-category-allow-multiple') || categoryMulti.value,
+                            categoryMulti.checked
+                        );
+                        document.querySelectorAll('[data-menu-row]').forEach(function (group) {
+                            const firstChecked = group.querySelector('[data-menu-category-checkbox]:checked');
+                            if (firstChecked) {
+                                enforceExclusiveCategorySelection(firstChecked);
+                            }
+                        });
+                    }
+
+                    if (categoryCheckbox) {
+                        enforceExclusiveCategorySelection(categoryCheckbox);
+                    }
+
                     if (!published && !categoryCheckbox) {
                         return;
                     }
@@ -2652,6 +2885,10 @@
                     const checkbox = e.target.closest('[data-published-checkbox]');
                     if (checkbox) {
                         syncPublishedLabel(checkbox);
+                    }
+                    const multi = e.target.closest('[data-category-allow-multiple]');
+                    if (multi) {
+                        syncCategoryMultiLabel(multi);
                     }
                 });
 

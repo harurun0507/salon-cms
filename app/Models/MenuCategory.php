@@ -4,12 +4,21 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Collection;
 
 class MenuCategory extends Model
 {
+    /** @deprecated Display default only — do not use for business logic. */
+    public const NAME_COMBINATION = '組み合わせ';
+
     protected $fillable = [
         'name',
         'sort_order',
+        'allow_multiple_selection',
+    ];
+
+    protected $casts = [
+        'allow_multiple_selection' => 'boolean',
     ];
 
     /**
@@ -19,9 +28,12 @@ class MenuCategory extends Model
     public function englishName(): ?string
     {
         $map = [
+            '組み合わせ' => 'SET',
+            'セットメニュー' => 'SET',
             'カット' => 'CUT',
             'カラー' => 'COLOR',
             'パーマ' => 'PERM',
+            '縮毛矯正' => 'STRAIGHT',
             'ストレート' => 'STRAIGHT',
             'トリートメント' => 'TREATMENT',
             'ヘッドスパ' => 'HEAD SPA',
@@ -31,6 +43,86 @@ class MenuCategory extends Model
         $name = trim((string) $this->name);
 
         return $map[$name] ?? null;
+    }
+
+    /**
+     * Primary "set / combination" category: driven by 複数設定可, never by display name.
+     */
+    public function isCombination(): bool
+    {
+        return (bool) $this->allow_multiple_selection;
+    }
+
+    /**
+     * Stable public URL fragment for deep-linking to this category on /menu.
+     */
+    public function publicAnchorSlug(): string
+    {
+        if ($this->isCombination()) {
+            return 'set';
+        }
+
+        return match (trim((string) $this->name)) {
+            'カット' => 'cut',
+            'カラー' => 'color',
+            'パーマ' => 'perm',
+            '縮毛矯正', 'ストレート' => 'straight',
+            'トリートメント' => 'treatment',
+            'ヘッドスパ' => 'head-spa',
+            'その他' => 'other',
+            default => 'category-'.$this->getKey(),
+        };
+    }
+
+    /**
+     * Icon key for combination-menu category chips (inline SVG component).
+     */
+    public function tagIconKey(): string
+    {
+        return match (trim((string) $this->name)) {
+            'カット' => 'scissors',
+            'カラー' => 'droplet',
+            'パーマ' => 'waves',
+            '縮毛矯正', 'ストレート' => 'straight',
+            'トリートメント' => 'sparkles',
+            'ヘッドスパ' => 'user',
+            'その他' => 'star',
+            default => 'star',
+        };
+    }
+
+    /**
+     * Set menus stay under the allow_multiple category only on the public site,
+     * even when also linked to cut/color/etc. for tag display.
+     */
+    public function includesMenuOnPublicListing(Menu $menu): bool
+    {
+        if ($this->isCombination()) {
+            return true;
+        }
+
+        return ! $menu->isCombinationMenu();
+    }
+
+    /**
+     * Categories with published menus filtered for public listing rules.
+     *
+     * @return Collection<int, self>
+     */
+    public static function queryForPublicListing(): Collection
+    {
+        return static::query()
+            ->with([
+                'publishedMenus.categories' => fn ($q) => $q->orderBy('menu_categories.sort_order'),
+            ])
+            ->orderBy('sort_order')
+            ->get()
+            ->each(function (self $category) {
+                $menus = $category->publishedMenus
+                    ->filter(fn (Menu $menu) => $category->includesMenuOnPublicListing($menu))
+                    ->values();
+                $category->setRelation('publishedMenus', $menus);
+            });
     }
 
     public function menus(): BelongsToMany

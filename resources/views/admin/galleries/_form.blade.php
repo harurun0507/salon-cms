@@ -30,13 +30,12 @@
     >{{ old('caption', $gallery->caption ?? '') }}</textarea>
 </div>
 <div>
-    <label for="staff_id" class="admin-label">担当スタッフ</label>
-    <select name="staff_id" id="staff_id" class="admin-input">
-        <option value="">未設定</option>
-        @foreach(($staffMembers ?? []) as $member)
-            <option value="{{ $member->id }}" @selected((string) old('staff_id', $gallery->staff_id ?? '') === (string) $member->id)>{{ $member->name }}</option>
-        @endforeach
-    </select>
+    @include('admin.galleries.partials.staff-picker', [
+        'name' => 'staff_id',
+        'inputId' => 'staff_id',
+        'selectedId' => old('staff_id', $gallery->staff_id ?? ''),
+        'staffMembers' => $staffMembers ?? collect(),
+    ])
 </div>
 <div>
     <label for="sort_order" class="admin-label">表示順</label>

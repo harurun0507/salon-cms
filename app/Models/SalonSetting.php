@@ -169,7 +169,6 @@ class SalonSetting extends Model
             ['label' => 'スタッフ数', 'value' => $this->staff_count, 'multiline' => false],
             ['label' => '駐車場', 'value' => $this->parking, 'multiline' => true],
             ['label' => 'こだわり条件', 'value' => $this->commitment_conditions, 'multiline' => true],
-            ['label' => '備考', 'value' => $this->notes, 'multiline' => true],
             ['label' => 'その他', 'value' => $this->other_info, 'multiline' => true],
         ];
 

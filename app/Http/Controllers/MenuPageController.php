@@ -10,7 +10,7 @@ class MenuPageController extends Controller
     public function index(): View
     {
         return view('public.menu', [
-            'categories' => MenuCategory::query()->with('publishedMenus')->orderBy('sort_order')->get(),
+            'categories' => MenuCategory::queryForPublicListing(),
         ]);
     }
 }

@@ -288,8 +288,20 @@ class ShopNameLogoTest extends TestCase
         $this->assertStringContainsString('カット価格', $accessHtml);
         $this->assertStringContainsString('¥5,940', $accessHtml);
         $this->assertStringContainsString('こだわり条件', $accessHtml);
-        $this->assertStringContainsString('備考', $accessHtml);
+        $this->assertStringContainsString('施術中はお電話に出られない場合があります。', $accessHtml);
+        $this->assertStringNotContainsString('>備考</p>', $accessHtml);
         $this->assertStringContainsString('その他', $accessHtml);
+        $this->assertStringContainsString('ポイント利用OK、メンズにもオススメ', $accessHtml);
+
+        // 備考は電話番号の直後に補足として出る（独立ラベルではない）
+        $phonePos = strpos($accessHtml, '0120-111-1111');
+        $notesPos = strpos($accessHtml, '施術中はお電話に出られない場合があります。');
+        $otherPos = strpos($accessHtml, 'ポイント利用OK、メンズにもオススメ');
+        $this->assertNotFalse($phonePos);
+        $this->assertNotFalse($notesPos);
+        $this->assertNotFalse($otherPos);
+        $this->assertGreaterThan($phonePos, $notesPos);
+        $this->assertGreaterThan($notesPos, $otherPos);
     }
 
     public function test_public_access_hides_empty_store_detail_fields(): void

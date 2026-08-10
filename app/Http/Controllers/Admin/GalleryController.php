@@ -23,7 +23,7 @@ class GalleryController extends AdminController
         $staffMembers = StaffMember::query()
             ->orderBy('sort_order')
             ->orderBy('id')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'photo_path']);
 
         return view('admin.galleries.index', compact('galleries', 'staffMembers'));
     }
@@ -168,7 +168,7 @@ class GalleryController extends AdminController
 
     public function create(): View
     {
-        $staffMembers = StaffMember::query()->orderBy('sort_order')->orderBy('id')->get(['id', 'name']);
+        $staffMembers = StaffMember::query()->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'photo_path']);
 
         return view('admin.galleries.create', compact('staffMembers'));
     }
@@ -207,7 +207,7 @@ class GalleryController extends AdminController
     public function edit(Gallery $gallery): View
     {
         $gallery->load('images');
-        $staffMembers = StaffMember::query()->orderBy('sort_order')->orderBy('id')->get(['id', 'name']);
+        $staffMembers = StaffMember::query()->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'photo_path']);
 
         return view('admin.galleries.edit', compact('gallery', 'staffMembers'));
     }

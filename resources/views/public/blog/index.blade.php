@@ -10,20 +10,10 @@
 
             <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
                 @forelse($blogs as $blog)
-                    <a href="{{ route('blog.show', $blog->slug) }}" class="group block">
-                        <div class="aspect-[16/10] overflow-hidden rounded-sm bg-salon-line">
-                            @if($blog->hasEyeCatch())
-                                <img
-                                    src="{{ asset('storage/'.$blog->eye_catch_image_path) }}"
-                                    alt=""
-                                    class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                                    loading="lazy"
-                                >
-                            @endif
-                        </div>
-                        <p class="mt-3 text-xs tracking-widest text-salon-accent">BLOG</p>
-                        <time class="mt-1 block text-sm tabular-nums text-salon-muted">{{ $blog->published_at?->format('Y.m.d') }}</time>
-                        <p class="mt-2 font-medium leading-relaxed transition group-hover:text-salon-accent">{{ $blog->title }}</p>
+                    <a href="{{ route('blog.show', $blog->slug) }}" class="group block min-w-0">
+                        <x-public.blog-eyecatch :blog="$blog" />
+                        <p class="blog-card-title mt-3">{{ $blog->title }}</p>
+                        <time class="blog-card-date mt-1.5 block">{{ $blog->published_at?->format('Y.m.d') }}</time>
                     </a>
                 @empty
                     <p class="col-span-full text-salon-muted">ブログ記事はまだありません。</p>

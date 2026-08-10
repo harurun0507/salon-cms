@@ -1,11 +1,12 @@
 @props([
-    'title',
+    'title' => null,
     'description' => null,
     'variant' => 'leaf',
 ])
 
 @php
     $iconClass = 'h-14 w-14';
+    $hasCopy = filled($title) || filled($description);
 @endphp
 
 <div {{ $attributes->class('admin-empty-state') }}>
@@ -71,14 +72,16 @@
         @endswitch
     </div>
 
-    <p class="admin-empty-state-title">{{ $title }}</p>
+    @if ($title)
+        <p class="admin-empty-state-title">{{ $title }}</p>
+    @endif
 
     @if ($description)
         <p class="admin-empty-state-desc">{{ $description }}</p>
     @endif
 
     @if (! $slot->isEmpty())
-        <div class="admin-empty-state-actions">
+        <div @class(['admin-empty-state-actions', '!mt-0' => ! $hasCopy])>
             {{ $slot }}
         </div>
     @endif

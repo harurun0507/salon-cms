@@ -47,8 +47,7 @@ class HomeController extends Controller
         }
 
         if ($sectionMap->has(TopPageSection::KEY_MENU)) {
-            $count = max(1, (int) $sectionMap->get(TopPageSection::KEY_MENU)->display_count);
-            $categories = $this->menuCategoriesForTop($count);
+            $categories = $this->menuCategoriesForTop();
         }
 
         if ($sectionMap->has(TopPageSection::KEY_GALLERY)) {
@@ -74,29 +73,22 @@ class HomeController extends Controller
         ]);
     }
 
-    private function menuCategoriesForTop(int $limit): Collection
+    /**
+     * Top page menu excerpt: up to N published menus per category (by display order).
+     * Categories with no published menus are omitted.
+     */
+    private function menuCategoriesForTop(int $perCategoryLimit = 3): Collection
     {
-        $categories = MenuCategory::query()
-            ->with('publishedMenus')
-            ->orderBy('sort_order')
-            ->get();
-
-        $remaining = $limit;
         $limited = collect();
 
-        foreach ($categories as $category) {
-            if ($remaining <= 0) {
-                break;
-            }
-
-            $menus = $category->publishedMenus->take($remaining);
+        foreach (MenuCategory::queryForPublicListing() as $category) {
+            $menus = $category->publishedMenus->take($perCategoryLimit);
             if ($menus->isEmpty()) {
                 continue;
             }
 
             $category->setRelation('publishedMenus', $menus);
             $limited->push($category);
-            $remaining -= $menus->count();
         }
 
         return $limited;

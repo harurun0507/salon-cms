@@ -43,7 +43,12 @@ class GalleryBulkSaveTest extends TestCase
 
     public function test_gallery_index_shows_inline_cards_and_bulk_save_without_modals(): void
     {
-        $gallery = $this->createGallery();
+        $staff = StaffMember::query()->create([
+            'name' => 'タカナ コウヘイ',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $gallery = $this->createGallery(['staff_id' => $staff->id]);
 
         $html = $this->actingAs($this->admin())
             ->get(route('admin.galleries.index'))
@@ -66,6 +71,14 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringContainsString('>詳細</label>', $html);
         $this->assertStringContainsString('name="galleries['.$gallery->id.'][sort_order]"', $html);
         $this->assertStringContainsString('name="galleries['.$gallery->id.'][staff_id]"', $html);
+        $this->assertStringContainsString('data-gallery-staff-input', $html);
+        $this->assertStringContainsString('data-gallery-staff-option', $html);
+        $this->assertStringContainsString('gallery-staff-chip', $html);
+        $this->assertStringContainsString('data-staff-id="'.$staff->id.'"', $html);
+        $this->assertStringContainsString('is-selected', $html);
+        $this->assertStringContainsString('value="'.$staff->id.'"', $html);
+        $this->assertStringContainsString('タカナ コウヘイ', $html);
+        $this->assertStringNotContainsString('<select', $html);
         $this->assertStringContainsString('data-gallery-drag-handle', $html);
         $this->assertStringContainsString('data-gallery-image-drag-handle', $html);
         $this->assertStringContainsString('画像1', $html);
@@ -77,6 +90,29 @@ class GalleryBulkSaveTest extends TestCase
             'href="'.route('admin.galleries.create').'"',
             $html
         );
+    }
+
+    public function test_gallery_staff_picker_does_not_auto_select_single_staff_on_unassigned_gallery(): void
+    {
+        StaffMember::query()->create([
+            'name' => '単一スタッフ',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $gallery = $this->createGallery(['staff_id' => null]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.galleries.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('単一スタッフ', $html);
+        $this->assertStringContainsString('id="gallery_staff_'.$gallery->id.'"', $html);
+        $this->assertMatchesRegularExpression(
+            '/id="gallery_staff_'.$gallery->id.'"[^>]*value=""/',
+            $html
+        );
+        $this->assertStringNotContainsString('gallery-staff-chip is-selected', $html);
     }
 
     public function test_gallery_index_shows_add_card_when_empty(): void
@@ -386,6 +422,73 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringContainsString('表示する', $html);
         $this->assertStringContainsString(route('gallery.show', $withImage), $html);
         $this->assertStringNotContainsString('画像なし', $html);
+        $this->assertStringContainsString('gallery-media-image', $html);
+        $this->assertStringContainsString('gallery-media-card', $html);
+        $this->assertStringContainsString('gallery-media-frame', $html);
+        $this->assertStringNotContainsString('gallery-media-image--fluid', $html);
+    }
+
+    public function test_home_gallery_section_hides_when_no_published_galleries(): void
+    {
+        \App\Models\SalonSetting::current();
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('id="gallery"', $html);
+        $this->assertStringNotContainsString('ヘアギャラリー', $html);
+        $this->assertStringNotContainsString('ギャラリー準備中です。', $html);
+        $this->assertStringNotContainsString(route('gallery'), $html);
+        $this->assertStringNotContainsString('/#gallery', $html);
+        $this->assertStringNotContainsString('>Gallery</a>', $html);
+    }
+
+    public function test_home_gallery_section_shows_when_published_gallery_exists(): void
+    {
+        Storage::fake('public');
+        \App\Models\SalonSetting::current();
+
+        $gallery = $this->createGallery([
+            'image_path' => UploadedFile::fake()->image('home-cover.jpg')->store('galleries', 'public'),
+            'title' => 'ショートボブ',
+            'caption' => 'ホーム表示',
+            'is_published' => true,
+        ]);
+        $untitled = $this->createGallery([
+            'image_path' => UploadedFile::fake()->image('home-cover-2.jpg')->store('galleries', 'public'),
+            'title' => null,
+            'caption' => 'タイトルなし',
+            'sort_order' => 2,
+            'is_published' => true,
+        ]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('id="gallery"', $html);
+        $this->assertStringContainsString('ヘアギャラリー', $html);
+        $this->assertStringContainsString(route('gallery.show', $gallery), $html);
+        $this->assertStringContainsString(route('gallery'), $html);
+        $this->assertStringContainsString('/#gallery', $html);
+        $this->assertStringContainsString('>Gallery</a>', $html);
+        $this->assertStringContainsString('gallery-media-card--home', $html);
+        $this->assertStringContainsString('gallery-media-card--home-titled', $html);
+        $this->assertStringContainsString('home-gallery-card-more', $html);
+        $this->assertStringContainsString('home-gallery-card-hit', $html);
+        $this->assertStringContainsString('gallery-media-tab-label', $html);
+        $this->assertStringContainsString('ショートボブ', $html);
+
+        preg_match(
+            '/href="'.preg_quote(route('gallery.show', $untitled), '/').'"[\s\S]*?<\/article>/',
+            $html,
+            $untitledCard
+        );
+        $this->assertNotEmpty($untitledCard);
+        $this->assertStringNotContainsString('gallery-media-card--home-titled', $untitledCard[0]);
+        $this->assertStringNotContainsString('gallery-media-tab-label', $untitledCard[0]);
+
+        $listHtml = $this->get(route('gallery'))->assertOk()->getContent();
+        $this->assertStringNotContainsString('gallery-media-card--home-titled', $listHtml);
+        $this->assertStringNotContainsString('gallery-media-tab-label', $listHtml);
+        $this->assertStringNotContainsString('home-gallery-card-more', $listHtml);
     }
 
     public function test_public_gallery_detail_shows_carousel_only_for_multiple_images(): void
@@ -420,7 +523,8 @@ class GalleryBulkSaveTest extends TestCase
         $singleHtml = $this->get(route('gallery.show', $single))->assertOk()->getContent();
         $this->assertStringContainsString('1枚', $singleHtml);
         $this->assertStringContainsString('gallery-detail-image-frame', $singleHtml);
-        $this->assertStringContainsString('object-fit: contain', $singleHtml);
+        $this->assertStringContainsString('gallery-media-image gallery-media-image--contain', $singleHtml);
+        $this->assertStringNotContainsString('aspect-[3/4]', $singleHtml);
         $this->assertStringNotContainsString('data-gallery-prev', $singleHtml);
         $this->assertStringNotContainsString('data-gallery-dot', $singleHtml);
         $this->assertStringNotContainsString('担当スタイリスト', $singleHtml);
@@ -433,12 +537,11 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringContainsString('aria-label="前の画像"', $multiHtml);
         $this->assertStringContainsString('aria-label="次の画像"', $multiHtml);
         $this->assertStringContainsString('画像1を表示', $multiHtml);
-        $this->assertStringContainsString('object-fit: contain', $multiHtml);
-        $this->assertStringContainsString('prefers-reduced-motion', $multiHtml);
+        $this->assertStringContainsString('gallery-media-image gallery-media-image--contain', $multiHtml);
         $this->assertStringContainsString('setInterval', $multiHtml);
         $this->assertStringContainsString('予約する', $multiHtml);
         $this->assertStringContainsString('gallery-detail-layout', $multiHtml);
-        $this->assertStringContainsString('max-w-140', $multiHtml);
+        $this->assertStringContainsString('max-w-2xl', $multiHtml);
         $this->assertStringContainsString('担当スタイリスト', $multiHtml);
         $this->assertStringContainsString('山田花子', $multiHtml);
         $this->assertStringContainsString('ショートボブ', $multiHtml);

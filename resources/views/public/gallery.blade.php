@@ -16,15 +16,15 @@
                         $alt = $coverImage?->alt_text ?: $gallery->displayTitle();
                     @endphp
                     @if($cover)
-                        <a href="{{ route('gallery.show', $gallery) }}" class="group block">
+                        <a href="{{ route('gallery.show', $gallery) }}" class="gallery-media-card group">
                             <figure>
-                                <div class="aspect-[3/4] overflow-hidden rounded-sm bg-salon-line">
+                                <span class="gallery-media-frame">
                                     <img
                                         src="{{ asset('storage/'.$cover) }}"
                                         alt="{{ $alt }}"
-                                        class="h-full w-full object-cover transition group-hover:scale-105"
+                                        class="gallery-media-image gallery-media-image--hover"
                                     >
-                                </div>
+                                </span>
                                 @if($gallery->displayTitle() !== 'ギャラリー' || filled($gallery->title))
                                     <figcaption class="mt-2 text-sm text-salon-muted">{{ $gallery->displayTitle() }}</figcaption>
                                 @endif

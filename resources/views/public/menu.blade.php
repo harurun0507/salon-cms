@@ -13,7 +13,7 @@
                     <nav class="menu-category-nav" aria-label="メニューカテゴリ">
                         @foreach($categories as $category)
                             <a
-                                href="#menu-category-{{ $category->id }}"
+                                href="#{{ $category->publicAnchorSlug() }}"
                                 class="menu-category-nav-link"
                                 data-menu-category-link
                             >{{ $category->name }}</a>
@@ -25,8 +25,14 @@
             @forelse($categories as $category)
                 @php
                     $englishName = $category->englishName();
+                    $anchorSlug = $category->publicAnchorSlug();
                 @endphp
-                <section id="menu-category-{{ $category->id }}" class="menu-category-block" data-menu-category-section>
+                <section
+                    id="{{ $anchorSlug }}"
+                    class="menu-category-block"
+                    data-menu-category-section
+                    data-menu-category-id="{{ $category->id }}"
+                >
                     <header class="menu-category-heading">
                         @if($englishName)
                             <p class="menu-category-heading-en">{{ $englishName }}</p>
@@ -35,7 +41,19 @@
                     </header>
                     <ul class="menu-price-list">
                         @foreach($category->publishedMenus as $menu)
+                            @php
+                                $constituentCategories = $category->isCombination()
+                                    ? $menu->constituentCategoriesForDisplay()
+                                    : collect();
+                            @endphp
                             <li class="menu-price-item">
+                                @if($constituentCategories->isNotEmpty())
+                                    <ul class="menu-price-tags" aria-label="含まれるカテゴリ">
+                                        @foreach($constituentCategories as $tagCategory)
+                                            <x-public.menu-category-tag :name="$tagCategory->name" />
+                                        @endforeach
+                                    </ul>
+                                @endif
                                 <div class="menu-price-row">
                                     <span class="menu-price-name">{{ $menu->name }}</span>
                                     <span class="menu-price-leader" aria-hidden="true"></span>

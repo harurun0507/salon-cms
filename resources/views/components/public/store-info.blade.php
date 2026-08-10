@@ -11,6 +11,9 @@
         ['label' => '電話番号', 'value' => $setting->phone, 'multiline' => false],
     ], static fn (array $item): bool => filled($item['value'])));
 
+    $hasPhone = filled($setting->phone);
+    $hasNotes = filled($setting->notes);
+
     $hasAddress = filled($setting->address);
     $hasAccessDirections = filled($setting->access_directions);
     $hasLocationDetails = $hasAddress || $hasAccessDirections;
@@ -25,9 +28,9 @@
     $parking = $setting->parking;
     $hasSalonBlock = $salonGridItems !== [] || filled($parking);
 
+    // 備考は電話番号直下へ表示するため、下部カードからは除外
     $extraItems = array_values(array_filter([
         ['label' => 'こだわり条件', 'value' => $setting->commitment_conditions],
-        ['label' => '備考', 'value' => $setting->notes],
         ['label' => 'その他', 'value' => $setting->other_info],
     ], static fn (array $item): bool => filled($item['value'])));
 
@@ -39,10 +42,10 @@
 @endphp
 
 <div {{ $attributes->class('space-y-6') }}>
-    {{-- 上段: 基本情報 | マップ・住所・アクセス --}}
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-        <section class="{{ $cardClass }}">
-            @if ($leftItems !== [])
+    {{-- 上段: 基本情報 | マップ・住所・アクセス（モバイルは1列・min幅0で横はみ出し防止） --}}
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+        <section class="{{ $cardClass }} min-w-0 max-w-full">
+            @if ($leftItems !== [] || ($hasNotes && ! $hasPhone))
                 <div>
                     @foreach ($leftItems as $item)
                         <div class="border-b border-salon-line/60 py-3.5 first:pt-0 last:border-b-0 last:pb-0">
@@ -51,13 +54,22 @@
                                 'mt-1.5 text-sm leading-7 text-salon-text',
                                 'whitespace-pre-line' => $item['multiline'],
                             ])>{{ $item['value'] }}</p>
+                            @if ($item['label'] === '電話番号' && $hasNotes)
+                                <p class="mt-2 whitespace-pre-line text-xs leading-6 text-salon-muted">{{ $setting->notes }}</p>
+                            @endif
                         </div>
                     @endforeach
+
+                    @if ($hasNotes && ! $hasPhone)
+                        <div class="border-b border-salon-line/60 py-3.5 first:pt-0 last:border-b-0 last:pb-0">
+                            <p class="whitespace-pre-line text-xs leading-6 text-salon-muted">{{ $setting->notes }}</p>
+                        </div>
+                    @endif
                 </div>
             @endif
 
             @if ($hasReserve)
-                <div @class(['mt-5' => $leftItems !== []])>
+                <div @class(['mt-5' => $leftItems !== [] || ($hasNotes && ! $hasPhone)])>
                     <a
                         href="{{ $setting->hot_pepper_url }}"
                         target="_blank"
@@ -68,13 +80,13 @@
             @endif
         </section>
 
-        <section class="access-map-card">
+        <section class="access-map-card min-w-0 max-w-full">
             <div class="overflow-hidden rounded-lg bg-salon-line/40">
                 @if ($hasMap)
-                    <div class="aspect-video min-h-[220px] w-full sm:min-h-[260px] lg:min-h-[280px]">
+                    <div class="aspect-video min-h-[220px] w-full max-w-full sm:min-h-[260px] lg:min-h-[280px]">
                         <iframe
                             src="{{ $setting->google_map_embed_url }}"
-                            class="h-full w-full rounded-lg border-0"
+                            class="h-full w-full max-w-full rounded-lg border-0"
                             loading="lazy"
                             referrerpolicy="no-referrer-when-downgrade"
                             title="Google Map"
@@ -151,11 +163,10 @@
         </section>
     @endif
 
-    {{-- こだわり・補足 --}}
+    {{-- こだわり・その他（備考は電話番号直下） --}}
     @if ($extraItems !== [])
         <section class="access-salon-card">
-            <h3 class="font-serif text-lg tracking-wide text-salon-text">こだわり・補足情報</h3>
-            <div class="mt-5">
+            <div class="mt-2">
                 @foreach ($extraItems as $item)
                     <div class="border-b border-salon-line/60 py-3.5 first:pt-0 last:border-b-0 last:pb-0">
                         <p class="text-xs tracking-wide text-salon-muted">{{ $item['label'] }}</p>

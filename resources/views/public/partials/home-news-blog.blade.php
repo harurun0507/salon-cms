@@ -46,32 +46,36 @@
                 >
                     <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
                         @foreach($homeBlogList as $blog)
-                            <a href="{{ route('blog.show', $blog->slug) }}" class="group block">
-                                <div class="relative aspect-[16/10] overflow-hidden rounded-sm bg-salon-line">
-                                    @if($blog->hasEyeCatch())
-                                        <img
-                                            src="{{ asset('storage/'.$blog->eye_catch_image_path) }}"
-                                            alt=""
-                                            class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                                            loading="lazy"
-                                        >
-                                    @endif
-                                    <span class="absolute left-3 top-3 bg-white/90 px-2.5 py-1 text-[0.65rem] tracking-widest text-salon-text">
-                                        BLOG
-                                    </span>
+                            @php
+                                $blogUrl = route('blog.show', $blog->slug);
+                            @endphp
+                            <article
+                                class="home-blog-card group"
+                                data-home-blog-href="{{ $blogUrl }}"
+                            >
+                                <a
+                                    href="{{ $blogUrl }}"
+                                    class="home-blog-card-hit"
+                                    tabindex="-1"
+                                    aria-hidden="true"
+                                ></a>
+                                <a
+                                    href="{{ $blogUrl }}"
+                                    class="home-blog-card-more"
+                                    aria-label="{{ $blog->title }}の詳細を見る"
+                                >
+                                    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                        <path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </a>
+                                <div class="home-blog-card-body">
+                                    <x-public.blog-eyecatch :blog="$blog" />
+                                    <p class="blog-card-title mt-3">{{ $blog->title }}</p>
+                                    <time class="blog-card-date mt-1.5 block">
+                                        {{ $blog->published_at?->format('Y.m.d') }}
+                                    </time>
                                 </div>
-                                <div class="mt-3 flex items-start justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <time class="block text-sm tabular-nums text-salon-muted">
-                                            {{ $blog->published_at?->format('Y.m.d') }}
-                                        </time>
-                                        <p class="mt-1 font-medium leading-relaxed transition group-hover:text-salon-accent">
-                                            {{ $blog->title }}
-                                        </p>
-                                    </div>
-                                    <span aria-hidden="true" class="mt-1 shrink-0 text-salon-accent transition group-hover:translate-x-0.5">→</span>
-                                </div>
-                            </a>
+                            </article>
                         @endforeach
                     </div>
                     <div class="mt-10 text-center">

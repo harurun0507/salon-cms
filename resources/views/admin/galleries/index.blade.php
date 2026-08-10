@@ -198,18 +198,12 @@
                             >{{ old($prefix.'.caption', $gallery->caption) }}</textarea>
                         </div>
                         <div>
-                            <label for="gallery_staff_{{ $gallery->id }}" class="admin-label">担当スタッフ</label>
-                            <select
-                                name="galleries[{{ $gallery->id }}][staff_id]"
-                                id="gallery_staff_{{ $gallery->id }}"
-                                class="admin-input"
-                                data-gallery-staff-input
-                            >
-                                <option value="">未設定</option>
-                                @foreach($staffMembers as $member)
-                                    <option value="{{ $member->id }}" @selected((string) $staffId === (string) $member->id)>{{ $member->name }}</option>
-                                @endforeach
-                            </select>
+                            @include('admin.galleries.partials.staff-picker', [
+                                'name' => 'galleries['.$gallery->id.'][staff_id]',
+                                'inputId' => 'gallery_staff_'.$gallery->id,
+                                'selectedId' => $staffId,
+                                'staffMembers' => $staffMembers,
+                            ])
                         </div>
                         <div>
                             <span class="admin-label">公開</span>
@@ -267,12 +261,17 @@
         </div>
     </form>
 
-    <template id="gallery-staff-options-template">
-        <option value="">未設定</option>
-        @foreach($staffMembers as $member)
-            <option value="{{ $member->id }}">{{ $member->name }}</option>
-        @endforeach
-    </template>
+    @php
+        $staffMembersJson = $staffMembers->map(static function ($member) {
+            return [
+                'id' => $member->id,
+                'name' => $member->name,
+                'photo_url' => filled($member->photo_path) ? asset('storage/'.$member->photo_path) : null,
+            ];
+        })->values();
+    @endphp
+    <script type="application/json" id="gallery-staff-members-json">@json($staffMembersJson)</script>
+    @include('admin.galleries.partials.staff-picker-assets')
 
     <style>
         .gallery-drag-handle,
@@ -427,12 +426,22 @@
             const deletedIdsWrap = document.getElementById('gallery-deleted-ids');
             const addCard = document.getElementById('gallery-add-card');
             const addButton = addCard ? addCard.querySelector('[data-gallery-add]') : null;
-            const staffOptionsTemplate = document.getElementById('gallery-staff-options-template');
+            const staffMembersJsonEl = document.getElementById('gallery-staff-members-json');
             const emptyHeading = '新規ギャラリー';
             const maxImages = parseInt(form && form.getAttribute('data-max-images') || '10', 10);
 
             if (!form || !grid || !addCard || !addButton) {
                 return;
+            }
+
+            let staffMembers = [];
+            try {
+                staffMembers = JSON.parse((staffMembersJsonEl && staffMembersJsonEl.textContent) || '[]');
+                if (!Array.isArray(staffMembers)) {
+                    staffMembers = [];
+                }
+            } catch (e) {
+                staffMembers = [];
             }
 
             let nextNewIndex = parseInt(form.getAttribute('data-next-new-index') || '1', 10);
@@ -509,8 +518,34 @@
                 }
             }
 
-            function staffOptionsHtml() {
-                return staffOptionsTemplate ? staffOptionsTemplate.innerHTML : '<option value="">未設定</option>';
+            function staffPickerHtml(inputName, inputId) {
+                let html = '<span class="admin-label" id="' + inputId + '_label">担当スタッフ</span>' +
+                    '<input type="hidden" name="' + inputName + '" id="' + inputId + '" value="" data-gallery-staff-input>';
+
+                if (!staffMembers.length) {
+                    return html + '<p class="mt-1 text-xs text-admin-muted">スタッフが登録されていません。</p>';
+                }
+
+                html += '<div class="gallery-staff-choices mt-1" role="group" aria-labelledby="' + inputId + '_label" data-gallery-staff-choices>';
+                staffMembers.forEach(function (member) {
+                    html += '<button type="button" class="gallery-staff-chip" data-gallery-staff-option data-staff-id="' + String(member.id) + '" aria-pressed="false">';
+                    if (member.photo_url) {
+                        html += '<img src="' + member.photo_url + '" alt="" class="gallery-staff-chip-avatar">';
+                    }
+                    html += '<span class="gallery-staff-chip-name">' + escapeHtml(member.name || '') + '</span></button>';
+                });
+                html += '</div>';
+
+                return html;
+            }
+
+            function escapeHtml(text) {
+                return String(text)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
             }
 
             function createImageItem(card, options) {
@@ -677,6 +712,10 @@
                     card.remove();
                     syncDisplayOrders();
                 });
+
+                if (typeof window.bindGalleryStaffPicker === 'function') {
+                    window.bindGalleryStaffPicker(card);
+                }
             }
 
             function createEmptyCard() {
@@ -735,10 +774,7 @@
                             '<textarea name="new_galleries[' + key + '][caption]" id="gallery_new_caption_' + key + '" rows="4" maxlength="2000" class="admin-input min-h-[7rem] resize-y" placeholder="スタイルの特徴やポイントを入力してください" data-gallery-caption-input></textarea>' +
                         '</div>' +
                         '<div>' +
-                            '<label for="gallery_new_staff_' + key + '" class="admin-label">担当スタッフ</label>' +
-                            '<select name="new_galleries[' + key + '][staff_id]" id="gallery_new_staff_' + key + '" class="admin-input" data-gallery-staff-input>' +
-                                staffOptionsHtml() +
-                            '</select>' +
+                            staffPickerHtml('new_galleries[' + key + '][staff_id]', 'gallery_new_staff_' + key) +
                         '</div>' +
                         '<div>' +
                             '<span class="admin-label">公開</span>' +

@@ -149,7 +149,10 @@ class AdminMenusTwoColumnTest extends TestCase
         $this->assertStringNotContainsString('data-menu-add-hint', $html);
         $this->assertStringNotContainsString('カテゴリを一括保存後にメニューを追加できます', $html);
         $this->assertStringContainsString('メニューを追加してみましょう。', $html);
+        $this->assertStringContainsString('このカテゴリにメニューはありません。', $html);
         $this->assertStringContainsString('data-menu-add-btn', $html);
+        $this->assertStringContainsString('data-menu-empty', $html);
+        $this->assertStringContainsString('data-menu-add-footer', $html);
         $this->assertStringContainsString('data-menu-list-header', $html);
         $this->assertStringNotContainsString("showToast('カテゴリを一括保存するとメニューを追加できます。'", $html);
         $this->assertStringNotContainsString('カテゴリを一括保存するとメニューを追加できます。', $html);
@@ -184,7 +187,10 @@ class AdminMenusTwoColumnTest extends TestCase
         $this->assertStringContainsString('id="menus-bulk-form"', $html);
         $this->assertStringContainsString('data-menu-list-header', $html);
         $this->assertStringContainsString('data-menu-add-btn', $html);
+        $this->assertStringContainsString('data-menu-add-footer', $html);
+        $this->assertStringContainsString('data-menu-empty', $html);
         $this->assertStringContainsString('このカテゴリにメニューはありません。', $html);
+        $this->assertStringContainsString('menu-add-footer', $html);
     }
 
     public function test_empty_categories_shows_workspace_with_inline_add(): void
@@ -514,6 +520,7 @@ class AdminMenusTwoColumnTest extends TestCase
         $this->assertStringContainsString('data-menu-add-btn', $html);
         $this->assertStringNotContainsString('data-open-modal="menu-add-modal"', $html);
         $this->assertStringContainsString('data-menu-empty', $html);
+        $this->assertStringContainsString('data-menu-add-footer', $html);
         $this->assertStringContainsString('data-menu-table', $html);
         $this->assertStringContainsString('data-next-new-menu-index', $html);
         $this->assertDatabaseHas('menu_categories', ['id' => $category->id]);
@@ -1200,8 +1207,8 @@ class AdminMenusTwoColumnTest extends TestCase
             ->put(route('admin.menus.bulk-update'), [
                 'selected_category_id' => $cut->id,
                 'categories' => [
-                    $cut->id => ['name' => 'カット', 'sort_order' => 1],
-                    $spa->id => ['name' => 'ヘッドスパ', 'sort_order' => 2],
+                    $cut->id => ['name' => 'カット', 'sort_order' => 1, 'allow_multiple_selection' => '1'],
+                    $spa->id => ['name' => 'ヘッドスパ', 'sort_order' => 2, 'allow_multiple_selection' => '0'],
                 ],
                 'menus' => [
                     $menu->id => [
@@ -1236,14 +1243,28 @@ class AdminMenusTwoColumnTest extends TestCase
             ->assertOk()
             ->getContent();
 
+        preg_match(
+            '/data-category-panel="'.$cut->id.'"[\s\S]*?(?=<div[^>]+data-category-panel=|\z)/',
+            $html,
+            $cutPanel
+        );
+        preg_match(
+            '/data-category-panel="'.$spa->id.'"[\s\S]*?(?=<div[^>]+data-category-panel=|\z)/',
+            $html,
+            $spaPanel
+        );
+
+        $this->assertNotEmpty($cutPanel);
+        $this->assertNotEmpty($spaPanel);
         $this->assertStringContainsString('カテゴリ（複数選択可）', $html);
-        $this->assertSame(2, substr_count($html, 'data-menu-row="'.$menu->id.'"'));
+        // 複数設定可カテゴリに属するメニューは、そのカテゴリにのみ管理画面でも一覧表示する
+        $this->assertSame(1, substr_count($html, 'data-menu-row="'.$menu->id.'"'));
+        $this->assertStringContainsString('data-menu-row="'.$menu->id.'"', $cutPanel[0]);
+        $this->assertStringNotContainsString('data-menu-row="'.$menu->id.'"', $spaPanel[0]);
         $this->assertStringNotContainsString('カテゴリ設定は表示順が先のカテゴリ側で編集できます。', $html);
         $this->assertSame(1, substr_count($html, 'data-menu-primary-editor="1"'));
-        $this->assertSame(1, substr_count($html, 'data-menu-primary-editor="0"'));
-        $this->assertSame(2, substr_count($html, 'name="menus['.$menu->id.'][name]"'));
-        $this->assertSame(2, substr_count($html, 'data-menu-category-row="'.$menu->id.'"'));
-        $this->assertStringContainsString('カテゴリ（参照専用）', $html);
+        $this->assertSame(1, substr_count($html, 'name="menus['.$menu->id.'][name]"'));
+        $this->assertSame(1, substr_count($html, 'data-menu-category-row="'.$menu->id.'"'));
         $this->assertStringContainsString('admin-choice-choices', $html);
         $this->assertStringContainsString('news-weekday-face', $html);
         $this->assertStringContainsString('admin-choice-face', $html);
@@ -1293,8 +1314,8 @@ class AdminMenusTwoColumnTest extends TestCase
             ->put(route('admin.menus.bulk-update'), [
                 'selected_category_id' => $treatment->id,
                 'categories' => [
-                    $cut->id => ['name' => 'カット', 'sort_order' => 1],
-                    $treatment->id => ['name' => 'トリートメント', 'sort_order' => 5],
+                    $cut->id => ['name' => 'カット', 'sort_order' => 1, 'allow_multiple_selection' => '1'],
+                    $treatment->id => ['name' => 'トリートメント', 'sort_order' => 5, 'allow_multiple_selection' => '0'],
                 ],
                 'menus' => [
                     $menu->id => [
@@ -1358,8 +1379,8 @@ class AdminMenusTwoColumnTest extends TestCase
             ->put(route('admin.menus.bulk-update'), [
                 'selected_category_id' => $treatment->id,
                 'categories' => [
-                    $cut->id => ['name' => 'カット', 'sort_order' => 1],
-                    $treatment->id => ['name' => 'トリートメント', 'sort_order' => 5],
+                    $cut->id => ['name' => 'カット', 'sort_order' => 1, 'allow_multiple_selection' => '1'],
+                    $treatment->id => ['name' => 'トリートメント', 'sort_order' => 5, 'allow_multiple_selection' => '0'],
                 ],
                 'menus' => [
                     $menu->id => [
@@ -1428,9 +1449,9 @@ class AdminMenusTwoColumnTest extends TestCase
             ->put(route('admin.menus.bulk-update'), [
                 'selected_category_id' => $other->id,
                 'categories' => [
-                    $cut->id => ['name' => 'カット', 'sort_order' => 1],
-                    $treatment->id => ['name' => 'トリートメント', 'sort_order' => 5],
-                    $other->id => ['name' => 'その他', 'sort_order' => 7],
+                    $cut->id => ['name' => 'カット', 'sort_order' => 1, 'allow_multiple_selection' => '1'],
+                    $treatment->id => ['name' => 'トリートメント', 'sort_order' => 5, 'allow_multiple_selection' => '0'],
+                    $other->id => ['name' => 'その他', 'sort_order' => 7, 'allow_multiple_selection' => '0'],
                 ],
                 'menus' => [
                     $setMenu->id => [
@@ -1617,5 +1638,290 @@ class AdminMenusTwoColumnTest extends TestCase
 
         $this->assertDatabaseMissing('menu_categories', ['id' => $empty->id]);
         $this->assertDatabaseHas('menu_categories', ['id' => $kept->id]);
+    }
+
+    public function test_category_panel_shows_allow_multiple_selection_switch(): void
+    {
+        $combo = MenuCategory::query()->create([
+            'name' => MenuCategory::NAME_COMBINATION,
+            'sort_order' => 1,
+            'allow_multiple_selection' => true,
+        ]);
+        MenuCategory::query()->create([
+            'name' => 'カット',
+            'sort_order' => 2,
+            'allow_multiple_selection' => false,
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.menus.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('複数設定可', $html);
+        $this->assertStringContainsString('name="categories['.$combo->id.'][allow_multiple_selection]"', $html);
+        $this->assertStringContainsString('data-category-allow-multiple="'.$combo->id.'"', $html);
+        $this->assertMatchesRegularExpression(
+            '/data-category-allow-multiple="'.$combo->id.'"[^>]*checked|checked[^>]*data-category-allow-multiple="'.$combo->id.'"/',
+            $html
+        );
+        $this->assertStringContainsString('"allow_multiple":true', $html);
+        $this->assertStringContainsString('enforceExclusiveCategorySelection', $html);
+    }
+
+    public function test_bulk_update_rejects_exclusive_categories_selected_together(): void
+    {
+        $cut = MenuCategory::query()->create([
+            'name' => 'カット',
+            'sort_order' => 1,
+            'allow_multiple_selection' => false,
+        ]);
+        $color = MenuCategory::query()->create([
+            'name' => 'カラー',
+            'sort_order' => 2,
+            'allow_multiple_selection' => false,
+        ]);
+        $menu = Menu::query()->create([
+            'name' => 'テストメニュー',
+            'price' => '¥1,000',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $menu->categories()->attach($cut->id, ['sort_order' => 1]);
+
+        $this->actingAs($this->admin())
+            ->from(route('admin.menus.index'))
+            ->put(route('admin.menus.bulk-update'), [
+                'selected_category_id' => $cut->id,
+                'categories' => [
+                    $cut->id => ['name' => 'カット', 'sort_order' => 1, 'allow_multiple_selection' => '0'],
+                    $color->id => ['name' => 'カラー', 'sort_order' => 2, 'allow_multiple_selection' => '0'],
+                ],
+                'menus' => [
+                    $menu->id => [
+                        'category_ids' => [$cut->id, $color->id],
+                        'name' => 'テストメニュー',
+                        'price' => '¥1,000',
+                        'sorts' => [
+                            $cut->id => 1,
+                            $color->id => 1,
+                        ],
+                        'is_published' => '1',
+                        'description' => '',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.menus.index'))
+            ->assertSessionHasErrors([
+                'menus.'.$menu->id.'.category_ids' => '複数設定不可のカテゴリは1つだけ選択できます。',
+            ]);
+    }
+
+    public function test_bulk_update_allows_exclusive_categories_with_multi_allow_category(): void
+    {
+        $combo = MenuCategory::query()->create([
+            'name' => MenuCategory::NAME_COMBINATION,
+            'sort_order' => 1,
+            'allow_multiple_selection' => true,
+        ]);
+        $cut = MenuCategory::query()->create([
+            'name' => 'カット',
+            'sort_order' => 2,
+            'allow_multiple_selection' => false,
+        ]);
+        $color = MenuCategory::query()->create([
+            'name' => 'カラー',
+            'sort_order' => 3,
+            'allow_multiple_selection' => false,
+        ]);
+        $menu = Menu::query()->create([
+            'name' => 'セットメニュー',
+            'price' => '¥12,980',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $menu->categories()->attach($combo->id, ['sort_order' => 1]);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.menus.bulk-update'), [
+                'selected_category_id' => $combo->id,
+                'categories' => [
+                    $combo->id => ['name' => '組み合わせ', 'sort_order' => 1, 'allow_multiple_selection' => '1'],
+                    $cut->id => ['name' => 'カット', 'sort_order' => 2, 'allow_multiple_selection' => '0'],
+                    $color->id => ['name' => 'カラー', 'sort_order' => 3, 'allow_multiple_selection' => '0'],
+                ],
+                'menus' => [
+                    $menu->id => [
+                        'category_ids' => [$combo->id, $cut->id, $color->id],
+                        'name' => 'セットメニュー',
+                        'price' => '¥12,980',
+                        'sorts' => [
+                            $combo->id => 1,
+                            $cut->id => 1,
+                            $color->id => 1,
+                        ],
+                        'is_published' => '1',
+                        'description' => '',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.menus.index'))
+            ->assertSessionHas('success')
+            ->assertSessionDoesntHaveErrors();
+
+        $this->assertEqualsCanonicalizing(
+            [$combo->id, $cut->id, $color->id],
+            $menu->fresh()->categories()->pluck('menu_categories.id')->all()
+        );
+        $this->assertTrue($combo->fresh()->allow_multiple_selection);
+        $this->assertFalse($cut->fresh()->allow_multiple_selection);
+    }
+
+    public function test_combination_menus_are_hidden_on_non_combination_admin_panels(): void
+    {
+        $combo = MenuCategory::query()->create([
+            'name' => MenuCategory::NAME_COMBINATION,
+            'sort_order' => 1,
+            'allow_multiple_selection' => true,
+        ]);
+        $cut = MenuCategory::query()->create([
+            'name' => 'カット',
+            'sort_order' => 2,
+            'allow_multiple_selection' => false,
+        ]);
+        $color = MenuCategory::query()->create([
+            'name' => 'カラー',
+            'sort_order' => 3,
+            'allow_multiple_selection' => false,
+        ]);
+
+        $setMenu = Menu::query()->create([
+            'name' => '[ ヘルシーな艶髪へ ]カット＆カラー',
+            'price' => '¥12,980',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $setMenu->categories()->attach([
+            $combo->id => ['sort_order' => 1],
+            $cut->id => ['sort_order' => 1],
+            $color->id => ['sort_order' => 1],
+        ]);
+
+        $standalone = Menu::query()->create([
+            'name' => 'カット単品',
+            'price' => '¥5,940',
+            'sort_order' => 2,
+            'is_published' => true,
+        ]);
+        $standalone->categories()->attach($cut->id, ['sort_order' => 2]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.menus.index'))
+            ->assertOk()
+            ->getContent();
+
+        preg_match(
+            '/data-category-panel="'.$combo->id.'"[\s\S]*?(?=<div[^>]+data-category-panel=|\z)/',
+            $html,
+            $comboPanel
+        );
+        preg_match(
+            '/data-category-panel="'.$cut->id.'"[\s\S]*?(?=<div[^>]+data-category-panel=|\z)/',
+            $html,
+            $cutPanel
+        );
+
+        $this->assertNotEmpty($comboPanel);
+        $this->assertNotEmpty($cutPanel);
+        $this->assertSame(1, substr_count($html, 'data-menu-row="'.$setMenu->id.'"'));
+        $this->assertStringContainsString('data-menu-row="'.$setMenu->id.'"', $comboPanel[0]);
+        $this->assertStringNotContainsString('data-menu-row="'.$setMenu->id.'"', $cutPanel[0]);
+        $this->assertStringContainsString('data-menu-row="'.$standalone->id.'"', $cutPanel[0]);
+        $this->assertStringContainsString('data-category-count="'.$cut->id.'">1</span>', $html);
+        $this->assertStringContainsString('data-category-count="'.$combo->id.'">1</span>', $html);
+    }
+
+    public function test_bulk_update_keeps_only_one_allow_multiple_category_on(): void
+    {
+        $combo = MenuCategory::query()->create([
+            'name' => '組み合わせ',
+            'sort_order' => 1,
+            'allow_multiple_selection' => true,
+        ]);
+        $cut = MenuCategory::query()->create([
+            'name' => 'カット',
+            'sort_order' => 2,
+            'allow_multiple_selection' => false,
+        ]);
+        $color = MenuCategory::query()->create([
+            'name' => 'カラー',
+            'sort_order' => 3,
+            'allow_multiple_selection' => false,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.menus.bulk-update'), [
+                'selected_category_id' => $cut->id,
+                'categories' => [
+                    $combo->id => ['name' => 'セットメニュー', 'sort_order' => 1, 'allow_multiple_selection' => '1'],
+                    $cut->id => ['name' => 'カット', 'sort_order' => 2, 'allow_multiple_selection' => '1'],
+                    $color->id => ['name' => 'カラー', 'sort_order' => 3, 'allow_multiple_selection' => '0'],
+                ],
+                'menus' => [],
+            ])
+            ->assertRedirect(route('admin.menus.index'))
+            ->assertSessionHas('success');
+
+        $this->assertFalse($combo->fresh()->allow_multiple_selection);
+        $this->assertTrue($cut->fresh()->allow_multiple_selection);
+        $this->assertFalse($color->fresh()->allow_multiple_selection);
+        $this->assertSame(1, MenuCategory::query()->where('allow_multiple_selection', true)->count());
+        $this->assertSame('セットメニュー', $combo->fresh()->name);
+    }
+
+    public function test_renamed_allow_multiple_category_hides_set_menus_from_other_admin_panels(): void
+    {
+        $setCategory = MenuCategory::query()->create([
+            'name' => 'セットメニュー',
+            'sort_order' => 1,
+            'allow_multiple_selection' => true,
+        ]);
+        $cut = MenuCategory::query()->create([
+            'name' => 'カット',
+            'sort_order' => 2,
+            'allow_multiple_selection' => false,
+        ]);
+
+        $setMenu = Menu::query()->create([
+            'name' => 'カット＆カラーセット',
+            'price' => '¥12,980',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $setMenu->categories()->attach([
+            $setCategory->id => ['sort_order' => 1],
+            $cut->id => ['sort_order' => 1],
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.menus.index'))
+            ->assertOk()
+            ->getContent();
+
+        preg_match(
+            '/data-category-panel="'.$setCategory->id.'"[\s\S]*?(?=<div[^>]+data-category-panel=|\z)/',
+            $html,
+            $setPanel
+        );
+        preg_match(
+            '/data-category-panel="'.$cut->id.'"[\s\S]*?(?=<div[^>]+data-category-panel=|\z)/',
+            $html,
+            $cutPanel
+        );
+
+        $this->assertNotEmpty($setPanel);
+        $this->assertNotEmpty($cutPanel);
+        $this->assertStringContainsString('data-menu-row="'.$setMenu->id.'"', $setPanel[0]);
+        $this->assertStringNotContainsString('data-menu-row="'.$setMenu->id.'"', $cutPanel[0]);
     }
 }

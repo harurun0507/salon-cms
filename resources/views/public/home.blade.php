@@ -201,32 +201,76 @@
 
             @case('menu')
                 <section id="menu" class="site-section">
-                    <div class="mx-auto max-w-6xl px-4 md:px-6">
+                    <div class="home-menu-section mx-auto max-w-6xl px-4 md:px-6">
                         <div class="mb-12">
                             <p class="mb-2 text-sm tracking-widest text-salon-accent">Menu</p>
                             <h2 class="section-title">メニュー・料金</h2>
                         </div>
-                        <div class="grid gap-10 md:grid-cols-2">
+                        <div class="home-menu-categories">
                             @foreach($categories as $category)
-                                <div>
-                                    <h3 class="mb-4 border-b border-salon-line pb-2 font-medium">{{ $category->name }}</h3>
-                                    <ul class="space-y-4">
+                                @php
+                                    $englishName = $category->englishName();
+                                    $menuCategoryUrl = route('menu').'#'.$category->publicAnchorSlug();
+                                @endphp
+                                <article
+                                    @class([
+                                        'home-menu-category',
+                                        'home-menu-category--combination' => $category->isCombination(),
+                                    ])
+                                    data-home-menu-href="{{ $menuCategoryUrl }}"
+                                >
+                                    <a
+                                        href="{{ $menuCategoryUrl }}"
+                                        class="home-menu-category-hit"
+                                        tabindex="-1"
+                                        aria-hidden="true"
+                                    ></a>
+                                    <a
+                                        href="{{ $menuCategoryUrl }}"
+                                        class="home-menu-category-more"
+                                        aria-label="{{ $category->name }}の詳細を見る"
+                                    >
+                                        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                            <path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </a>
+                                    <header class="home-menu-category-heading">
+                                        @if($englishName)
+                                            <p class="home-menu-category-en">{{ $englishName }}</p>
+                                        @endif
+                                        <h3 class="home-menu-category-title">{{ $category->name }}</h3>
+                                    </header>
+                                    <ul class="home-menu-list">
                                         @foreach($category->publishedMenus as $menu)
-                                            <li class="flex items-start justify-between gap-4">
-                                                <div>
-                                                    <p>{{ $menu->name }}</p>
-                                                    @if($menu->description)
-                                                        <p class="mt-1 text-xs text-salon-muted whitespace-pre-line">{{ $menu->description }}</p>
+                                            @php
+                                                $constituentCategories = $category->isCombination()
+                                                    ? $menu->constituentCategoriesForDisplay()
+                                                    : collect();
+                                            @endphp
+                                            <li class="home-menu-item">
+                                                @if($constituentCategories->isNotEmpty())
+                                                    <ul class="menu-price-tags" aria-label="含まれるカテゴリ">
+                                                        @foreach($constituentCategories as $tagCategory)
+                                                            <x-public.menu-category-tag :name="$tagCategory->name" />
+                                                        @endforeach
+                                                    </ul>
+                                                @endif
+                                                <div class="menu-price-row">
+                                                    <span class="menu-price-name">{{ $menu->name }}</span>
+                                                    <span class="menu-price-leader" aria-hidden="true"></span>
+                                                    @if($menu->isInquiryPrice())
+                                                        <span class="menu-price-inquiry">{{ $menu->price }}</span>
+                                                    @elseif(filled($menu->price))
+                                                        <span class="menu-price-value">{{ $menu->price }}</span>
                                                     @endif
                                                 </div>
-                                                <p class="shrink-0 font-medium">{{ $menu->price }}</p>
                                             </li>
                                         @endforeach
                                     </ul>
-                                </div>
+                                </article>
                             @endforeach
                         </div>
-                        <div class="mt-10 text-center">
+                        <div class="mt-12 text-center">
                             <x-section-more-link :href="route('menu')">すべて見る →</x-section-more-link>
                         </div>
                     </div>
@@ -234,37 +278,73 @@
                 @break
 
             @case('gallery')
-                <section id="gallery" class="site-section">
-                    <div class="mx-auto max-w-6xl px-4 md:px-6">
-                        <div class="mb-12 text-center">
-                            <p class="mb-2 text-sm tracking-widest text-salon-accent">Gallery</p>
-                            <h2 class="section-title">ヘアギャラリー</h2>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-                            @forelse($galleries as $gallery)
-                                @php
-                                    $cover = $gallery->coverImagePath();
-                                    $coverImage = $gallery->coverImage();
-                                    $alt = $coverImage?->alt_text ?: $gallery->displayTitle();
-                                @endphp
-                                @if($cover)
-                                    <a href="{{ route('gallery.show', $gallery) }}" class="group block aspect-[3/4] overflow-hidden rounded-sm">
-                                        <img
-                                            src="{{ asset('storage/'.$cover) }}"
-                                            alt="{{ $alt }}"
-                                            class="h-full w-full object-cover transition group-hover:scale-105"
+                @if(($galleries ?? collect())->isNotEmpty())
+                    <section id="gallery" class="site-section">
+                        <div class="mx-auto max-w-6xl px-4 md:px-6">
+                            <div class="mb-12 text-center">
+                                <p class="mb-2 text-sm tracking-widest text-salon-accent">Gallery</p>
+                                <h2 class="section-title">ヘアギャラリー</h2>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+                                @foreach($galleries as $gallery)
+                                    @php
+                                        $cover = $gallery->coverImagePath();
+                                        $coverImage = $gallery->coverImage();
+                                        $alt = $coverImage?->alt_text ?: $gallery->displayTitle();
+                                        $galleryTitle = trim((string) ($gallery->title ?? ''));
+                                        $showGalleryTitle = $galleryTitle !== '';
+                                    @endphp
+                                    @if($cover)
+                                        @php
+                                            $galleryUrl = route('gallery.show', $gallery);
+                                        @endphp
+                                        <article
+                                            @class([
+                                                'gallery-media-card gallery-media-card--home home-gallery-card group',
+                                                'gallery-media-card--home-titled' => $showGalleryTitle,
+                                            ])
+                                            data-home-gallery-href="{{ $galleryUrl }}"
                                         >
-                                    </a>
-                                @endif
-                            @empty
-                                <p class="col-span-full text-center text-salon-muted">ギャラリー準備中です。</p>
-                            @endforelse
+                                            <a
+                                                href="{{ $galleryUrl }}"
+                                                class="home-gallery-card-hit"
+                                                tabindex="-1"
+                                                aria-hidden="true"
+                                            ></a>
+                                            <a
+                                                href="{{ $galleryUrl }}"
+                                                class="home-gallery-card-more"
+                                                aria-label="{{ $gallery->displayTitle() }}の詳細を見る"
+                                            >
+                                                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                                    <path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                            </a>
+                                            @if($showGalleryTitle)
+                                                <span class="gallery-media-top">
+                                                    <span class="gallery-media-tab">
+                                                        <span class="gallery-media-tab-label">{{ $galleryTitle }}</span>
+                                                    </span>
+                                                    <span class="gallery-media-ledge" aria-hidden="true"></span>
+                                                </span>
+                                            @endif
+                                            <span class="gallery-media-frame">
+                                                <img
+                                                    src="{{ asset('storage/'.$cover) }}"
+                                                    alt="{{ $alt }}"
+                                                    class="gallery-media-image gallery-media-image--hover"
+                                                >
+                                            </span>
+                                        </article>
+                                    @endif
+                                @endforeach
+                            </div>
+                            <div class="mt-10 text-center">
+                                <x-section-more-link :href="route('gallery')">すべて見る →</x-section-more-link>
+                            </div>
                         </div>
-                        <div class="mt-10 text-center">
-                            <x-section-more-link :href="route('gallery')">すべて見る →</x-section-more-link>
-                        </div>
-                    </div>
-                </section>
+                    </section>
+                @endif
                 @break
 
             @case('staff')

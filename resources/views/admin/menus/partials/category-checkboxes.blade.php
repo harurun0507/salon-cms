@@ -18,6 +18,11 @@
         return [
             'value' => (string) ($categoryOption['id'] ?? $categoryOption->id),
             'label' => (string) ($categoryOption['name'] ?? $categoryOption->name),
+            'allow_multiple' => (bool) (
+                is_array($categoryOption)
+                    ? ($categoryOption['allow_multiple'] ?? false)
+                    : ($categoryOption->allow_multiple_selection ?? false)
+            ),
         ];
     })->all();
 @endphp

@@ -38,7 +38,7 @@
                         aria-label="ギャラリー画像"
                     @endif
                 >
-                    <div class="gallery-detail-frame mx-auto w-full max-w-140">
+                    <div class="gallery-detail-frame mx-auto w-full max-w-2xl lg:max-w-none">
                         <div class="gallery-detail-image-frame" data-gallery-stage>
                             @foreach($images as $index => $image)
                                 <figure
@@ -50,6 +50,7 @@
                                     <img
                                         src="{{ asset('storage/'.$image->image_path) }}"
                                         alt="{{ $image->alt_text ?: $displayTitle }}"
+                                        class="gallery-media-image gallery-media-image--contain"
                                         @if($index > 0) loading="lazy" @endif
                                     >
                                 </figure>
@@ -137,147 +138,6 @@
             </div>
         </div>
     </section>
-
-    <style>
-        .gallery-detail-layout {
-            display: grid;
-            gap: 2.5rem;
-        }
-
-        .gallery-detail-copy { order: 1; }
-        .gallery-detail-media { order: 2; }
-        .gallery-detail-staff { order: 3; }
-
-        .gallery-detail-staff-inner {
-            margin-top: 2.5rem;
-            padding-top: 2rem;
-            border-top: 1px solid color-mix(
-                in srgb,
-                var(--site-text, #3A332E) 12%,
-                transparent
-            );
-        }
-
-        @media (min-width: 1024px) {
-            .gallery-detail-layout {
-                grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-                column-gap: 4rem;
-                row-gap: 0;
-                align-items: start;
-            }
-
-            .gallery-detail-copy {
-                grid-column: 1;
-                grid-row: 1;
-                order: unset;
-            }
-
-            .gallery-detail-media {
-                grid-column: 2;
-                grid-row: 1 / span 3;
-                order: unset;
-                justify-self: end;
-                width: 100%;
-            }
-
-            .gallery-detail-staff {
-                grid-column: 1;
-                grid-row: 2;
-                order: unset;
-            }
-        }
-
-        .gallery-detail-image-frame {
-            position: relative;
-            width: min(100%, calc(620px * 4 / 5));
-            margin-inline: auto;
-            aspect-ratio: 4 / 5;
-            max-height: 620px;
-            background: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        @media (max-width: 767px) {
-            .gallery-detail-image-frame {
-                width: 100%;
-                max-height: none;
-            }
-        }
-
-        .gallery-detail-slide {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.35s ease;
-        }
-
-        .gallery-detail-slide.is-active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .gallery-detail-image-frame img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .gallery-detail-slide {
-                transition: none;
-            }
-        }
-
-        .gallery-detail-nav {
-            display: inline-flex;
-            width: 36px;
-            height: 36px;
-            flex-shrink: 0;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid color-mix(in srgb, var(--site-text, #3A332E) 14%, transparent);
-            border-radius: 9999px;
-            background: color-mix(in srgb, var(--site-background, #FAF7F1) 70%, white);
-            color: color-mix(in srgb, var(--site-text, #3A332E) 45%, #8A847A);
-            cursor: pointer;
-            transition:
-                color 0.2s ease,
-                border-color 0.2s ease,
-                background-color 0.2s ease;
-        }
-
-        .gallery-detail-nav:hover {
-            background: color-mix(in srgb, var(--site-primary, #5F6F52) 12%, #F7F5F0);
-            border-color: color-mix(in srgb, var(--site-text, #3A332E) 22%, transparent);
-            color: color-mix(in srgb, var(--site-text, #3A332E) 70%, #5F6F52);
-        }
-
-        .gallery-detail-nav:focus-visible {
-            outline: 2px solid color-mix(in srgb, var(--site-primary, #5F6F52) 35%, white);
-            outline-offset: 2px;
-        }
-
-        .gallery-detail-nav-icon {
-            width: 14px;
-            height: 14px;
-        }
-
-        [data-gallery-carousel]:focus {
-            outline: none;
-        }
-        [data-gallery-carousel]:focus-visible {
-            outline: 2px solid color-mix(in srgb, var(--site-primary, #5F6F52) 45%, white);
-            outline-offset: 4px;
-        }
-    </style>
 
     @if($hasCarousel)
         <script>

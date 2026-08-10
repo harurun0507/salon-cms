@@ -17,15 +17,15 @@ class HomeNavigationAndNewsTest extends TestCase
 
         $html = $this->get(route('home'))->assertOk()->getContent();
 
-        foreach (['concept', 'news', 'gallery', 'menu', 'staff', 'access'] as $id) {
+        foreach (['concept', 'news', 'menu', 'staff', 'access'] as $id) {
             $this->assertStringContainsString('/#'.$id, $html);
         }
+        $this->assertStringNotContainsString('/#gallery', $html);
 
         $this->assertMatchesRegularExpression(
             '/aria-label="メインメニュー"[^>]*>\s*'
             .'<a[^>]*>Concept<\/a>\s*'
             .'<a[^>]*>News<\/a>\s*'
-            .'<a[^>]*>Gallery<\/a>\s*'
             .'<a[^>]*>Menu<\/a>\s*'
             .'<a[^>]*>Staff<\/a>\s*'
             .'<a[^>]*>Access<\/a>/s',

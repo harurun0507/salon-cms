@@ -33,8 +33,8 @@ class PublicMenuDescriptionTest extends TestCase
         $this->assertStringContainsString("1行目\n2行目", $html);
         $this->assertStringContainsString('¥5,000', $html);
         $this->assertStringNotContainsString('<br', $html);
-        $this->assertStringContainsString('id="menu-category-'.$category->id.'"', $html);
-        $this->assertStringContainsString('href="#menu-category-'.$category->id.'"', $html);
+        $this->assertStringContainsString('id="cut"', $html);
+        $this->assertStringContainsString('href="#cut"', $html);
         $this->assertStringContainsString('menu-category-nav', $html);
         $this->assertStringContainsString('menu-category-nav-bar', $html);
         $this->assertStringContainsString('menu-category-nav-link', $html);
@@ -99,18 +99,18 @@ class PublicMenuDescriptionTest extends TestCase
         $html = $this->get(route('menu'))->assertOk()->getContent();
 
         $this->assertLessThan(
-            strpos($html, 'href="#menu-category-'.$second->id.'"'),
-            strpos($html, 'href="#menu-category-'.$first->id.'"')
+            strpos($html, 'href="#color"'),
+            strpos($html, 'href="#cut"')
         );
         $this->assertLessThan(
-            strpos($html, 'id="menu-category-'.$second->id.'"'),
-            strpos($html, 'id="menu-category-'.$first->id.'"')
+            strpos($html, 'id="color"'),
+            strpos($html, 'id="cut"')
         );
         $this->assertStringContainsString('>カット</a>', $html);
         $this->assertStringContainsString('>カラー</a>', $html);
         $this->assertStringNotContainsString('カット (2)', $html);
         $this->assertStringNotContainsString('カット（2）', $html);
-        $this->assertStringContainsString('[id^="menu-category-"]', $html);
+        $this->assertStringContainsString('[data-menu-category-section]', $html);
         $this->assertStringContainsString('data-menu-category-nav', $html);
         $this->assertStringContainsString('data-menu-category-link', $html);
         $this->assertStringContainsString('menu-category-nav-bar', $html);
@@ -156,25 +156,100 @@ class PublicMenuDescriptionTest extends TestCase
         $this->assertSame('#d1d6cb', DesignSetting::secondarySoftFromAccent('#7c8a6a'));
     }
 
-    public function test_home_menu_section_preserves_newlines_with_whitespace_pre_line(): void
+    public function test_home_menu_section_hides_descriptions_and_shows_excerpt(): void
     {
         SalonSetting::current();
 
-        $category = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
-        $menu = Menu::query()->create([
-            'name' => 'カットベーシック',
-            'price' => '¥5,000',
-            'description' => "説明A\n説明B",
-            'sort_order' => 1,
-            'is_published' => true,
+        $cut = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 1]);
+        $empty = MenuCategory::query()->create(['name' => 'カラー', 'sort_order' => 2]);
+
+        foreach ([1, 2, 3, 4] as $i) {
+            $menu = Menu::query()->create([
+                'name' => "カット{$i}",
+                'price' => '¥'.(5000 + $i),
+                'description' => "説明{$i}",
+                'sort_order' => $i,
+                'is_published' => true,
+            ]);
+            $menu->categories()->attach($cut->id, ['sort_order' => $i]);
+        }
+
+        $unpublished = Menu::query()->create([
+            'name' => '非公開カット',
+            'price' => '¥9,999',
+            'description' => '非公開説明',
+            'sort_order' => 5,
+            'is_published' => false,
         ]);
-        $menu->categories()->attach($category->id, ['sort_order' => 1]);
+        $unpublished->categories()->attach($cut->id, ['sort_order' => 5]);
 
         $html = $this->get(route('home'))->assertOk()->getContent();
 
-        $this->assertStringContainsString('whitespace-pre-line', $html);
-        $this->assertStringContainsString("説明A\n説明B", $html);
-        $this->assertStringContainsString('¥5,000', $html);
+        preg_match('/id="menu"[\s\S]*?<\/section>/', $html, $menuSection);
+        $this->assertNotEmpty($menuSection);
+        $section = $menuSection[0];
+
+        $this->assertStringContainsString('home-menu-categories', $section);
+        $this->assertStringContainsString('home-menu-category', $section);
+        $this->assertStringContainsString('home-menu-category-en', $section);
+        $this->assertStringContainsString('CUT', $section);
+        $this->assertStringContainsString('カット', $section);
+        $this->assertStringContainsString('カット1', $section);
+        $this->assertStringContainsString('カット2', $section);
+        $this->assertStringContainsString('カット3', $section);
+        $this->assertStringNotContainsString('カット4', $section);
+        $this->assertStringNotContainsString('非公開カット', $section);
+        $this->assertStringNotContainsString('カラー', $section);
+        $this->assertStringNotContainsString('説明1', $section);
+        $this->assertStringNotContainsString('whitespace-pre-line', $section);
+        $this->assertStringNotContainsString('menu-price-desc', $section);
+        $this->assertStringContainsString('すべて見る', $section);
+        $this->assertStringContainsString(route('menu', absolute: false), $section);
+        $this->assertStringContainsString('home-menu-category-more', $section);
+        $this->assertStringContainsString('home-menu-category-hit', $section);
+        $this->assertStringContainsString('data-home-menu-href', $section);
+        $this->assertStringContainsString(route('menu', absolute: false).'#cut', $section);
+        $this->assertSame(0, $empty->publishedMenus()->count());
+    }
+
+    public function test_home_combination_excerpt_shows_tags_without_description(): void
+    {
+        SalonSetting::current();
+
+        $combination = MenuCategory::query()->create([
+            'name' => MenuCategory::NAME_COMBINATION,
+            'sort_order' => 1,
+            'allow_multiple_selection' => true,
+        ]);
+        $cut = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 2]);
+        $color = MenuCategory::query()->create(['name' => 'カラー', 'sort_order' => 3]);
+
+        $setMenu = Menu::query()->create([
+            'name' => '[ ヘルシーな艶髪へ ]セット',
+            'price' => '¥12,980',
+            'description' => 'セット説明はトップ非表示',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $setMenu->categories()->attach([
+            $combination->id => ['sort_order' => 1],
+            $cut->id => ['sort_order' => 1],
+            $color->id => ['sort_order' => 1],
+        ]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        preg_match('/id="menu"[\s\S]*?<\/section>/', $html, $menuSection);
+        $this->assertNotEmpty($menuSection);
+        $section = $menuSection[0];
+
+        $this->assertStringContainsString('組み合わせ', $section);
+        $this->assertStringContainsString('menu-price-tags', $section);
+        $this->assertStringContainsString('>カット</span>', $section);
+        $this->assertStringContainsString('>カラー</span>', $section);
+        $this->assertStringContainsString('[ ヘルシーな艶髪へ ]セット', $section);
+        $this->assertStringContainsString('¥12,980', $section);
+        $this->assertStringNotContainsString('セット説明はトップ非表示', $section);
     }
 
     public function test_menu_appears_in_each_assigned_category_on_public_page(): void
@@ -198,12 +273,12 @@ class PublicMenuDescriptionTest extends TestCase
         $html = $this->get(route('menu'))->assertOk()->getContent();
 
         preg_match(
-            '/id="menu-category-'.$cut->id.'"[\s\S]*?<\/section>/',
+            '/id="cut"[\s\S]*?<\/section>/',
             $html,
             $cutSection
         );
         preg_match(
-            '/id="menu-category-'.$spa->id.'"[\s\S]*?<\/section>/',
+            '/id="head-spa"[\s\S]*?<\/section>/',
             $html,
             $spaSection
         );
@@ -213,5 +288,129 @@ class PublicMenuDescriptionTest extends TestCase
         $this->assertStringContainsString('カット＆リラックスヘッドスパ', $cutSection[0]);
         $this->assertStringContainsString('カット＆リラックスヘッドスパ', $spaSection[0]);
         $this->assertSame(2, substr_count($html, 'カット＆リラックスヘッドスパ'));
+    }
+
+    public function test_combination_menu_shows_tags_only_under_combination_category(): void
+    {
+        SalonSetting::current();
+
+        $combination = MenuCategory::query()->create([
+            'name' => MenuCategory::NAME_COMBINATION,
+            'sort_order' => 1,
+            'allow_multiple_selection' => true,
+        ]);
+        $cut = MenuCategory::query()->create(['name' => 'カット', 'sort_order' => 2]);
+        $color = MenuCategory::query()->create(['name' => 'カラー', 'sort_order' => 3]);
+        $treatment = MenuCategory::query()->create(['name' => 'トリートメント', 'sort_order' => 4]);
+
+        $setMenu = Menu::query()->create([
+            'name' => '[ ヘルシーな艶髪へ ]カット＆カラー＆link高保湿トリートメント',
+            'price' => '¥12,980',
+            'description' => 'セット説明',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $setMenu->categories()->attach([
+            $combination->id => ['sort_order' => 1],
+            $cut->id => ['sort_order' => 1],
+            $color->id => ['sort_order' => 1],
+            $treatment->id => ['sort_order' => 1],
+        ]);
+
+        $standalone = Menu::query()->create([
+            'name' => 'カット単品',
+            'price' => '¥5,940',
+            'sort_order' => 2,
+            'is_published' => true,
+        ]);
+        $standalone->categories()->attach($cut->id, ['sort_order' => 2]);
+
+        $html = $this->get(route('menu'))->assertOk()->getContent();
+
+        preg_match(
+            '/id="set"[\s\S]*?<\/section>/',
+            $html,
+            $comboSection
+        );
+        preg_match(
+            '/id="cut"[\s\S]*?<\/section>/',
+            $html,
+            $cutSection
+        );
+
+        $this->assertNotEmpty($comboSection);
+        $this->assertNotEmpty($cutSection);
+        $this->assertStringContainsString('menu-price-tags', $comboSection[0]);
+        $this->assertStringContainsString('menu-price-tag', $comboSection[0]);
+        $this->assertStringContainsString('menu-price-tag-icon', $comboSection[0]);
+        $this->assertStringContainsString('menu-price-tag-label', $comboSection[0]);
+        $this->assertStringContainsString('>カット</span>', $comboSection[0]);
+        $this->assertStringContainsString('>カラー</span>', $comboSection[0]);
+        $this->assertStringContainsString('>トリートメント</span>', $comboSection[0]);
+        $this->assertStringContainsString('[ ヘルシーな艶髪へ ]カット＆カラー＆link高保湿トリートメント', $comboSection[0]);
+        $this->assertSame(1, substr_count($html, '[ ヘルシーな艶髪へ ]カット＆カラー＆link高保湿トリートメント'));
+        $this->assertStringNotContainsString('[ ヘルシーな艶髪へ ]', $cutSection[0]);
+        $this->assertStringContainsString('カット単品', $cutSection[0]);
+        $this->assertStringNotContainsString('menu-price-tags', $cutSection[0]);
+    }
+
+    public function test_renamed_allow_multiple_category_keeps_set_menu_listing_rules(): void
+    {
+        SalonSetting::current();
+
+        $setCategory = MenuCategory::query()->create([
+            'name' => 'セットメニュー',
+            'sort_order' => 1,
+            'allow_multiple_selection' => true,
+        ]);
+        $cut = MenuCategory::query()->create([
+            'name' => 'カット',
+            'sort_order' => 2,
+            'allow_multiple_selection' => false,
+        ]);
+        $color = MenuCategory::query()->create([
+            'name' => 'カラー',
+            'sort_order' => 3,
+            'allow_multiple_selection' => false,
+        ]);
+
+        $setMenu = Menu::query()->create([
+            'name' => 'カット＆カラーセット',
+            'price' => '¥12,980',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $setMenu->categories()->attach([
+            $setCategory->id => ['sort_order' => 1],
+            $cut->id => ['sort_order' => 1],
+            $color->id => ['sort_order' => 1],
+        ]);
+
+        $standalone = Menu::query()->create([
+            'name' => 'カット単品',
+            'price' => '¥5,940',
+            'sort_order' => 2,
+            'is_published' => true,
+        ]);
+        $standalone->categories()->attach($cut->id, ['sort_order' => 2]);
+
+        $html = $this->get(route('menu'))->assertOk()->getContent();
+
+        preg_match('/id="set"[\s\S]*?<\/section>/', $html, $setSection);
+        preg_match('/id="cut"[\s\S]*?<\/section>/', $html, $cutSection);
+        preg_match('/id="color"[\s\S]*?<\/section>/', $html, $colorSection);
+
+        $this->assertNotEmpty($setSection);
+        $this->assertNotEmpty($cutSection);
+        $this->assertStringContainsString('セットメニュー', $setSection[0]);
+        $this->assertStringContainsString('カット＆カラーセット', $setSection[0]);
+        $this->assertStringContainsString('>カット</span>', $setSection[0]);
+        $this->assertStringContainsString('>カラー</span>', $setSection[0]);
+        $this->assertSame(1, substr_count($html, 'カット＆カラーセット'));
+        $this->assertStringNotContainsString('カット＆カラーセット', $cutSection[0]);
+        $this->assertStringContainsString('カット単品', $cutSection[0]);
+        if ($colorSection !== []) {
+            $this->assertStringNotContainsString('カット＆カラーセット', $colorSection[0]);
+        }
     }
 }
