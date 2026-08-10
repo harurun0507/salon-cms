@@ -2,9 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\Gallery;
+use App\Models\GalleryImage;
 use App\Models\News;
 use App\Models\SalonSetting;
+use App\Models\TopPageSection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class HomeNavigationAndNewsTest extends TestCase
@@ -14,23 +19,100 @@ class HomeNavigationAndNewsTest extends TestCase
     public function test_header_nav_uses_section_anchors_including_news(): void
     {
         SalonSetting::current();
+        TopPageSection::ensureDefaults();
 
         $html = $this->get(route('home'))->assertOk()->getContent();
 
         foreach (['concept', 'news', 'menu', 'staff', 'access'] as $id) {
             $this->assertStringContainsString('/#'.$id, $html);
         }
-        $this->assertStringNotContainsString('/#gallery', $html);
+        $this->assertStringContainsString('/#gallery', $html);
 
         $this->assertMatchesRegularExpression(
             '/aria-label="メインメニュー"[^>]*>\s*'
             .'<a[^>]*>Concept<\/a>\s*'
             .'<a[^>]*>News<\/a>\s*'
+            .'<a[^>]*>Gallery<\/a>\s*'
             .'<a[^>]*>Menu<\/a>\s*'
             .'<a[^>]*>Staff<\/a>\s*'
             .'<a[^>]*>Access<\/a>/s',
             $html
         );
+    }
+
+    public function test_header_gallery_nav_shows_when_section_on_even_without_published_galleries(): void
+    {
+        SalonSetting::current();
+        TopPageSection::ensureDefaults();
+        TopPageSection::query()->where('section_key', TopPageSection::KEY_GALLERY)->update([
+            'is_visible' => true,
+        ]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('id="gallery"', $html);
+        $this->assertStringContainsString('>Gallery</a>', $html);
+        $this->assertStringContainsString('<span>Gallery</span>', $html);
+    }
+
+    public function test_header_and_mobile_nav_hide_items_when_top_sections_are_off(): void
+    {
+        Storage::fake('public');
+        SalonSetting::current();
+        TopPageSection::ensureDefaults();
+
+        $gallery = Gallery::query()->create([
+            'title' => '公開ギャラリー',
+            'caption' => null,
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        GalleryImage::query()->create([
+            'gallery_id' => $gallery->id,
+            'image_path' => UploadedFile::fake()->image('g.jpg')->store('galleries', 'public'),
+            'display_order' => 1,
+        ]);
+
+        TopPageSection::query()->whereIn('section_key', [
+            TopPageSection::KEY_NEWS,
+            TopPageSection::KEY_BLOG,
+            TopPageSection::KEY_GALLERY,
+            TopPageSection::KEY_MENU,
+            TopPageSection::KEY_STAFF,
+            TopPageSection::KEY_ACCESS,
+        ])->update(['is_visible' => false]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('>Concept</a>', $html);
+        $this->assertStringNotContainsString('>News</a>', $html);
+        $this->assertStringNotContainsString('>Gallery</a>', $html);
+        $this->assertStringNotContainsString('>Menu</a>', $html);
+        $this->assertStringNotContainsString('>Staff</a>', $html);
+        $this->assertStringNotContainsString('>Access</a>', $html);
+        $this->assertStringNotContainsString('<span>News</span>', $html);
+        $this->assertStringNotContainsString('<span>Gallery</span>', $html);
+        $this->assertStringNotContainsString('<span>Menu</span>', $html);
+        $this->assertStringNotContainsString('<span>Staff</span>', $html);
+        $this->assertStringNotContainsString('<span>Access</span>', $html);
+        $this->assertStringNotContainsString('id="gallery"', $html);
+        $this->assertStringNotContainsString('id="menu"', $html);
+        $this->assertStringNotContainsString('id="staff"', $html);
+        $this->assertStringNotContainsString('id="access"', $html);
+    }
+
+    public function test_header_news_nav_stays_when_only_blog_section_is_on(): void
+    {
+        SalonSetting::current();
+        TopPageSection::ensureDefaults();
+        TopPageSection::query()->where('section_key', TopPageSection::KEY_NEWS)->update(['is_visible' => false]);
+        TopPageSection::query()->where('section_key', TopPageSection::KEY_BLOG)->update(['is_visible' => true]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('>News</a>', $html);
+        $this->assertStringContainsString('/#blog', $html);
+        $this->assertStringNotContainsString('href="'.url('/#news').'"', $html);
     }
 
     public function test_home_shows_up_to_configured_published_news_newest_first(): void

@@ -116,4 +116,14 @@ class TopPageSection extends Model
 
         return static::query()->visible()->ordered()->get();
     }
+
+    /**
+     * @return array<string, bool>
+     */
+    public static function visibilityByKey(): array
+    {
+        return static::ensureDefaults()
+            ->mapWithKeys(fn (self $section) => [$section->section_key => (bool) $section->is_visible])
+            ->all();
+    }
 }

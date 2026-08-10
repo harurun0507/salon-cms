@@ -440,8 +440,9 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringNotContainsString('ヘアギャラリー', $html);
         $this->assertStringNotContainsString('ギャラリー準備中です。', $html);
         $this->assertStringNotContainsString(route('gallery'), $html);
-        $this->assertStringNotContainsString('/#gallery', $html);
-        $this->assertStringNotContainsString('>Gallery</a>', $html);
+        // Nav Gallery follows top-page section ON/OFF only (not published count).
+        $this->assertStringContainsString('/#gallery', $html);
+        $this->assertStringContainsString('>Gallery</a>', $html);
     }
 
     public function test_home_gallery_section_shows_when_published_gallery_exists(): void

@@ -25,6 +25,17 @@
                 ->where('is_published', true)
                 ->whereHas('images')
                 ->exists();
+        $topSectionVisibility = $topSectionVisibility
+            ?? \App\Models\TopPageSection::visibilityByKey();
+        $showNavNews = ($topSectionVisibility[\App\Models\TopPageSection::KEY_NEWS] ?? false)
+            || ($topSectionVisibility[\App\Models\TopPageSection::KEY_BLOG] ?? false);
+        $newsNavHref = ($topSectionVisibility[\App\Models\TopPageSection::KEY_NEWS] ?? false)
+            ? url('/#news')
+            : url('/#blog');
+        $showNavGallery = $topSectionVisibility[\App\Models\TopPageSection::KEY_GALLERY] ?? false;
+        $showNavMenu = $topSectionVisibility[\App\Models\TopPageSection::KEY_MENU] ?? false;
+        $showNavStaff = $topSectionVisibility[\App\Models\TopPageSection::KEY_STAFF] ?? false;
+        $showNavAccess = $topSectionVisibility[\App\Models\TopPageSection::KEY_ACCESS] ?? false;
     @endphp
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -196,13 +207,21 @@
 
             <nav class="hidden items-center gap-8 text-sm md:flex" aria-label="メインメニュー">
                 <a href="{{ url('/#concept') }}" class="hover:text-salon-accent">Concept</a>
-                <a href="{{ url('/#news') }}" class="hover:text-salon-accent">News</a>
-                @if($showPublicGallery)
+                @if($showNavNews)
+                    <a href="{{ $newsNavHref }}" class="hover:text-salon-accent">News</a>
+                @endif
+                @if($showNavGallery)
                     <a href="{{ url('/#gallery') }}" class="hover:text-salon-accent">Gallery</a>
                 @endif
-                <a href="{{ url('/#menu') }}" class="hover:text-salon-accent">Menu</a>
-                <a href="{{ url('/#staff') }}" class="hover:text-salon-accent">Staff</a>
-                <a href="{{ url('/#access') }}" class="hover:text-salon-accent">Access</a>
+                @if($showNavMenu)
+                    <a href="{{ url('/#menu') }}" class="hover:text-salon-accent">Menu</a>
+                @endif
+                @if($showNavStaff)
+                    <a href="{{ url('/#staff') }}" class="hover:text-salon-accent">Staff</a>
+                @endif
+                @if($showNavAccess)
+                    <a href="{{ url('/#access') }}" class="hover:text-salon-accent">Access</a>
+                @endif
             </nav>
 
             @if($setting->hot_pepper_url)
@@ -263,28 +282,36 @@
                     <span>Concept</span>
                     <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </a>
-                <a href="{{ url('/#news') }}" data-nav-link class="site-mobile-nav-link">
-                    <span>News</span>
-                    <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </a>
-                @if($showPublicGallery)
+                @if($showNavNews)
+                    <a href="{{ $newsNavHref }}" data-nav-link class="site-mobile-nav-link">
+                        <span>News</span>
+                        <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </a>
+                @endif
+                @if($showNavGallery)
                     <a href="{{ url('/#gallery') }}" data-nav-link class="site-mobile-nav-link">
                         <span>Gallery</span>
                         <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </a>
                 @endif
-                <a href="{{ url('/#menu') }}" data-nav-link class="site-mobile-nav-link">
-                    <span>Menu</span>
-                    <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </a>
-                <a href="{{ url('/#staff') }}" data-nav-link class="site-mobile-nav-link">
-                    <span>Staff</span>
-                    <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </a>
-                <a href="{{ url('/#access') }}" data-nav-link class="site-mobile-nav-link">
-                    <span>Access</span>
-                    <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </a>
+                @if($showNavMenu)
+                    <a href="{{ url('/#menu') }}" data-nav-link class="site-mobile-nav-link">
+                        <span>Menu</span>
+                        <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </a>
+                @endif
+                @if($showNavStaff)
+                    <a href="{{ url('/#staff') }}" data-nav-link class="site-mobile-nav-link">
+                        <span>Staff</span>
+                        <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </a>
+                @endif
+                @if($showNavAccess)
+                    <a href="{{ url('/#access') }}" data-nav-link class="site-mobile-nav-link">
+                        <span>Access</span>
+                        <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </a>
+                @endif
             </div>
             @if($setting->hot_pepper_url)
                 <div class="site-mobile-nav-cta">
