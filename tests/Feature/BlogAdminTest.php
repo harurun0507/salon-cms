@@ -46,6 +46,8 @@ class BlogAdminTest extends TestCase
         $this->assertStringContainsString('id="blog-bulk-form"', $html);
         $this->assertStringContainsString('enctype="multipart/form-data"', $html);
         $this->assertStringContainsString('id="blog-add-card"', $html);
+        $this->assertStringContainsString('data-blog-add', $html);
+        $this->assertStringContainsString('data-blog-add-top', $html);
         $this->assertStringContainsString('ブログを追加', $html);
         $this->assertStringContainsString('アイキャッチ画像', $html);
         $this->assertStringContainsString('投稿日時', $html);
@@ -147,6 +149,73 @@ class BlogAdminTest extends TestCase
         $blog->refresh();
         $this->assertNull($blog->eye_catch_image_path);
         $this->assertFalse(Storage::disk('public')->exists($path));
+    }
+
+    public function test_validation_error_preserves_prepended_new_blog_card_order(): void
+    {
+        $existing1 = $this->createBlog([
+            'title' => '既存1',
+            'slug' => 'existing-1',
+            'display_order' => 1,
+        ]);
+        $existing2 = $this->createBlog([
+            'title' => '既存2',
+            'slug' => 'existing-2',
+            'display_order' => 2,
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->followingRedirects()
+            ->from(route('admin.blog.index'))
+            ->put(route('admin.blog.update'), [
+                'blogs' => [
+                    $existing1->id => [
+                        'title' => '既存1',
+                        'body' => '本文1',
+                        'published_at' => '2026-08-01T10:00',
+                        'is_published' => '1',
+                        'display_order' => 2,
+                        'remove_eye_catch' => '0',
+                    ],
+                    $existing2->id => [
+                        'title' => '既存2',
+                        'body' => '本文2',
+                        'published_at' => '2026-08-01T11:00',
+                        'is_published' => '1',
+                        'display_order' => 3,
+                        'remove_eye_catch' => '0',
+                    ],
+                ],
+                'new_blogs' => [
+                    'new_1' => [
+                        'title' => '先頭の新規',
+                        'body' => '新規本文',
+                        'published_at' => '',
+                        'is_published' => '0',
+                        'display_order' => 1,
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->assertSee('投稿日時は必須です。', false)
+            ->assertSee('先頭の新規', false)
+            ->getContent();
+
+        preg_match('/id="blog-grid"(.*?)<div\s+id="blog-add-card"/s', $html, $matches);
+        $this->assertNotEmpty($matches);
+        $grid = $matches[1];
+
+        $posNew = strpos($grid, 'data-blog-new');
+        $posExisting1 = strpos($grid, 'data-blog-id="'.$existing1->id.'"');
+        $posExisting2 = strpos($grid, 'data-blog-id="'.$existing2->id.'"');
+
+        $this->assertNotFalse($posNew);
+        $this->assertNotFalse($posExisting1);
+        $this->assertNotFalse($posExisting2);
+        $this->assertLessThan($posExisting1, $posNew);
+        $this->assertLessThan($posExisting2, $posExisting1);
+        $this->assertStringContainsString('name="new_blogs[new_1][is_published]" value="0"', $grid);
+        $this->assertStringContainsString('>新規本文</textarea>', $grid);
     }
 
     public function test_validation_error_keeps_uploaded_new_blog_image_as_pending_preview(): void

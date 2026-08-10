@@ -483,6 +483,71 @@ class NewsAdminTest extends TestCase
         $this->assertStringContainsString('2026-08-03T11:00', $html);
     }
 
+    public function test_validation_error_preserves_prepended_new_news_card_order(): void
+    {
+        $existing1 = $this->createNews([
+            'title' => '既存1',
+            'slug' => 'existing-1',
+            'display_order' => 1,
+        ]);
+        $existing2 = $this->createNews([
+            'title' => '既存2',
+            'slug' => 'existing-2',
+            'display_order' => 2,
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->followingRedirects()
+            ->from(route('admin.news.index'))
+            ->put(route('admin.news.update'), [
+                'news' => [
+                    $existing1->id => [
+                        'title' => '既存1',
+                        'body' => '本文1',
+                        'category' => 'other',
+                        'published_at' => '2026-08-01T10:00',
+                        'is_published' => '1',
+                        'display_order' => 2,
+                    ],
+                    $existing2->id => [
+                        'title' => '既存2',
+                        'body' => '本文2',
+                        'category' => 'other',
+                        'published_at' => '2026-08-01T11:00',
+                        'is_published' => '1',
+                        'display_order' => 3,
+                    ],
+                ],
+                'new_news' => [
+                    'new_1' => [
+                        'title' => '先頭の新規',
+                        'body' => '新規本文',
+                        'category' => 'other',
+                        'published_at' => '',
+                        'is_published' => '0',
+                        'display_order' => 1,
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->assertSee('先頭の新規', false)
+            ->getContent();
+
+        preg_match('/id="news-grid"(.*?)<div\s+id="news-add-card"/s', $html, $matches);
+        $this->assertNotEmpty($matches);
+        $grid = $matches[1];
+
+        $posNew = strpos($grid, 'data-news-new');
+        $posExisting1 = strpos($grid, 'data-news-id="'.$existing1->id.'"');
+        $posExisting2 = strpos($grid, 'data-news-id="'.$existing2->id.'"');
+
+        $this->assertNotFalse($posNew);
+        $this->assertNotFalse($posExisting1);
+        $this->assertNotFalse($posExisting2);
+        $this->assertLessThan($posExisting1, $posNew);
+        $this->assertLessThan($posExisting2, $posExisting1);
+    }
+
     public function test_bulk_update_normalizes_display_order(): void
     {
         $a = $this->createNews(['title' => 'A', 'slug' => 'a', 'display_order' => 10]);
