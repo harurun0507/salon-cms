@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Banner;
+use App\Models\Blog;
 use App\Models\Gallery;
 use App\Models\HeroImage;
 use App\Models\Menu;
@@ -34,6 +35,12 @@ class DashboardController extends AdminController
             [$now]
         );
 
+        $blogCounts = $this->aggregatePublishCounts(
+            Blog::query(),
+            'is_published = 1 AND (published_at IS NULL OR published_at <= ?)',
+            [$now]
+        );
+
         $galleryCounts = $this->aggregatePublishCounts(Gallery::query(), 'is_published = 1');
         $menuCounts = $this->aggregatePublishCounts(Menu::query(), 'is_published = 1');
         $staffCounts = $this->aggregatePublishCounts(StaffMember::query(), 'is_published = 1');
@@ -60,6 +67,7 @@ class DashboardController extends AdminController
         return view('admin.dashboard', [
             'siteStatus' => $siteStatus,
             'newsCounts' => $newsCounts,
+            'blogCounts' => $blogCounts,
             'galleryCounts' => $galleryCounts,
             'menuCounts' => $menuCounts,
             'staffCounts' => $staffCounts,

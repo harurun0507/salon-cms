@@ -155,6 +155,12 @@
                     'route' => route('admin.news.index'),
                 ],
                 [
+                    'label' => 'ブログ',
+                    'icon' => 'blog',
+                    'counts' => $blogCounts,
+                    'route' => route('admin.blog.index'),
+                ],
+                [
                     'label' => 'ギャラリー',
                     'icon' => 'gallery',
                     'counts' => $galleryCounts,

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Banner;
+use App\Models\Blog;
 use App\Models\Gallery;
 use App\Models\HeroImage;
 use App\Models\Menu;
@@ -52,6 +53,23 @@ class AdminDashboardTest extends TestCase
             'body' => '本文',
             'is_published' => false,
             'published_at' => null,
+            'display_order' => 2,
+        ]);
+
+        Blog::query()->create([
+            'title' => '公開ブログ',
+            'slug' => 'published-blog',
+            'body' => '本文',
+            'is_published' => true,
+            'published_at' => now()->subDay(),
+            'display_order' => 1,
+        ]);
+        Blog::query()->create([
+            'title' => '非公開ブログ',
+            'slug' => 'draft-blog',
+            'body' => '本文',
+            'is_published' => false,
+            'published_at' => now()->subDay(),
             'display_order' => 2,
         ]);
 
@@ -127,7 +145,12 @@ class AdminDashboardTest extends TestCase
         $this->assertStringContainsString('公開 1', $html);
         $this->assertStringContainsString('非公開 1', $html);
         $this->assertStringContainsString('dashboard-count-card', $html);
+        $this->assertMatchesRegularExpression(
+            '/dashboard-count-card-title">お知らせ[\s\S]*dashboard-count-card-title">ブログ[\s\S]*dashboard-count-card-title">ギャラリー[\s\S]*dashboard-count-card-title">メニュー[\s\S]*dashboard-count-card-title">スタッフ/u',
+            $html
+        );
         $this->assertStringContainsString(route('admin.news.index'), $html);
+        $this->assertStringContainsString(route('admin.blog.index'), $html);
         $this->assertStringContainsString(route('admin.galleries.index'), $html);
         $this->assertStringContainsString(route('admin.menus.index'), $html);
         $this->assertStringContainsString(route('admin.staff.index'), $html);
