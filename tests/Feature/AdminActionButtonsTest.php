@@ -89,6 +89,7 @@ class AdminActionButtonsTest extends TestCase
 
         $this->assertStringContainsString('id="gallery-add-card"', $html);
         $this->assertStringContainsString('data-gallery-add', $html);
+        $this->assertStringContainsString('data-gallery-add-top', $html);
         $this->assertStringContainsString('btn-admin-create', $html);
         $this->assertStringContainsString('admin-icon-btn-delete', $html);
         $this->assertStringContainsString('data-gallery-remove', $html);

@@ -3,20 +3,25 @@
 @section('heading', 'ギャラリー管理')
 
 @section('save-bar')
-    <div class="flex min-w-0 flex-wrap items-center gap-3">
-        <button
-            type="button"
-            class="admin-btn shadow-md shrink-0"
-            data-admin-confirm-trigger
-            data-confirm-form="galleries-bulk-form"
-            data-confirm-title="ギャラリー保存の確認"
-            data-confirm-message="変更内容を保存します。&#10;よろしいですか？"
-            data-confirm-note="画像、タイトル、詳細、担当スタッフ、表示順、公開状態、削除など、現在入力されている内容が反映されます。"
-            data-confirm-submit-label="保存する"
-        >保存する</button>
-        <p class="text-sm text-admin-muted">
-            公開サイトに表示するギャラリーを登録・編集します。1件あたり最大{{ \App\Models\Gallery::MAX_IMAGES }}枚まで画像を追加できます。
-        </p>
+    <div class="flex min-w-0 flex-wrap items-center justify-between gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-3">
+            <button
+                type="button"
+                class="admin-btn shadow-md shrink-0"
+                data-admin-confirm-trigger
+                data-confirm-form="galleries-bulk-form"
+                data-confirm-title="ギャラリー保存の確認"
+                data-confirm-message="変更内容を保存します。&#10;よろしいですか？"
+                data-confirm-note="画像、タイトル、詳細、担当スタッフ、表示順、公開状態、削除など、現在入力されている内容が反映されます。"
+                data-confirm-submit-label="保存する"
+            >保存する</button>
+            <p class="text-sm text-admin-muted">
+                公開サイトに表示するギャラリーを登録・編集します。1件あたり最大{{ \App\Models\Gallery::MAX_IMAGES }}枚まで画像を追加できます。
+            </p>
+        </div>
+        <x-admin.create-button data-gallery-add-top class="shrink-0">
+            ギャラリーを追加
+        </x-admin.create-button>
     </div>
 
 @endsection
@@ -25,17 +30,79 @@
     @php
         $maxOrder = (int) ($galleries->max('sort_order') ?? 0);
         $maxImages = \App\Models\Gallery::MAX_IMAGES;
-    @endphp
 
-    @if ($errors->any())
-        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <ul class="list-disc space-y-1 pl-5">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+        $isUsablePending = static function (mixed $path): bool {
+            if (! is_string($path) || $path === '') {
+                return false;
+            }
+
+            if (! str_starts_with($path, 'galleries/tmp/')) {
+                return false;
+            }
+
+            if (str_contains($path, '..')) {
+                return false;
+            }
+
+            return \Illuminate\Support\Facades\Storage::disk('public')->exists($path);
+        };
+
+        $oldNewGalleries = old('new_galleries', []);
+        if (! is_array($oldNewGalleries)) {
+            $oldNewGalleries = [];
+        }
+        $nextNewIndex = 1;
+        foreach (array_keys($oldNewGalleries) as $key) {
+            if (preg_match('/^new_(\d+)$/', (string) $key, $m)) {
+                $nextNewIndex = max($nextNewIndex, ((int) $m[1]) + 1);
+            }
+        }
+
+        $deletedIds = collect(old('deleted_ids', []))
+            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->map(fn ($id) => (string) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        // Preserve submitted card order (sort_order) across validation redirects.
+        $workspaceCards = [];
+        $workspaceIndex = 0;
+        foreach ($galleries as $gallery) {
+            if (in_array((string) $gallery->id, $deletedIds, true)) {
+                continue;
+            }
+
+            $workspaceCards[] = [
+                'kind' => 'existing',
+                'order' => (int) old('galleries.'.$gallery->id.'.sort_order', $gallery->sort_order),
+                'index' => $workspaceIndex++,
+                'gallery' => $gallery,
+            ];
+        }
+        foreach ($oldNewGalleries as $key => $newItem) {
+            if (! is_array($newItem)) {
+                continue;
+            }
+
+            $workspaceCards[] = [
+                'kind' => 'new',
+                'order' => (int) old('new_galleries.'.$key.'.sort_order', $newItem['sort_order'] ?? PHP_INT_MAX),
+                'index' => $workspaceIndex++,
+                'key' => (string) $key,
+                'newItem' => $newItem,
+            ];
+        }
+        usort($workspaceCards, function (array $a, array $b): int {
+            if ($a['order'] !== $b['order']) {
+                return $a['order'] <=> $b['order'];
+            }
+
+            return $a['index'] <=> $b['index'];
+        });
+
+        $maxOrder = max($maxOrder, count($workspaceCards));
+    @endphp
 
     <form
         method="POST"
@@ -43,196 +110,37 @@
         id="galleries-bulk-form"
         enctype="multipart/form-data"
         data-gallery-workspace
-        data-next-new-index="1"
+        data-next-new-index="{{ $nextNewIndex }}"
         data-max-order="{{ $maxOrder }}"
         data-max-images="{{ $maxImages }}"
     >
         @csrf
         @method('PUT')
 
-        <div id="gallery-deleted-ids"></div>
+        <div id="gallery-deleted-ids">
+            @foreach($deletedIds as $deletedId)
+                <input type="hidden" name="deleted_ids[]" value="{{ $deletedId }}">
+            @endforeach
+        </div>
 
         <div id="gallery-grid" class="grid grid-cols-1 gap-4 lg:grid-cols-2" data-gallery-grid>
-            @foreach($galleries as $gallery)
-                @php
-                    $prefix = 'galleries.'.$gallery->id;
-                    $publishedOld = old($prefix.'.is_published', $gallery->is_published ? '1' : '0');
-                    $isPublished = in_array((string) $publishedOld, ['1', 'true', 'on'], true);
-                    $sortOrder = old($prefix.'.sort_order', $gallery->sort_order);
-                    $cardTitle = trim((string) old($prefix.'.title', $gallery->title));
-                    $headingTitle = $cardTitle !== '' ? $cardTitle : '新規ギャラリー';
-                    $staffId = old($prefix.'.staff_id', $gallery->staff_id);
-                @endphp
-                <div
-                    class="admin-card gallery-card"
-                    data-gallery-card
-                    data-gallery-id="{{ $gallery->id }}"
-                    data-gallery-existing
-                    data-gallery-name-prefix="galleries[{{ $gallery->id }}]"
-                >
-                    <div class="mb-3 flex items-center justify-between gap-3">
-                        <div class="flex min-w-0 items-center gap-2">
-                            <span
-                                class="gallery-drag-handle"
-                                data-gallery-drag-handle
-                                draggable="true"
-                                role="button"
-                                tabindex="0"
-                                aria-label="ギャラリーを並び替え"
-                                title="ドラッグして並び替え"
-                            >
-                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <circle cx="7" cy="5" r="1.25"/>
-                                    <circle cx="13" cy="5" r="1.25"/>
-                                    <circle cx="7" cy="10" r="1.25"/>
-                                    <circle cx="13" cy="10" r="1.25"/>
-                                    <circle cx="7" cy="15" r="1.25"/>
-                                    <circle cx="13" cy="15" r="1.25"/>
-                                </svg>
-                            </span>
-                            <p class="banner-card-label truncate text-sm font-medium text-gray-800" data-gallery-card-title title="{{ $headingTitle }}">{{ $headingTitle }}</p>
-                        </div>
-                        <button
-                            type="button"
-                            class="admin-icon-btn admin-icon-btn-delete"
-                            data-gallery-remove
-                            aria-label="削除"
-                            title="削除"
-                        >
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-
-                    <input type="hidden" name="galleries[{{ $gallery->id }}][sort_order]" value="{{ $sortOrder }}" data-gallery-order>
-                    <div data-gallery-deleted-images></div>
-
-                    <div class="mb-3">
-                        <p class="admin-label">ギャラリー画像</p>
-                        <div class="gallery-image-grid" data-gallery-image-grid>
-                            @foreach($gallery->images as $image)
-                                <div
-                                    class="gallery-image-item"
-                                    data-gallery-image-item
-                                    data-gallery-image-id="{{ $image->id }}"
-                                    data-gallery-image-existing
-                                >
-                                    <span
-                                        class="gallery-image-drag-handle"
-                                        data-gallery-image-drag-handle
-                                        draggable="true"
-                                        role="button"
-                                        tabindex="0"
-                                        aria-label="画像を並び替え"
-                                        title="ドラッグして並び替え"
-                                    >
-                                        <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                            <circle cx="7" cy="5" r="1.25"/><circle cx="13" cy="5" r="1.25"/>
-                                            <circle cx="7" cy="10" r="1.25"/><circle cx="13" cy="10" r="1.25"/>
-                                            <circle cx="7" cy="15" r="1.25"/><circle cx="13" cy="15" r="1.25"/>
-                                        </svg>
-                                    </span>
-                                    <button
-                                        type="button"
-                                        class="gallery-image-remove"
-                                        data-gallery-image-remove
-                                        aria-label="画像を削除"
-                                        title="画像を削除"
-                                    >&times;</button>
-                                    <div class="gallery-image-thumb" data-gallery-image-dropzone>
-                                        <img src="{{ asset('storage/'.$image->image_path) }}" alt="" class="h-full w-full object-cover" data-gallery-image-preview>
-                                    </div>
-                                    <input type="hidden" name="galleries[{{ $gallery->id }}][images][{{ $image->id }}][display_order]" value="{{ $image->display_order }}" data-gallery-image-order>
-                                    <input type="hidden" name="galleries[{{ $gallery->id }}][images][{{ $image->id }}][alt_text]" value="{{ $image->alt_text }}" data-gallery-image-alt>
-                                    <input type="file" name="galleries[{{ $gallery->id }}][images][{{ $image->id }}][image]" accept="image/jpeg,image/png,image/webp" class="hidden" data-gallery-image-file>
-                                    <p class="mt-1 text-center text-[10px] text-admin-muted" data-gallery-image-label>画像{{ $loop->iteration }}</p>
-                                </div>
-                            @endforeach
-
-                            <button
-                                type="button"
-                                class="gallery-image-add"
-                                data-gallery-image-add
-                                @if($gallery->images->count() >= $maxImages) hidden @endif
-                            >
-                                <svg class="mx-auto h-8 w-8 text-[#B8B09F]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    <rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
-                                    <circle cx="9" cy="10.5" r="1.5" fill="currentColor" opacity="0.7"/>
-                                    <path d="M5.5 16.5l4-3.5 2.5 2 3.5-3.5 3 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                <span class="mt-1 block text-xs font-medium text-admin-accent">＋画像を追加</span>
-                            </button>
-                        </div>
-                        <p class="mt-1 hidden text-sm text-red-600" data-gallery-image-error role="alert"></p>
-                        @error($prefix.'.images')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                        @error($prefix.'.new_images')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div class="space-y-3">
-                        <div>
-                            <label for="gallery_title_{{ $gallery->id }}" class="admin-label">タイトル</label>
-                            <input
-                                type="text"
-                                name="galleries[{{ $gallery->id }}][title]"
-                                id="gallery_title_{{ $gallery->id }}"
-                                value="{{ old($prefix.'.title', $gallery->title) }}"
-                                maxlength="255"
-                                class="admin-input"
-                                placeholder="例：ショートボブ"
-                                data-gallery-title-input
-                            >
-                        </div>
-                        <div>
-                            <label for="gallery_caption_{{ $gallery->id }}" class="admin-label">詳細</label>
-                            <textarea
-                                name="galleries[{{ $gallery->id }}][caption]"
-                                id="gallery_caption_{{ $gallery->id }}"
-                                rows="4"
-                                maxlength="2000"
-                                class="admin-input min-h-[7rem] resize-y"
-                                placeholder="スタイルの特徴やポイントを入力してください"
-                                data-gallery-caption-input
-                            >{{ old($prefix.'.caption', $gallery->caption) }}</textarea>
-                        </div>
-                        <div>
-                            @include('admin.galleries.partials.staff-picker', [
-                                'name' => 'galleries['.$gallery->id.'][staff_id]',
-                                'inputId' => 'gallery_staff_'.$gallery->id,
-                                'selectedId' => $staffId,
-                                'staffMembers' => $staffMembers,
-                            ])
-                        </div>
-                        <div>
-                            <span class="admin-label">公開</span>
-                            <div class="admin-segmented mt-1" role="radiogroup" aria-label="公開状態">
-                                <label class="admin-segmented-option">
-                                    <input type="radio" name="galleries[{{ $gallery->id }}][is_published]" value="1" class="admin-segmented-input" @checked($isPublished)>
-                                    <span class="admin-segmented-face">
-                                        <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                                            <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
-                                            <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.35"/>
-                                        </svg>
-                                        <span class="admin-segmented-text">公開</span>
-                                    </span>
-                                </label>
-                                <label class="admin-segmented-option">
-                                    <input type="radio" name="galleries[{{ $gallery->id }}][is_published]" value="0" class="admin-segmented-input" @checked(!$isPublished)>
-                                    <span class="admin-segmented-face">
-                                        <svg class="admin-segmented-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                                            <path d="M2 2.5 13.5 13.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
-                                            <path d="M6.7 4.1A6.4 6.4 0 0 1 8 3.5c4 0 6.5 4.5 6.5 4.5a10.3 10.3 0 0 1-2.15 2.55M4.2 5.85A10.2 10.2 0 0 0 1.5 8S4 12.5 8 12.5c.7 0 1.35-.12 1.95-.34" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
-                                            <path d="M6.65 7.1a2 2 0 0 0 2.35 2.35" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
-                                        </svg>
-                                        <span class="admin-segmented-text">非公開</span>
-                                    </span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            @foreach($workspaceCards as $workspaceCard)
+                @if($workspaceCard['kind'] === 'existing')
+                    @include('admin.galleries.partials.card-existing', [
+                        'gallery' => $workspaceCard['gallery'],
+                        'staffMembers' => $staffMembers,
+                        'maxImages' => $maxImages,
+                        'isUsablePending' => $isUsablePending,
+                    ])
+                @else
+                    @include('admin.galleries.partials.card-new', [
+                        'key' => $workspaceCard['key'],
+                        'newItem' => $workspaceCard['newItem'],
+                        'staffMembers' => $staffMembers,
+                        'maxImages' => $maxImages,
+                        'isUsablePending' => $isUsablePending,
+                    ])
+                @endif
             @endforeach
 
             <div
@@ -426,6 +334,7 @@
             const deletedIdsWrap = document.getElementById('gallery-deleted-ids');
             const addCard = document.getElementById('gallery-add-card');
             const addButton = addCard ? addCard.querySelector('[data-gallery-add]') : null;
+            const addTopButton = document.querySelector('[data-gallery-add-top]');
             const staffMembersJsonEl = document.getElementById('gallery-staff-members-json');
             const emptyHeading = '新規ギャラリー';
             const maxImages = parseInt(form && form.getAttribute('data-max-images') || '10', 10);
@@ -580,6 +489,7 @@
                     '<div class="gallery-image-thumb" data-gallery-image-dropzone></div>' +
                     '<input type="hidden" name="' + nameBase + '[display_order]" value="1" data-gallery-image-order>' +
                     '<input type="hidden" name="' + nameBase + '[alt_text]" value="" data-gallery-image-alt>' +
+                    '<input type="hidden" name="' + nameBase + '[pending_image_path]" value="" data-gallery-image-pending>' +
                     '<input type="file" name="' + nameBase + '[image]" accept="image/jpeg,image/png,image/webp" class="hidden" data-gallery-image-file' + (isExisting ? '' : ' required') + '>' +
                     '<p class="mt-1 text-center text-[10px] text-admin-muted" data-gallery-image-label>画像</p>';
 
@@ -591,6 +501,13 @@
                 }
 
                 bindImageItem(card, item);
+
+                if (options.pendingPath) {
+                    const pendingInput = item.querySelector('[data-gallery-image-pending]');
+                    if (pendingInput) {
+                        pendingInput.value = options.pendingPath;
+                    }
+                }
 
                 if (options.file) {
                     applyImageFile(card, item, options.file);
@@ -718,7 +635,7 @@
                 }
             }
 
-            function createEmptyCard() {
+            function createEmptyCard(placement) {
                 const key = 'new_' + nextNewIndex;
                 nextNewIndex += 1;
                 form.setAttribute('data-next-new-index', String(nextNewIndex));
@@ -804,7 +721,27 @@
                         '</div>' +
                     '</div>';
 
-                addCard.before(card);
+                if (window.AdminWorkspaceCards && typeof window.AdminWorkspaceCards.insert === 'function') {
+                    window.AdminWorkspaceCards.insert(card, {
+                        grid: grid,
+                        addCard: addCard,
+                        cardSelector: '[data-gallery-card]',
+                        placement: placement === 'start' ? 'start' : 'end',
+                    });
+                } else if (placement === 'start') {
+                    const firstCard = grid.querySelector('[data-gallery-card]');
+                    if (firstCard) {
+                        firstCard.before(card);
+                    } else {
+                        addCard.before(card);
+                    }
+                    requestAnimationFrame(function () {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+                    });
+                } else {
+                    addCard.before(card);
+                }
+
                 bindCard(card);
                 syncDisplayOrders();
             }
@@ -921,8 +858,15 @@
 
             addButton.addEventListener('click', function (e) {
                 e.preventDefault();
-                createEmptyCard();
+                createEmptyCard('end');
             });
+
+            if (addTopButton) {
+                addTopButton.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    createEmptyCard('start');
+                });
+            }
         })();
     </script>
 @endsection

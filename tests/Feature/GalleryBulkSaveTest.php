@@ -59,6 +59,7 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringContainsString('data-gallery-workspace', $html);
         $this->assertStringContainsString('id="gallery-add-card"', $html);
         $this->assertStringContainsString('data-gallery-add', $html);
+        $this->assertStringContainsString('data-gallery-add-top', $html);
         $this->assertStringContainsString('ギャラリーを追加', $html);
         $this->assertStringContainsString('＋画像を追加', $html);
         $this->assertStringContainsString('data-gallery-image-grid', $html);
@@ -125,6 +126,7 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringContainsString('id="gallery-add-card"', $html);
         $this->assertStringContainsString('ギャラリーを追加', $html);
         $this->assertStringContainsString('data-gallery-add', $html);
+        $this->assertStringContainsString('data-gallery-add-top', $html);
         $this->assertStringContainsString('新規ギャラリー', $html);
     }
 
@@ -585,9 +587,141 @@ class GalleryBulkSaveTest extends TestCase
         $html = $this->get(route('gallery.show', $gallery))->assertOk()->getContent();
         $this->assertStringContainsString('ショートボブ', $html);
         $this->assertStringContainsString('どれもアレンジ可能です♪', $html);
-        $this->assertStringContainsString('<h1 class="mt-8 text-3xl font-semibold tracking-wide text-salon-text md:text-[2rem]">', $html);
+        $this->assertStringContainsString('<h1 class="mt-6 text-3xl font-semibold tracking-wide text-salon-text md:text-[2rem]">', $html);
         $this->assertMatchesRegularExpression('/<h1[^>]*>\s*ショートボブ\s*<\/h1>/u', $html);
         $this->assertDoesNotMatchRegularExpression('/whitespace-pre-line[^>]*>\s*ショートボブ/u', $html);
+    }
+
+
+    public function test_validation_error_uses_toast_and_preserves_prepended_new_gallery(): void
+    {
+        Storage::fake('public');
+
+        $existing = $this->createGallery([
+            'title' => '既存ギャラリー',
+            'caption' => '既存詳細',
+            'image_path' => UploadedFile::fake()->image('existing.jpg')->store('galleries', 'public'),
+            'sort_order' => 1,
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->followingRedirects()
+            ->from(route('admin.galleries.index'))
+            ->put(route('admin.galleries.bulk-update'), [
+                'galleries' => [
+                    $existing->id => [
+                        'title' => '既存ギャラリー',
+                        'caption' => '既存詳細',
+                        'sort_order' => 2,
+                        'is_published' => '1',
+                        'images' => [
+                            $existing->images->first()->id => ['display_order' => 1],
+                        ],
+                    ],
+                ],
+                'new_galleries' => [
+                    'new_1' => [
+                        'title' => '先頭の新規',
+                        'caption' => '新規詳細',
+                        'sort_order' => 1,
+                        'is_published' => '0',
+                        'new_images' => [
+                            'img_1' => [
+                                'display_order' => 1,
+                                'image' => UploadedFile::fake()->image('new.jpg', 800, 500),
+                            ],
+                        ],
+                    ],
+                    'new_2' => [
+                        'title' => '画像なし新規',
+                        'caption' => 'エラー用',
+                        'sort_order' => 3,
+                        'is_published' => '1',
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('validationErrors', $html);
+        $this->assertStringContainsString('画像は1枚以上必要です。', $html);
+        $this->assertStringNotContainsString('border-red-200 bg-red-50', $html);
+        $this->assertStringContainsString('data-gallery-add-top', $html);
+        $this->assertStringContainsString('先頭の新規', $html);
+        preg_match('/id="gallery-grid"(.*?)<div\s+id="gallery-add-card"/s', $html, $matches);
+        $this->assertNotEmpty($matches);
+        $grid = $matches[1];
+
+        $posNew = strpos($grid, 'data-gallery-new');
+        $posExisting = strpos($grid, 'data-gallery-id="'.$existing->id.'"');
+        $this->assertNotFalse($posNew);
+        $this->assertNotFalse($posExisting);
+        $this->assertLessThan($posExisting, $posNew);
+        $this->assertStringContainsString('storage/galleries/tmp/', $grid);
+        $this->assertMatchesRegularExpression('/name="new_galleries\[new_1\]\[new_images\]\[[^"]+\]\[pending_image_path\]"/', $grid);
+        $this->assertStringContainsString('name="new_galleries[new_1][is_published]" value="0"', $grid);
+        $this->assertStringContainsString('>新規詳細</textarea>', $grid);
+    }
+
+    public function test_validation_error_keeps_new_gallery_pending_image_for_retry(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->admin())
+            ->from(route('admin.galleries.index'))
+            ->put(route('admin.galleries.bulk-update'), [
+                'new_galleries' => [
+                    'new_1' => [
+                        'title' => '再保存ギャラリー',
+                        'caption' => '詳細',
+                        'sort_order' => 1,
+                        'is_published' => '1',
+                        'new_images' => [
+                            'img_1' => [
+                                'display_order' => 1,
+                                'image' => UploadedFile::fake()->image('retry.jpg', 800, 500),
+                            ],
+                        ],
+                    ],
+                    'new_2' => [
+                        'title' => '画像なし',
+                        'sort_order' => 2,
+                        'is_published' => '1',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.galleries.index'))
+            ->assertSessionHasErrors(['new_galleries.new_2.new_images']);
+
+        $pendingPath = session()->getOldInput('new_galleries.new_1.new_images.img_1.pending_image_path');
+        $this->assertIsString($pendingPath);
+        Storage::disk('public')->assertExists($pendingPath);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.galleries.bulk-update'), [
+                'new_galleries' => [
+                    'new_1' => [
+                        'title' => '再保存ギャラリー',
+                        'caption' => '詳細',
+                        'sort_order' => 1,
+                        'is_published' => '1',
+                        'new_images' => [
+                            'img_1' => [
+                                'display_order' => 1,
+                                'pending_image_path' => $pendingPath,
+                            ],
+                        ],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.galleries.index'))
+            ->assertSessionHasNoErrors();
+
+        $created = Gallery::query()->where('title', '再保存ギャラリー')->first();
+        $this->assertNotNull($created);
+        $this->assertSame(1, $created->images()->count());
+        Storage::disk('public')->assertExists($created->images->first()->image_path);
+        Storage::disk('public')->assertMissing($pendingPath);
     }
 
     public function test_caption_preserves_newlines_on_save_and_public_display(): void

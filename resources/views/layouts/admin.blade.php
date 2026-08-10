@@ -872,7 +872,7 @@
 
                 <div class="p-4 md:p-8">
                     @php
-                        $toastValidationRoutes = ['admin.news.*', 'admin.home.banners', 'admin.home.banners.update', 'admin.menus.*', 'admin.blog.*'];
+                        $toastValidationRoutes = ['admin.news.*', 'admin.home.banners', 'admin.home.banners.update', 'admin.menus.*', 'admin.blog.*', 'admin.galleries.*'];
                         $toastValidationErrors = [];
                         if (request()->routeIs($toastValidationRoutes)) {
                             $errorBag = (isset($errors) && $errors->any())
