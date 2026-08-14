@@ -30,7 +30,11 @@
     $publicScrollSectionMeta = \App\Models\TopPageSection::publicScrollSectionMeta();
 @endphp
 <!DOCTYPE html>
-<html lang="ja" class="scroll-smooth" data-scroll-display="{{ $scrollDisplayType }}">
+<html
+    lang="ja"
+    @if(! $usesVerticalScrollIndicator) class="scroll-smooth" @endif
+    data-scroll-display="{{ $scrollDisplayType }}"
+>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -171,6 +175,10 @@
             font-family: var(--site-heading-font, var(--font-serif));
         }
         html { scroll-behavior: smooth; }
+        /* VI: 初期hash着地を瞬時にし、先頭からのsmoothスクロールを出さない */
+        html[data-scroll-display='vertical_indicator'] {
+            scroll-behavior: auto;
+        }
         #concept, #menu, #gallery, #staff, #access, #news, #blog { scroll-margin-top: 5.5rem; }
         html[data-scroll-display='vertical_indicator'] #concept,
         html[data-scroll-display='vertical_indicator'] #menu,
@@ -419,7 +427,15 @@
                 }
             });
 
+            function isVerticalIndicatorMode() {
+                return document.documentElement.getAttribute('data-scroll-display') === 'vertical_indicator';
+            }
+
             function scrollToHashTarget() {
+                // 縦インジケーターは専用スクリプトがhash初期表示を担当する
+                if (isVerticalIndicatorMode()) {
+                    return;
+                }
                 const id = window.location.hash.replace(/^#/, '');
                 if (!id) return;
                 const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
@@ -512,6 +528,63 @@
                         found.push({ el: el, id: meta.id, label: meta.label });
                     });
                     return found;
+                }
+
+                function indexForHash() {
+                    const raw = window.location.hash.replace(/^#/, '');
+                    if (!raw) {
+                        return -1;
+                    }
+
+                    for (let i = 0; i < sections.length; i += 1) {
+                        if (sections[i].id === raw) {
+                            return i;
+                        }
+                    }
+
+                    const el = document.getElementById(raw);
+                    if (!el) {
+                        return -1;
+                    }
+
+                    for (let i = 0; i < sections.length; i += 1) {
+                        if (sections[i].el === el || sections[i].el.contains(el)) {
+                            return i;
+                        }
+                    }
+
+                    return -1;
+                }
+
+                function jumpToSectionInstant(index) {
+                    if (!sections.length || index < 0 || index >= sections.length) {
+                        return false;
+                    }
+
+                    unlockAnimation();
+                    const section = sections[index];
+                    setActive(index);
+                    updateHash(section);
+
+                    if (isTopSection(section)) {
+                        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                    } else {
+                        section.el.scrollIntoView({ behavior: 'auto', block: 'start' });
+                    }
+
+                    return true;
+                }
+
+                function applyHashTarget(options) {
+                    const instant = Boolean(options && options.instant);
+                    const index = indexForHash();
+                    if (index < 0) {
+                        return false;
+                    }
+                    if (instant) {
+                        return jumpToSectionInstant(index);
+                    }
+                    return goToSection(index);
                 }
 
                 function setActive(index) {
@@ -870,7 +943,11 @@
                     nav.appendChild(list);
                     nav.hidden = false;
                     nav.classList.add('is-ready');
-                    updateActiveFromScroll();
+
+                    // 初期表示: URL hash のセクションを瞬時に表示（smooth遷移なし）
+                    if (!applyHashTarget({ instant: true })) {
+                        updateActiveFromScroll();
+                    }
                 }
 
                 function onHomeLogoClick(event) {
@@ -916,7 +993,11 @@
 
                 window.addEventListener('scroll', requestUpdate, { passive: true });
                 window.addEventListener('resize', requestUpdate);
-                window.addEventListener('hashchange', requestUpdate);
+                window.addEventListener('hashchange', function () {
+                    if (!applyHashTarget({ instant: false })) {
+                        requestUpdate();
+                    }
+                });
                 window.addEventListener('wheel', onWheel, { passive: false });
                 window.addEventListener('touchstart', onTouchStart, { passive: true });
                 window.addEventListener('touchmove', onTouchMove, { passive: false });

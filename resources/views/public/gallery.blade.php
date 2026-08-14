@@ -9,8 +9,11 @@
     @endphp
     <section class="site-section">
         <div class="mx-auto max-w-6xl px-4 md:px-6">
-            <p class="mb-2 text-sm tracking-widest text-salon-accent">Gallery</p>
-            <h1 class="section-title mb-12">ヘアギャラリー</h1>
+            <x-public.list-page-header
+                eyebrow="Gallery"
+                title="ヘアギャラリー"
+                :back-href="\App\Models\TopPageSection::listPageBackHref('gallery')"
+            />
 
             <div class="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
                 @forelse($galleries as $gallery)

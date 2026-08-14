@@ -9,8 +9,11 @@
     @endphp
     <section class="site-section">
         <div class="mx-auto max-w-3xl px-4 md:px-6">
-            <p class="mb-2 text-sm tracking-widest text-salon-accent">News</p>
-            <h1 class="section-title mb-12">お知らせ</h1>
+            <x-public.list-page-header
+                eyebrow="News"
+                title="お知らせ"
+                :back-href="\App\Models\TopPageSection::listPageBackHref('news')"
+            />
 
             <ul class="divide-y divide-salon-line">
                 @forelse($newsList as $news)

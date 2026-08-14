@@ -88,11 +88,7 @@
         </div>
 
         <div class="home-vi-menu__footer">
-            <x-section-more-link
-                :href="route('menu')"
-                data-menu-modal-trigger
-                data-menu-view="all"
-            >すべて見る →</x-section-more-link>
+            <x-section-more-link :href="route('menu')">すべて見る →</x-section-more-link>
         </div>
     </div>
 </section>

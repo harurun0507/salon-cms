@@ -443,6 +443,9 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringContainsString('data-gallery-modal-data', $modalHtml);
         $this->assertStringContainsString('data-gallery-modal-thumbs', $modalHtml);
         $this->assertStringContainsString('"categoryLabel":"HAIR STYLE"', $modalHtml);
+        $this->assertStringContainsString('canSwitchGalleries', $modalHtml);
+        $this->assertStringContainsString('IMAGE_AUTO_INTERVAL_MS', $modalHtml);
+        $this->assertStringContainsString('isVerticalIndicator()', $modalHtml);
     }
 
     public function test_home_gallery_section_hides_when_no_published_galleries(): void

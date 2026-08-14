@@ -5,8 +5,11 @@
 @section('content')
     <section class="site-section">
         <div class="mx-auto max-w-5xl px-4 md:px-6">
-            <p class="mb-2 text-sm tracking-widest text-salon-accent">Menu</p>
-            <h1 class="section-title mb-10">メニュー・料金</h1>
+            <x-public.list-page-header
+                eyebrow="Menu"
+                title="メニュー・料金"
+                :back-href="\App\Models\TopPageSection::listPageBackHref('menu')"
+            />
 
             @if($categories->isNotEmpty())
                 <div class="menu-category-nav-bar" data-menu-category-nav>

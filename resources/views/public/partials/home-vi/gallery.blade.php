@@ -89,7 +89,7 @@
         </div>
 
         <div class="home-vi-gallery__footer">
-            <x-section-more-link :href="route('gallery')" class="home-vi-more-link--on-dark">すべて見る →</x-section-more-link>
+            <x-section-more-link :href="route('gallery')">すべて見る →</x-section-more-link>
         </div>
     </section>
 @endif

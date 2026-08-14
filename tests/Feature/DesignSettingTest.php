@@ -382,6 +382,13 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('Privacy Policy', $html);
         $this->assertStringNotContainsString('site-footer', $html);
         $this->assertStringNotContainsString('rounded-full bg-salon-line', $html);
+        // VI hash landing: no Tailwind scroll-smooth; instant jump helpers present
+        $this->assertStringNotContainsString('class="scroll-smooth"', $html);
+        $this->assertStringContainsString("html[data-scroll-display='vertical_indicator']", $html);
+        $this->assertStringContainsString('scroll-behavior: auto', $html);
+        $this->assertStringContainsString('function jumpToSectionInstant', $html);
+        $this->assertStringContainsString('function indexForHash', $html);
+        $this->assertStringContainsString("applyHashTarget({ instant: true })", $html);
         $this->assertTrue(DesignSetting::current()->fresh()->usesVerticalScrollIndicator());
         $this->assertFalse(DesignSetting::current()->fresh()->usesColoredScrollbar());
     }

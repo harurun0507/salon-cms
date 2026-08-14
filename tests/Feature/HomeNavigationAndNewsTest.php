@@ -270,6 +270,13 @@ class HomeNavigationAndNewsTest extends TestCase
             '/const SECTION_META = .+?"id"\s*:\s*"gallery".+?"id"\s*:\s*"menu"/s',
             $html
         );
+
+        $this->assertStringContainsString('home-vi-gallery__footer', $html);
+        $this->assertMatchesRegularExpression(
+            '/home-vi-gallery__footer[\s\S]*?class="btn-outline"[^>]*>\s*すべて見る →/u',
+            $html
+        );
+        $this->assertStringNotContainsString('home-vi-more-link--on-dark', $html);
     }
 
     public function test_vertical_indicator_news_blog_uses_asymmetric_split_layout(): void
@@ -373,13 +380,22 @@ class HomeNavigationAndNewsTest extends TestCase
         $this->assertStringContainsString('data-menu-modal-trigger', $html);
         $this->assertStringContainsString('data-menu-category-id="'.$set->id.'"', $html);
         $this->assertStringContainsString('data-menu-category-id="'.$cut->id.'"', $html);
-        $this->assertStringContainsString('data-menu-view="all"', $html);
+        $this->assertStringNotContainsString('data-menu-view="all"', $html);
+        $this->assertMatchesRegularExpression(
+            '/href="'.preg_quote(route('menu'), '/').'"[^>]*>\s*すべて見る →/u',
+            $html
+        );
         $this->assertStringContainsString('カット＋カラー', $html);
         $this->assertStringContainsString('セット説明', $html);
         $this->assertStringContainsString('カット説明', $html);
         // Set block itself is the clickable trigger (not only the arrow).
         $this->assertMatchesRegularExpression(
             '/class="home-vi-menu__set"[^>]*data-menu-modal-trigger/s',
+            $html
+        );
+        // Category tiles keep modal triggers; "すべて見る" navigates to /menu.
+        $this->assertDoesNotMatchRegularExpression(
+            '/data-menu-modal-trigger[^>]*>\s*すべて見る/u',
             $html
         );
     }

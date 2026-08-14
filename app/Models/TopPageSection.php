@@ -246,6 +246,51 @@ class TopPageSection extends Model
     }
 
     /**
+     * Home hash URL for "戻る" on public list pages (always section-based, never history.back).
+     */
+    public static function listPageBackHref(string $list): string
+    {
+        $visibility = self::visibilityByKey();
+
+        $sectionId = match ($list) {
+            'gallery' => 'gallery',
+            'menu' => 'menu',
+            'staff' => 'staff',
+            'news' => ($visibility[self::KEY_NEWS] ?? false) ? 'news' : 'blog',
+            'blog' => self::blogListBackSectionId($visibility),
+            default => null,
+        };
+
+        if ($sectionId === null) {
+            return route('home');
+        }
+
+        return url('/#'.$sectionId);
+    }
+
+    /**
+     * When News/Blog share one top-page block, use that section hash (usually #news)
+     * so vertical-indicator mode can land on the full scene.
+     *
+     * @param  array<string, bool>  $visibility
+     */
+    public static function blogListBackSectionId(array $visibility): string
+    {
+        $newsOn = (bool) ($visibility[self::KEY_NEWS] ?? false);
+        $blogOn = (bool) ($visibility[self::KEY_BLOG] ?? false);
+
+        if ($newsOn && $blogOn) {
+            return 'news';
+        }
+
+        if ($blogOn) {
+            return 'blog';
+        }
+
+        return $newsOn ? 'news' : 'blog';
+    }
+
+    /**
      * @return array<string, bool>
      */
     public static function visibilityByKey(): array

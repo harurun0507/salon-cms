@@ -5,8 +5,11 @@
 @section('content')
     <section class="site-section">
         <div class="mx-auto max-w-5xl px-4 md:px-6">
-            <p class="mb-2 text-sm tracking-widest text-salon-accent">Staff</p>
-            <h1 class="section-title mb-12">スタッフ紹介</h1>
+            <x-public.list-page-header
+                eyebrow="Staff"
+                title="スタッフ紹介"
+                :back-href="\App\Models\TopPageSection::listPageBackHref('staff')"
+            />
 
             <div class="grid gap-12 md:grid-cols-2">
                 @forelse($staffMembers as $member)

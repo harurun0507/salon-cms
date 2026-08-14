@@ -178,6 +178,7 @@
 
             const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             const modalScroll = window.SalonPublicModalScroll;
+            const IMAGE_AUTO_INTERVAL_MS = 5000;
             let galleryIndex = 0;
             let imageIndex = 0;
             let isOpen = false;
@@ -212,7 +213,7 @@
                 }
                 imageTimer = window.setInterval(function () {
                     showImage(imageIndex + 1, false);
-                }, 5000);
+                }, IMAGE_AUTO_INTERVAL_MS);
             }
 
             function syncImageSelectors() {
@@ -415,12 +416,23 @@
             }
 
             function updateGalleryNav() {
+                // VI: open one gallery from the list — no cross-gallery arrows.
+                const hideGalleryNav = isVerticalIndicator() || items.length < 2;
                 if (prevGalleryBtn) {
-                    prevGalleryBtn.hidden = items.length < 2;
+                    prevGalleryBtn.hidden = hideGalleryNav;
                 }
                 if (nextGalleryBtn) {
-                    nextGalleryBtn.hidden = items.length < 2;
+                    nextGalleryBtn.hidden = hideGalleryNav;
                 }
+            }
+
+            function canSwitchImages() {
+                const item = currentItem();
+                return !!(item && item.images && item.images.length > 1);
+            }
+
+            function canSwitchGalleries() {
+                return !isVerticalIndicator() && items.length > 1;
             }
 
             function renderGallery(index) {
@@ -432,6 +444,7 @@
                 if (!item) {
                     return;
                 }
+                // Always start from the first image when (re)opening a gallery.
                 renderImages(item);
                 renderInfo(item);
                 updateGalleryNav();
@@ -506,15 +519,27 @@
             closeBtn?.addEventListener('click', closeModal);
             backdrop?.addEventListener('click', closeModal);
             prevGalleryBtn?.addEventListener('click', function () {
+                if (!canSwitchGalleries()) {
+                    return;
+                }
                 renderGallery(galleryIndex - 1);
             });
             nextGalleryBtn?.addEventListener('click', function () {
+                if (!canSwitchGalleries()) {
+                    return;
+                }
                 renderGallery(galleryIndex + 1);
             });
             imagePrevBtn?.addEventListener('click', function () {
+                if (!canSwitchImages()) {
+                    return;
+                }
                 showImage(imageIndex - 1, true);
             });
             imageNextBtn?.addEventListener('click', function () {
+                if (!canSwitchImages()) {
+                    return;
+                }
                 showImage(imageIndex + 1, true);
             });
 
@@ -529,20 +554,18 @@
                 }
                 if (event.key === 'ArrowLeft') {
                     event.preventDefault();
-                    const item = currentItem();
-                    if (item && item.images && item.images.length > 1) {
+                    if (canSwitchImages()) {
                         showImage(imageIndex - 1, true);
-                    } else if (items.length > 1) {
+                    } else if (canSwitchGalleries()) {
                         renderGallery(galleryIndex - 1);
                     }
                     return;
                 }
                 if (event.key === 'ArrowRight') {
                     event.preventDefault();
-                    const item = currentItem();
-                    if (item && item.images && item.images.length > 1) {
+                    if (canSwitchImages()) {
                         showImage(imageIndex + 1, true);
-                    } else if (items.length > 1) {
+                    } else if (canSwitchGalleries()) {
                         renderGallery(galleryIndex + 1);
                     }
                 }
