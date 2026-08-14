@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\DesignSetting;
 use App\Models\News;
 use App\Models\SalonSetting;
 use App\Models\TopPageSection;
@@ -68,6 +69,16 @@ class NewsAdminTest extends TestCase
         $this->assertStringContainsString('news-category-choices', $html);
         $this->assertStringContainsString('定休日', $html);
         $this->assertStringContainsString('臨時休業', $html);
+        $this->assertStringContainsString('営業カレンダー設定', $html);
+        $this->assertStringContainsString('name="calendar_holiday_color"', $html);
+        $this->assertStringContainsString('name="calendar_temporary_color"', $html);
+        $this->assertStringContainsString('name="calendar_hours_color"', $html);
+        $this->assertStringContainsString('data-news-calendar-colors-reset', $html);
+        $this->assertStringContainsString('data-confirm-callback="news-calendar-colors-reset"', $html);
+        $this->assertStringContainsString('初期値に戻す', $html);
+        $this->assertStringContainsString('data-news-hours-wrap', $html);
+        $this->assertStringContainsString('applyRegularHoursDefaults', $html);
+        $this->assertStringContainsString('regularBusinessHours', $html);
         $this->assertStringContainsString('data-news-closed-calendar', $html);
         $this->assertStringContainsString('data-news-weekday-wrap', $html);
         $this->assertStringContainsString('news-weekday-choices', $html);
@@ -164,9 +175,16 @@ class NewsAdminTest extends TestCase
         $this->assertNotSame('', (string) $created->slug);
     }
 
-    public function test_holiday_category_saves_weekdays_and_shows_on_public_detail(): void
+    public function test_holiday_category_uses_salon_closed_days_on_public_detail(): void
     {
-        SalonSetting::current();
+        $salon = SalonSetting::current();
+        $salon->closedWeekdays()->delete();
+        $salon->closedNthWeekdays()->delete();
+        $salon->closedWeekdays()->create(['weekday' => 2]);
+        $salon->closedNthWeekdays()->create([
+            'week_of_month' => 3,
+            'weekday' => 3,
+        ]);
 
         $news = $this->createNews([
             'title' => '8月定休日',
@@ -176,6 +194,7 @@ class NewsAdminTest extends TestCase
             'published_at' => now()->subHour(),
         ]);
         $news->closedDates()->create(['closed_date' => '2026-08-04']);
+        $news->closedWeekdays()->create(['weekday' => 1]);
 
         $this->actingAs($this->admin())
             ->put(route('admin.news.update'), [
@@ -196,26 +215,202 @@ class NewsAdminTest extends TestCase
 
         $news->refresh();
         $this->assertSame('holiday', $news->category);
-        $this->assertSame([1, 2], $news->closedWeekdays()->orderBy('weekday')->pluck('weekday')->all());
+        $this->assertSame(0, $news->closedWeekdays()->count());
         $this->assertSame(0, $news->closedDates()->count());
-
-        $editHtml = $this->actingAs($this->admin())
-            ->get(route('admin.news.index'))
-            ->assertOk()
-            ->getContent();
-        $this->assertStringContainsString('data-news-weekday-wrap', $editHtml);
-        $this->assertStringContainsString('name="news['.$news->id.'][closed_weekdays][]"', $editHtml);
-        $this->assertStringContainsString('value="1"', $editHtml);
 
         $showHtml = $this->get(route('news.show', $news->slug))
             ->assertOk()
             ->getContent();
-        $this->assertStringContainsString('定休日は毎週月曜日・火曜日です。', $showHtml);
+        $this->assertStringContainsString('定休日は毎週火曜日・第3水曜日です。', $showHtml);
         $this->assertStringNotContainsString('以下の日程は定休日となります。', $showHtml);
         $this->assertLessThan(
             strpos($showHtml, 'ご理解のほどよろしくお願いします。'),
-            strpos($showHtml, '定休日は毎週月曜日・火曜日です。')
+            strpos($showHtml, '定休日は毎週火曜日・第3水曜日です。')
         );
+    }
+
+    public function test_hours_category_saves_change_date_and_times_and_calendar_colors(): void
+    {
+        $news = $this->createNews([
+            'title' => '営業時間変更のお知らせ',
+            'slug' => 'hours-change',
+            'category' => 'other',
+            'is_published' => true,
+            'published_at' => now()->subHour(),
+        ]);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.news.update'), [
+                'calendar_holiday_color' => '#CCD5C0',
+                'calendar_temporary_color' => '#E2D8CE',
+                'calendar_hours_color' => '#D8C6B0',
+                'news' => [
+                    $news->id => [
+                        'title' => '営業時間変更のお知らせ',
+                        'body' => 'ご理解をお願いします。',
+                        'category' => 'hours',
+                        'hours_change_date' => '2026-08-12',
+                        'hours_start_time' => '10:00',
+                        'hours_end_time' => '19:00',
+                        'published_at' => now()->subHour()->format('Y-m-d\TH:i'),
+                        'is_published' => '1',
+                        'display_order' => 1,
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.news.index'));
+
+        $news->refresh();
+        $this->assertSame('hours', $news->category);
+        $this->assertSame('2026-08-12', $news->hours_change_date?->toDateString());
+        $this->assertSame('10:00', $news->hoursStartTimeLabel());
+        $this->assertSame('19:00', $news->hoursEndTimeLabel());
+        $this->assertSame('営業時間変更　10:00〜19:00', $news->hoursChangeNoteDetail());
+        $this->assertSame(0, $news->closedDates()->count());
+        $this->assertSame(0, $news->closedWeekdays()->count());
+
+        $design = DesignSetting::current()->fresh();
+        $this->assertSame('#ccd5c0', $design->calendar_holiday_color);
+        $this->assertSame('#e2d8ce', $design->calendar_temporary_color);
+        $this->assertSame('#d8c6b0', $design->calendar_hours_color);
+        $this->assertSame('#ccd5c0', $design->cssVariables()['--site-calendar-holiday-bg']);
+    }
+
+    public function test_regular_business_hours_defaults_follow_weekday_weekend_and_holiday(): void
+    {
+        $setting = SalonSetting::current();
+        $setting->forceFill([
+            'weekday_open_time' => '10:00:00',
+            'weekday_close_time' => '20:00:00',
+            'weekend_open_time' => '09:00:00',
+            'weekend_close_time' => '19:00:00',
+        ])->save();
+
+        $weekday = $setting->regularHoursForDate(\Illuminate\Support\Carbon::parse('2026-08-12')); // Wed
+        $this->assertSame('weekday', $weekday['bucket']);
+        $this->assertSame('10:00', $weekday['open']);
+        $this->assertSame('20:00', $weekday['close']);
+
+        $saturday = $setting->regularHoursForDate(\Illuminate\Support\Carbon::parse('2026-08-15'));
+        $this->assertSame('weekend', $saturday['bucket']);
+        $this->assertSame('09:00', $saturday['open']);
+        $this->assertSame('19:00', $saturday['close']);
+
+        $mountainDay = $setting->regularHoursForDate(\Illuminate\Support\Carbon::parse('2026-08-11')); // Tue holiday
+        $this->assertSame('weekend', $mountainDay['bucket']);
+        $this->assertSame('09:00', $mountainDay['open']);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.news.index'))
+            ->assertOk()
+            ->getContent();
+        $this->assertStringContainsString('"open":"10:00"', $html);
+        $this->assertStringContainsString('"open":"09:00"', $html);
+        $this->assertStringContainsString('2026-08-11', $html);
+    }
+
+    public function test_existing_hours_news_keeps_saved_times_on_edit_form(): void
+    {
+        $setting = SalonSetting::current();
+        $setting->forceFill([
+            'weekday_open_time' => '10:00:00',
+            'weekday_close_time' => '20:00:00',
+            'weekend_open_time' => '09:00:00',
+            'weekend_close_time' => '19:00:00',
+        ])->save();
+
+        $news = $this->createNews([
+            'title' => '営業時間変更のお知らせ',
+            'slug' => 'hours-saved',
+            'category' => 'hours',
+            'hours_change_date' => '2026-08-12',
+            'hours_start_time' => '11:30:00',
+            'hours_end_time' => '16:00:00',
+            'is_published' => true,
+            'published_at' => now()->subHour(),
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.news.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('name="news['.$news->id.'][hours_start_time]"', $html);
+        $this->assertStringContainsString('value="11:30"', $html);
+        $this->assertStringContainsString('value="16:00"', $html);
+        $this->assertStringContainsString('保存済みの変更営業時間を表示しています', $html);
+    }
+
+    public function test_hours_change_does_not_mutate_salon_regular_hours(): void
+    {
+        $setting = SalonSetting::current();
+        $setting->forceFill([
+            'weekday_open_time' => '10:00:00',
+            'weekday_close_time' => '20:00:00',
+            'weekend_open_time' => '09:00:00',
+            'weekend_close_time' => '19:00:00',
+        ])->save();
+
+        $news = $this->createNews([
+            'title' => '営業時間変更のお知らせ',
+            'slug' => 'hours-no-mutate',
+            'category' => 'other',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.news.update'), [
+                'news' => [
+                    $news->id => [
+                        'title' => '営業時間変更のお知らせ',
+                        'body' => '',
+                        'category' => 'hours',
+                        'hours_change_date' => '2026-08-12',
+                        'hours_start_time' => '12:00',
+                        'hours_end_time' => '15:00',
+                        'published_at' => now()->subHour()->format('Y-m-d\TH:i'),
+                        'is_published' => '1',
+                        'display_order' => 1,
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.news.index'));
+
+        $setting->refresh();
+        $this->assertSame('10:00', $setting->weekdayOpenTimeInputValue());
+        $this->assertSame('20:00', $setting->weekdayCloseTimeInputValue());
+        $this->assertSame('09:00', $setting->weekendOpenTimeInputValue());
+        $this->assertSame('19:00', $setting->weekendCloseTimeInputValue());
+        $this->assertSame("平日 10:00 - 20:00\n土日祝 9:00 - 19:00", $setting->businessHoursDisplayText());
+    }
+
+    public function test_hours_category_requires_change_date_and_times(): void
+    {
+        $news = $this->createNews([
+            'title' => '営業時間変更のお知らせ',
+            'slug' => 'hours-required',
+            'category' => 'other',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->from(route('admin.news.index'))
+            ->put(route('admin.news.update'), [
+                'news' => [
+                    $news->id => [
+                        'title' => '営業時間変更のお知らせ',
+                        'body' => '',
+                        'category' => 'hours',
+                        'published_at' => now()->subHour()->format('Y-m-d\TH:i'),
+                        'is_published' => '1',
+                        'display_order' => 1,
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.news.index'))
+            ->assertSessionHasErrors([
+                'news.'.$news->id.'.hours_change_date',
+                'news.'.$news->id.'.hours_start_time',
+                'news.'.$news->id.'.hours_end_time',
+            ]);
     }
 
     public function test_temporary_closure_category_also_saves_closed_dates(): void
@@ -372,15 +567,14 @@ class NewsAdminTest extends TestCase
             ->assertDontSee('prose prose-neutral', false);
     }
 
-    public function test_holiday_requires_at_least_one_weekday(): void
+    public function test_holiday_category_can_be_saved_without_news_weekdays(): void
     {
         $this->actingAs($this->admin())
-            ->from(route('admin.news.index'))
             ->put(route('admin.news.update'), [
                 'new_news' => [
                     'new_1' => [
                         'title' => '定休日',
-                        'body' => '休業します。',
+                        'body' => '店舗情報の定休日をご確認ください。',
                         'category' => 'holiday',
                         'closed_weekdays' => [],
                         'published_at' => '2026-08-01T10:00',
@@ -390,7 +584,12 @@ class NewsAdminTest extends TestCase
                 ],
             ])
             ->assertRedirect(route('admin.news.index'))
-            ->assertSessionHasErrors(['new_news.new_1.closed_weekdays']);
+            ->assertSessionHasNoErrors();
+
+        $news = News::query()->where('title', '定休日')->first();
+        $this->assertNotNull($news);
+        $this->assertSame('holiday', $news->category);
+        $this->assertSame(0, $news->closedWeekdays()->count());
     }
 
     public function test_temporary_closure_requires_at_least_one_closed_date(): void

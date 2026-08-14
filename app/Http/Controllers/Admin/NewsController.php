@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Models\DesignSetting;
 use App\Models\News;
+use App\Models\SalonSetting;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,15 +20,43 @@ class NewsController extends AdminController
         $newsList = News::query()->with(['closedDates', 'closedWeekdays'])->ordered()->get();
         $categories = News::CATEGORIES;
         $weekdayLabels = News::WEEKDAY_SHORT_LABELS;
+        $design = DesignSetting::current();
+        $calendarColors = $design->resolvedBusinessCalendarColors();
+        $regularBusinessHours = SalonSetting::current()->regularBusinessHoursAdminPayload();
 
-        return view('admin.news.index', compact('newsList', 'categories', 'weekdayLabels'));
+        return view('admin.news.index', compact(
+            'newsList',
+            'categories',
+            'weekdayLabels',
+            'design',
+            'calendarColors',
+            'regularBusinessHours'
+        ));
     }
 
     public function update(Request $request): RedirectResponse
     {
         $categoryRule = ['required', 'string', Rule::in(News::categoryKeys())];
 
+        foreach ([
+            'calendar_holiday_color',
+            'calendar_temporary_color',
+            'calendar_hours_color',
+        ] as $field) {
+            $raw = $request->input($field);
+            if (filled($raw)) {
+                $request->merge([
+                    $field => DesignSetting::normalizeHex((string) $raw),
+                ]);
+            }
+        }
+
+        $this->normalizeHoursTimeInputs($request);
+
         $validator = Validator::make($request->all(), [
+            'calendar_holiday_color' => ['nullable', 'string', 'regex:/^#[0-9a-f]{6}$/'],
+            'calendar_temporary_color' => ['nullable', 'string', 'regex:/^#[0-9a-f]{6}$/'],
+            'calendar_hours_color' => ['nullable', 'string', 'regex:/^#[0-9a-f]{6}$/'],
             'news' => ['nullable', 'array'],
             'news.*.title' => ['required', 'string', 'max:255'],
             'news.*.body' => ['nullable', 'string'],
@@ -35,6 +65,9 @@ class NewsController extends AdminController
             'news.*.closed_dates.*' => ['nullable', 'date_format:Y-m-d'],
             'news.*.closed_weekdays' => ['nullable', 'array'],
             'news.*.closed_weekdays.*' => ['nullable', 'integer', 'between:0,6'],
+            'news.*.hours_change_date' => ['nullable', 'date_format:Y-m-d'],
+            'news.*.hours_start_time' => ['nullable', 'date_format:H:i'],
+            'news.*.hours_end_time' => ['nullable', 'date_format:H:i'],
             'news.*.published_at' => ['required', 'date'],
             'news.*.is_published' => ['required', 'in:0,1'],
             'news.*.display_order' => ['nullable', 'integer', 'min:0'],
@@ -46,6 +79,9 @@ class NewsController extends AdminController
             'new_news.*.closed_dates.*' => ['nullable', 'date_format:Y-m-d'],
             'new_news.*.closed_weekdays' => ['nullable', 'array'],
             'new_news.*.closed_weekdays.*' => ['nullable', 'integer', 'between:0,6'],
+            'new_news.*.hours_change_date' => ['nullable', 'date_format:Y-m-d'],
+            'new_news.*.hours_start_time' => ['nullable', 'date_format:H:i'],
+            'new_news.*.hours_end_time' => ['nullable', 'date_format:H:i'],
             'new_news.*.published_at' => ['required', 'date'],
             'new_news.*.is_published' => ['required', 'in:0,1'],
             'new_news.*.display_order' => ['nullable', 'integer', 'min:0'],
@@ -96,6 +132,36 @@ class NewsController extends AdminController
                             );
                         }
                     }
+
+                    if (News::usesHoursChangeFields($category)) {
+                        if (! filled($data['hours_change_date'] ?? null)) {
+                            $validator->errors()->add(
+                                "{$group}.{$key}.hours_change_date",
+                                '変更日を選択してください。'
+                            );
+                        }
+                        if (! filled($data['hours_start_time'] ?? null)) {
+                            $validator->errors()->add(
+                                "{$group}.{$key}.hours_start_time",
+                                '開始時間を入力してください。'
+                            );
+                        }
+                        if (! filled($data['hours_end_time'] ?? null)) {
+                            $validator->errors()->add(
+                                "{$group}.{$key}.hours_end_time",
+                                '終了時間を入力してください。'
+                            );
+                        }
+
+                        $start = (string) ($data['hours_start_time'] ?? '');
+                        $end = (string) ($data['hours_end_time'] ?? '');
+                        if ($start !== '' && $end !== '' && $start >= $end) {
+                            $validator->errors()->add(
+                                "{$group}.{$key}.hours_end_time",
+                                '終了時間は開始時間より後にしてください。'
+                            );
+                        }
+                    }
                 }
             }
         });
@@ -135,7 +201,16 @@ class NewsController extends AdminController
             return $a['order'] < $b['order'] ? -1 : 1;
         });
 
-        DB::transaction(function () use ($orderedItems, $deletedIds) {
+        DB::transaction(function () use ($orderedItems, $deletedIds, $validated) {
+            $calendarColorUpdates = array_filter([
+                'calendar_holiday_color' => $validated['calendar_holiday_color'] ?? null,
+                'calendar_temporary_color' => $validated['calendar_temporary_color'] ?? null,
+                'calendar_hours_color' => $validated['calendar_hours_color'] ?? null,
+            ], fn ($value) => is_string($value) && $value !== '');
+            if ($calendarColorUpdates !== []) {
+                DesignSetting::current()->update($calendarColorUpdates);
+            }
+
             if ($deletedIds !== []) {
                 News::query()->whereIn('id', $deletedIds)->delete();
             }
@@ -174,7 +249,11 @@ class NewsController extends AdminController
      */
     private function validationMessages(): array
     {
-        $messages = [];
+        $messages = [
+            'calendar_holiday_color.regex' => 'カラーは #RRGGBB 形式で入力してください。',
+            'calendar_temporary_color.regex' => 'カラーは #RRGGBB 形式で入力してください。',
+            'calendar_hours_color.regex' => 'カラーは #RRGGBB 形式で入力してください。',
+        ];
 
         foreach (['news', 'new_news'] as $group) {
             $messages["{$group}.*.title.required"] = 'タイトルは必須です。';
@@ -184,6 +263,9 @@ class NewsController extends AdminController
             $messages["{$group}.*.published_at.date"] = '公開日時の形式が正しくありません。';
             $messages["{$group}.*.is_published.required"] = '公開状態を選択してください。';
             $messages["{$group}.*.is_published.in"] = '公開状態を選択してください。';
+            $messages["{$group}.*.hours_change_date.date_format"] = '変更日の形式が正しくありません。';
+            $messages["{$group}.*.hours_start_time.date_format"] = '開始時間の形式が正しくありません。';
+            $messages["{$group}.*.hours_end_time.date_format"] = '終了時間の形式が正しくありません。';
         }
 
         return $messages;
@@ -195,10 +277,22 @@ class NewsController extends AdminController
      */
     private function newsAttributes(array $data, int $displayOrder): array
     {
+        $category = $data['category'] ?? News::CATEGORY_OTHER;
+        $isHours = News::usesHoursChangeFields($category);
+
         return [
             'title' => $data['title'],
             'body' => (string) ($data['body'] ?? ''),
-            'category' => $data['category'] ?? News::CATEGORY_OTHER,
+            'category' => $category,
+            'hours_change_date' => $isHours
+                ? $this->nullableDateOnly($data['hours_change_date'] ?? null)
+                : null,
+            'hours_start_time' => $isHours
+                ? $this->nullableTime($data['hours_start_time'] ?? null)
+                : null,
+            'hours_end_time' => $isHours
+                ? $this->nullableTime($data['hours_end_time'] ?? null)
+                : null,
             'published_at' => $this->nullableDate($data['published_at'] ?? null),
             'is_published' => ($data['is_published'] ?? '0') === '1',
             'display_order' => $displayOrder,
@@ -280,5 +374,54 @@ class NewsController extends AdminController
         }
 
         return Carbon::parse($value);
+    }
+
+    private function nullableDateOnly(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return Carbon::parse($value)->toDateString();
+    }
+
+    private function nullableTime(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return Carbon::parse($value)->format('H:i:s');
+    }
+
+    private function normalizeHoursTimeInputs(Request $request): void
+    {
+        foreach (['news', 'new_news'] as $group) {
+            $items = $request->input($group, []);
+            if (! is_array($items)) {
+                continue;
+            }
+
+            foreach ($items as $key => $data) {
+                if (! is_array($data)) {
+                    continue;
+                }
+
+                foreach (['hours_start_time', 'hours_end_time'] as $field) {
+                    $raw = $data[$field] ?? null;
+                    if (! is_string($raw) || $raw === '') {
+                        continue;
+                    }
+
+                    try {
+                        $items[$key][$field] = Carbon::parse($raw)->format('H:i');
+                    } catch (\Throwable) {
+                        // Keep original value for validation error messaging.
+                    }
+                }
+            }
+
+            $request->merge([$group => $items]);
+        }
     }
 }

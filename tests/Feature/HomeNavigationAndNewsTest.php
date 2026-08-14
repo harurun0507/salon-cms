@@ -2,8 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Blog;
+use App\Models\DesignSetting;
 use App\Models\Gallery;
 use App\Models\GalleryImage;
+use App\Models\Menu;
+use App\Models\MenuCategory;
 use App\Models\News;
 use App\Models\SalonSetting;
 use App\Models\TopPageSection;
@@ -201,5 +205,357 @@ class HomeNavigationAndNewsTest extends TestCase
         $this->assertStringContainsString('tracking-widest text-salon-accent">NEWS</', $html);
         $this->assertStringContainsString(route('news.index'), $html);
         $this->assertStringContainsString('すべて見る →', $html);
+    }
+
+    public function test_public_section_flow_matches_header_and_places_gallery_before_menu(): void
+    {
+        $this->assertSame(
+            ['banner', 'news', 'blog', 'gallery', 'menu', 'staff', 'access'],
+            TopPageSection::publicConfigurableKeysInOrder()
+        );
+
+        $this->assertSame(
+            ['hero-slider', 'concept', 'banners', 'news', 'blog', 'gallery', 'menu', 'staff', 'access'],
+            array_column(TopPageSection::publicScrollSectionMeta(), 'id')
+        );
+
+        $this->assertSame(
+            ['Concept', 'News', 'Gallery', 'Menu', 'Staff', 'Access'],
+            array_column(TopPageSection::publicHeaderNavItems([
+                TopPageSection::KEY_NEWS => true,
+                TopPageSection::KEY_BLOG => true,
+                TopPageSection::KEY_GALLERY => true,
+                TopPageSection::KEY_MENU => true,
+                TopPageSection::KEY_STAFF => true,
+                TopPageSection::KEY_ACCESS => true,
+            ]), 'label')
+        );
+    }
+
+    public function test_vertical_indicator_home_uses_public_nav_order_and_shared_section_meta(): void
+    {
+        Storage::fake('public');
+        SalonSetting::current();
+        TopPageSection::ensureDefaults();
+
+        // Admin order intentionally reversed vs header (menu before gallery).
+        TopPageSection::query()->where('section_key', TopPageSection::KEY_MENU)->update(['display_order' => 3]);
+        TopPageSection::query()->where('section_key', TopPageSection::KEY_GALLERY)->update(['display_order' => 4]);
+
+        DesignSetting::current()->update([
+            'scroll_display_type' => DesignSetting::SCROLL_VERTICAL_INDICATOR,
+        ]);
+
+        $gallery = Gallery::query()->create([
+            'title' => '公開ギャラリー',
+            'caption' => null,
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        GalleryImage::query()->create([
+            'gallery_id' => $gallery->id,
+            'image_path' => UploadedFile::fake()->image('g.jpg')->store('galleries', 'public'),
+            'display_order' => 1,
+        ]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $galleryPos = strpos($html, 'id="gallery"');
+        $menuPos = strpos($html, 'id="menu"');
+        $this->assertNotFalse($galleryPos);
+        $this->assertNotFalse($menuPos);
+        $this->assertLessThan($menuPos, $galleryPos);
+
+        $this->assertMatchesRegularExpression(
+            '/const SECTION_META = .+?"id"\s*:\s*"gallery".+?"id"\s*:\s*"menu"/s',
+            $html
+        );
+    }
+
+    public function test_vertical_indicator_news_blog_uses_asymmetric_split_layout(): void
+    {
+        SalonSetting::current();
+        TopPageSection::ensureDefaults();
+        DesignSetting::current()->update([
+            'scroll_display_type' => DesignSetting::SCROLL_VERTICAL_INDICATOR,
+        ]);
+
+        News::query()->create([
+            'title' => 'VIお知らせ',
+            'slug' => 'vi-news',
+            'body' => '本文',
+            'is_published' => true,
+            'published_at' => now()->subHour(),
+            'display_order' => 1,
+        ]);
+
+        Blog::query()->create([
+            'title' => 'VIブログ',
+            'slug' => 'vi-blog',
+            'body' => '本文',
+            'is_published' => true,
+            'published_at' => now()->subHour(),
+            'display_order' => 1,
+        ]);
+        Blog::query()->create([
+            'title' => 'VIブログ2件目は非表示',
+            'slug' => 'vi-blog-2',
+            'body' => '本文',
+            'is_published' => true,
+            'published_at' => now()->subDays(2),
+            'display_order' => 2,
+        ]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('home-vi-news--split', $html);
+        $this->assertStringContainsString('home-vi-news__news', $html);
+        $this->assertStringContainsString('home-vi-news__blog', $html);
+        $this->assertStringContainsString('home-vi-news__feature', $html);
+        $this->assertStringContainsString('home-vi-news__visual', $html);
+        $this->assertStringContainsString('home-vi-news__more-link', $html);
+        $this->assertStringContainsString('VIお知らせ', $html);
+        $this->assertStringContainsString('VIブログ', $html);
+        $this->assertStringNotContainsString('VIブログ2件目は非表示', $html);
+        $this->assertStringContainsString(route('news.show', 'vi-news', absolute: false), $html);
+        $this->assertStringContainsString(route('blog.show', 'vi-blog', absolute: false), $html);
+        // Card chrome from the list-style eyecatch should not appear in VI feature.
+        $this->assertStringNotContainsString('blog-eyecatch-tab', $html);
+        $this->assertStringNotContainsString('home-blog-card-more', $html);
+        // Colored-scrollbar stacked layout classes should not appear in VI mode.
+        $this->assertStringNotContainsString('home-blog-after-news', $html);
+    }
+
+    public function test_vertical_indicator_menu_uses_modal_triggers_instead_of_page_only(): void
+    {
+        SalonSetting::current();
+        TopPageSection::ensureDefaults();
+        DesignSetting::current()->update([
+            'scroll_display_type' => DesignSetting::SCROLL_VERTICAL_INDICATOR,
+        ]);
+
+        $set = MenuCategory::query()->create([
+            'name' => '組み合わせ',
+            'sort_order' => 1,
+            'allow_multiple_selection' => true,
+        ]);
+        $cut = MenuCategory::query()->create([
+            'name' => 'カット',
+            'sort_order' => 2,
+            'allow_multiple_selection' => false,
+        ]);
+
+        $setMenu = Menu::query()->create([
+            'name' => 'カット＋カラー',
+            'price' => '¥12,000',
+            'description' => 'セット説明',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $setMenu->categories()->attach([
+            $set->id => ['sort_order' => 1],
+            $cut->id => ['sort_order' => 2],
+        ]);
+
+        $cutMenu = Menu::query()->create([
+            'name' => 'カット単品',
+            'price' => '¥5,000',
+            'description' => 'カット説明',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $cutMenu->categories()->attach($cut->id, ['sort_order' => 1]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('home-vi-menu', $html);
+        $this->assertStringContainsString('data-menu-modal', $html);
+        $this->assertStringContainsString('data-menu-modal-trigger', $html);
+        $this->assertStringContainsString('data-menu-category-id="'.$set->id.'"', $html);
+        $this->assertStringContainsString('data-menu-category-id="'.$cut->id.'"', $html);
+        $this->assertStringContainsString('data-menu-view="all"', $html);
+        $this->assertStringContainsString('カット＋カラー', $html);
+        $this->assertStringContainsString('セット説明', $html);
+        $this->assertStringContainsString('カット説明', $html);
+        // Set block itself is the clickable trigger (not only the arrow).
+        $this->assertMatchesRegularExpression(
+            '/class="home-vi-menu__set"[^>]*data-menu-modal-trigger/s',
+            $html
+        );
+    }
+
+    public function test_vertical_indicator_news_modal_aggregates_business_calendar_by_month(): void
+    {
+        \Illuminate\Support\Carbon::setTestNow('2026-08-25 12:00:00');
+
+        SalonSetting::current();
+        TopPageSection::ensureDefaults();
+        DesignSetting::current()->update([
+            'scroll_display_type' => DesignSetting::SCROLL_VERTICAL_INDICATOR,
+            'news_detail_display' => DesignSetting::DETAIL_DISPLAY_MODAL,
+        ]);
+        TopPageSection::query()->where('section_key', TopPageSection::KEY_NEWS)->update([
+            'display_count' => 10,
+        ]);
+
+        $salon = SalonSetting::current();
+        $salon->closedWeekdays()->delete();
+        $salon->closedNthWeekdays()->delete();
+        $salon->closedWeekdays()->create(['weekday' => 1]); // Monday
+
+        News::query()->create([
+            'title' => '8月の定休日',
+            'slug' => 'aug-holiday',
+            'body' => '',
+            'category' => News::CATEGORY_HOLIDAY,
+            'is_published' => true,
+            'published_at' => '2026-08-01 10:00:00',
+            'display_order' => 1,
+        ]);
+
+        $temporary = News::query()->create([
+            'title' => '臨時休業のお知らせ',
+            'slug' => 'aug-temporary',
+            'body' => '',
+            'category' => News::CATEGORY_TEMPORARY_CLOSURE,
+            'is_published' => true,
+            'published_at' => '2026-08-10 10:00:00',
+            'display_order' => 2,
+        ]);
+        $temporary->closedDates()->create(['closed_date' => '2026-08-15']);
+
+        News::query()->create([
+            'title' => '営業時間変更のお知らせ',
+            'slug' => 'aug-hours',
+            'body' => '',
+            'category' => News::CATEGORY_HOURS,
+            'hours_change_date' => '2026-08-20',
+            'hours_start_time' => '10:00:00',
+            'hours_end_time' => '17:00:00',
+            'is_published' => true,
+            'published_at' => '2026-08-10 10:00:00',
+            'display_order' => 3,
+        ]);
+
+        News::query()->create([
+            'title' => '新メニューのお知らせ',
+            'slug' => 'aug-new-menu',
+            'body' => '新メニューを追加しました。',
+            'category' => News::CATEGORY_NEW_MENU,
+            'is_published' => true,
+            'published_at' => '2026-08-05 10:00:00',
+            'display_order' => 4,
+        ]);
+
+        $payload = News::buildBusinessCalendarPayload(2026, 8);
+        $this->assertSame('2026年8月 営業カレンダー', $payload['title']);
+        $this->assertContains('holiday', $payload['days']['2026-08-03'] ?? []);
+        $this->assertContains('temporary', $payload['days']['2026-08-15'] ?? []);
+        $this->assertContains('hours', $payload['days']['2026-08-20'] ?? []);
+        $this->assertTrue(collect($payload['notes'])->contains(
+            fn (array $note) => ($note['label'] ?? '') === '8月15日'
+                && ($note['detail'] ?? '') === '臨時休業'
+                && (int) ($note['newsId'] ?? 0) === (int) $temporary->id
+        ));
+        $this->assertTrue(collect($payload['notes'])->contains(
+            fn (array $note) => ($note['label'] ?? '') === '8月20日'
+                && ($note['detail'] ?? '') === '営業時間変更　10:00〜17:00'
+                && ($note['newsId'] ?? null) !== null
+        ));
+        $this->assertTrue(collect($payload['notes'])->contains(
+            fn (array $note) => ($note['categoryKey'] ?? '') === News::CATEGORY_HOLIDAY
+                && array_key_exists('newsId', $note)
+                && $note['newsId'] === null
+        ));
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+        $this->assertStringContainsString('data-news-modal-calendar-legend', $html);
+        $this->assertStringContainsString('data-news-modal-calendar-notes', $html);
+        $this->assertStringContainsString('2026年8月 営業カレンダー', $html);
+        $this->assertStringContainsString('resolveCalendarFocus', $html);
+        $this->assertStringContainsString('"hoursChangeDate":"2026-08-20"', $html);
+        $this->assertStringContainsString('is-selected', $html);
+
+        $this->assertMatchesRegularExpression(
+            '/data-news-modal-data[^>]*>\s*\{/s',
+            $html
+        );
+        $this->assertStringContainsString('"aggregateBusinessCalendar":true', $html);
+        $this->assertStringContainsString('"businessCalendarKey":"2026-08"', $html);
+        $this->assertStringContainsString('"slug":"aug-new-menu"', $html);
+        $this->assertStringContainsString('"slug":"aug-new-menu","url":', $html);
+        $this->assertDoesNotMatchRegularExpression(
+            '/"slug":"aug-new-menu"[^}]*"businessCalendarKey":"2026-08"/s',
+            $html
+        );
+        $this->assertMatchesRegularExpression(
+            '/"slug":"aug-new-menu"[^}]*"businessCalendarKey":null/s',
+            $html
+        );
+
+        \Illuminate\Support\Carbon::setTestNow();
+    }
+
+    public function test_colored_scrollbar_home_keeps_classic_menu_links_without_modal(): void
+    {
+        SalonSetting::current();
+        TopPageSection::ensureDefaults();
+        DesignSetting::current()->update([
+            'scroll_display_type' => DesignSetting::SCROLL_COLORED_SCROLLBAR,
+        ]);
+
+        $cut = MenuCategory::query()->create([
+            'name' => 'カット',
+            'sort_order' => 1,
+            'allow_multiple_selection' => false,
+        ]);
+        $cutMenu = Menu::query()->create([
+            'name' => 'カット単品',
+            'price' => '¥5,000',
+            'description' => null,
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        $cutMenu->categories()->attach($cut->id, ['sort_order' => 1]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('data-menu-modal', $html);
+        $this->assertStringNotContainsString('data-menu-modal-trigger', $html);
+        $this->assertStringContainsString(route('menu', absolute: false), $html);
+    }
+
+    public function test_colored_scrollbar_home_keeps_admin_display_order(): void
+    {
+        Storage::fake('public');
+        SalonSetting::current();
+        TopPageSection::ensureDefaults();
+
+        TopPageSection::query()->where('section_key', TopPageSection::KEY_MENU)->update(['display_order' => 3]);
+        TopPageSection::query()->where('section_key', TopPageSection::KEY_GALLERY)->update(['display_order' => 4]);
+
+        DesignSetting::current()->update([
+            'scroll_display_type' => DesignSetting::SCROLL_COLORED_SCROLLBAR,
+        ]);
+
+        $gallery = Gallery::query()->create([
+            'title' => '公開ギャラリー',
+            'caption' => null,
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        GalleryImage::query()->create([
+            'gallery_id' => $gallery->id,
+            'image_path' => UploadedFile::fake()->image('g.jpg')->store('galleries', 'public'),
+            'display_order' => 1,
+        ]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $galleryPos = strpos($html, 'id="gallery"');
+        $menuPos = strpos($html, 'id="menu"');
+        $this->assertNotFalse($galleryPos);
+        $this->assertNotFalse($menuPos);
+        $this->assertLessThan($galleryPos, $menuPos);
     }
 }

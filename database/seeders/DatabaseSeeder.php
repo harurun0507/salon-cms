@@ -37,8 +37,10 @@ class DatabaseSeeder extends Seeder
                 'concept' => "一人ひとりの髪質やライフスタイルに合わせた、丁寧なカウンセリングと施術を大切にしています。\n\nナチュラルで扱いやすいスタイルを、あなたらしく。",
                 'address' => '埼玉県川口市幸町２－14－27－102号',
                 'access_directions' => '銀座通り商店街（樹モール）を抜けてふじのいち商店街をアリオ方面に進み、市役所通りに出ましたら右手をご覧いただくとピンクとグリーンのテナントビルがございます。アースサポートさんのお隣、1階、店舗上の黒い看板が目印です。',
-                'business_hours' => "平日 10:00 - 20:00\n土日祝 9:00 - 19:00",
-                'closed_days' => '毎週火曜日・第3水曜日',
+                'weekday_open_time' => '10:00:00',
+                'weekday_close_time' => '20:00:00',
+                'weekend_open_time' => '09:00:00',
+                'weekend_close_time' => '19:00:00',
                 'phone' => '0120-111-1111',
                 'payment_methods' => 'Visa／Mastercard／JCB／American Express／Diners Club／Discover',
                 'cut_price' => '¥5,940',
@@ -54,6 +56,17 @@ class DatabaseSeeder extends Seeder
                 'hot_pepper_url' => 'https://beauty.hotpepper.jp/slnH000428792/?wak=CPMY100402_link_reservesalon_salon_beauty_20220223',
             ]
         );
+
+        $salon = SalonSetting::query()->find(1);
+        if ($salon) {
+            $salon->closedWeekdays()->delete();
+            $salon->closedNthWeekdays()->delete();
+            $salon->closedWeekdays()->create(['weekday' => 2]); // Tuesday
+            $salon->closedNthWeekdays()->create([
+                'week_of_month' => 3,
+                'weekday' => 3, // Wednesday
+            ]);
+        }
 
         SocialLink::ensureDefaults();
 

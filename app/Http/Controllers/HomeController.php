@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Banner;
 use App\Models\Blog;
+use App\Models\DesignSetting;
 use App\Models\Gallery;
 use App\Models\MenuCategory;
 use App\Models\News;
@@ -18,13 +19,17 @@ class HomeController extends Controller
     public function index(): View
     {
         $setting = SalonSetting::current();
-        $topSections = TopPageSection::visibleOrdered();
+        $design = DesignSetting::current();
+        $topSections = $design->usesVerticalScrollIndicator()
+            ? TopPageSection::visibleOrderedForPublicNav()
+            : TopPageSection::visibleOrdered();
         $sectionMap = $topSections->keyBy('section_key');
 
         $banners = collect();
         $newsList = collect();
         $blogList = collect();
         $categories = collect();
+        $menuModalCategories = collect();
         $galleries = collect();
         $staffMembers = collect();
 
@@ -48,6 +53,11 @@ class HomeController extends Controller
 
         if ($sectionMap->has(TopPageSection::KEY_MENU)) {
             $categories = $this->menuCategoriesForTop();
+            if ($design->usesVerticalScrollIndicator()) {
+                $menuModalCategories = MenuCategory::queryForPublicListing()
+                    ->filter(fn (MenuCategory $category) => $category->publishedMenus->isNotEmpty())
+                    ->values();
+            }
         }
 
         if ($sectionMap->has(TopPageSection::KEY_GALLERY)) {
@@ -62,12 +72,14 @@ class HomeController extends Controller
 
         return view('public.home', [
             'setting' => $setting,
+            'design' => $design,
             'heroImages' => $setting->publishedHeroImages()->get(),
             'topSections' => $topSections,
             'banners' => $banners,
             'newsList' => $newsList,
             'blogList' => $blogList,
             'categories' => $categories,
+            'menuModalCategories' => $menuModalCategories,
             'galleries' => $galleries,
             'staffMembers' => $staffMembers,
         ]);

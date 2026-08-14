@@ -44,8 +44,31 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('name="scrollbar_thumb_color"', $html);
         $this->assertStringContainsString('name="scrollbar_track_color"', $html);
         $this->assertStringContainsString('name="scrollbar_thumb_hover_color"', $html);
-        $this->assertStringContainsString('スクロールバー', $html);
+        $this->assertStringContainsString('name="scroll_display_type"', $html);
+        $this->assertStringContainsString('スクロール表示', $html);
+        $this->assertStringContainsString('カラースクロールバー', $html);
+        $this->assertStringContainsString('縦インジケーター', $html);
+        $this->assertStringContainsString('詳細ページの表示方法', $html);
+        $this->assertStringContainsString('name="news_detail_display"', $html);
+        $this->assertStringContainsString('name="blog_detail_display"', $html);
+        $this->assertStringContainsString('name="gallery_detail_display"', $html);
+        $this->assertStringContainsString('画面遷移', $html);
+        $this->assertStringContainsString('モーダル', $html);
+        $this->assertStringContainsString('モーダル背景', $html);
+        $this->assertStringContainsString('name="modal_overlay_style"', $html);
+        $this->assertStringContainsString('name="modal_overlay_color"', $html);
+        $this->assertStringContainsString('薄い', $html);
+        $this->assertStringContainsString('標準', $html);
+        $this->assertStringContainsString('濃い', $html);
+        $this->assertStringContainsString('ぼかしあり', $html);
+        $this->assertStringContainsString('value="'.DesignSetting::MODAL_OVERLAY_LIGHT.'"', $html);
+        $this->assertStringContainsString('value="'.DesignSetting::MODAL_OVERLAY_BLUR.'"', $html);
+        $this->assertStringContainsString('value="#1e1a16"', $html);
+        $this->assertStringContainsString('スクロールバーの色', $html);
         $this->assertStringContainsString('スクロールバー表示例', $html);
+        $this->assertStringContainsString('縦インジケーター表示例', $html);
+        $this->assertStringContainsString('value="'.DesignSetting::SCROLL_COLORED_SCROLLBAR.'"', $html);
+        $this->assertStringContainsString('value="'.DesignSetting::SCROLL_VERTICAL_INDICATOR.'"', $html);
         $this->assertStringContainsString('value="#5f6f52"', $html);
         $this->assertStringContainsString('value="#7c8a6a"', $html);
         $this->assertStringContainsString('value="#faf7f1"', $html);
@@ -78,6 +101,12 @@ class DesignSettingTest extends TestCase
                 'scrollbar_thumb_color' => '#B1B2B3',
                 'scrollbar_track_color' => '#C4C5C6',
                 'scrollbar_thumb_hover_color' => '#D7D8D9',
+                'scroll_display_type' => DesignSetting::SCROLL_VERTICAL_INDICATOR,
+                'news_detail_display' => DesignSetting::DETAIL_DISPLAY_MODAL,
+                'blog_detail_display' => DesignSetting::DETAIL_DISPLAY_MODAL,
+                'gallery_detail_display' => DesignSetting::DETAIL_DISPLAY_PAGE,
+                'modal_overlay_style' => DesignSetting::MODAL_OVERLAY_LIGHT,
+                'modal_overlay_color' => '#223344',
                 'heading_font' => DesignSetting::FONT_SANS,
                 'body_font' => DesignSetting::FONT_ROUNDED,
                 'button_radius' => DesignSetting::RADIUS_SMALL,
@@ -94,6 +123,18 @@ class DesignSettingTest extends TestCase
         $this->assertSame('#b1b2b3', $design->scrollbar_thumb_color);
         $this->assertSame('#c4c5c6', $design->scrollbar_track_color);
         $this->assertSame('#d7d8d9', $design->scrollbar_thumb_hover_color);
+        $this->assertSame(DesignSetting::SCROLL_VERTICAL_INDICATOR, $design->scroll_display_type);
+        $this->assertTrue($design->usesVerticalScrollIndicator());
+        $this->assertSame(DesignSetting::DETAIL_DISPLAY_MODAL, $design->news_detail_display);
+        $this->assertSame(DesignSetting::DETAIL_DISPLAY_MODAL, $design->blog_detail_display);
+        $this->assertSame(DesignSetting::DETAIL_DISPLAY_PAGE, $design->gallery_detail_display);
+        $this->assertTrue($design->usesNewsDetailModal());
+        $this->assertTrue($design->usesBlogDetailModal());
+        $this->assertFalse($design->usesGalleryDetailModal());
+        $this->assertSame(DesignSetting::MODAL_OVERLAY_LIGHT, $design->modal_overlay_style);
+        $this->assertSame('#223344', $design->modal_overlay_color);
+        $this->assertSame('0.28', $design->resolvedModalOverlayOpacity());
+        $this->assertSame('0px', $design->resolvedModalOverlayBlur());
         $this->assertSame(DesignSetting::FONT_SANS, $design->heading_font);
         $this->assertSame(DesignSetting::FONT_ROUNDED, $design->body_font);
         $this->assertSame(DesignSetting::RADIUS_SMALL, $design->button_radius);
@@ -151,6 +192,11 @@ class DesignSettingTest extends TestCase
                 'button_radius' => 'huge',
                 'card_radius' => 'tiny',
                 'layout_density' => 'loose',
+                'scroll_display_type' => 'invalid_type',
+                'news_detail_display' => 'popup',
+                'blog_detail_display' => 'window',
+                'gallery_detail_display' => 'overlay',
+                'modal_overlay_style' => 'neon',
             ]))
             ->assertRedirect(route('admin.system.design'))
             ->assertSessionHasErrors([
@@ -159,6 +205,11 @@ class DesignSettingTest extends TestCase
                 'button_radius',
                 'card_radius',
                 'layout_density',
+                'scroll_display_type',
+                'news_detail_display',
+                'blog_detail_display',
+                'gallery_detail_display',
+                'modal_overlay_style',
             ]);
     }
 
@@ -187,6 +238,10 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('"scrollbar_thumb_color":"#c8c0b2"', $html);
         $this->assertStringContainsString('"scrollbar_track_color":"#f1ece3"', $html);
         $this->assertStringContainsString('"scrollbar_thumb_hover_color":"#afa692"', $html);
+        $this->assertStringContainsString('"scroll_display_type":"colored_scrollbar"', $html);
+        $this->assertStringContainsString('"news_detail_display":"page"', $html);
+        $this->assertStringContainsString('"blog_detail_display":"page"', $html);
+        $this->assertStringContainsString('"gallery_detail_display":"page"', $html);
 
         $saved = DesignSetting::current()->fresh();
         $this->assertSame('#112233', $saved->primary_color);
@@ -204,6 +259,7 @@ class DesignSettingTest extends TestCase
             'scrollbar_thumb_color' => '#111213',
             'scrollbar_track_color' => '#141516',
             'scrollbar_thumb_hover_color' => '#171819',
+            'scroll_display_type' => DesignSetting::SCROLL_COLORED_SCROLLBAR,
             'heading_font' => DesignSetting::FONT_SANS,
             'body_font' => DesignSetting::FONT_SERIF,
             'button_radius' => DesignSetting::RADIUS_SMALL,
@@ -227,6 +283,10 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('--site-scrollbar-thumb: #111213;', $html);
         $this->assertStringContainsString('--site-scrollbar-track: #141516;', $html);
         $this->assertStringContainsString('--site-scrollbar-thumb-hover: #171819;', $html);
+        $this->assertStringContainsString('--site-modal-overlay-color: #1e1a16;', $html);
+        $this->assertStringContainsString('--site-modal-overlay-rgb: 30, 26, 22;', $html);
+        $this->assertStringContainsString('--site-modal-overlay-opacity: 0.62;', $html);
+        $this->assertStringContainsString('--site-modal-overlay-filter: blur(2px);', $html);
         $this->assertStringContainsString('--site-button-radius: 8px;', $html);
         $this->assertStringContainsString('--site-card-radius: 16px;', $html);
         $this->assertStringContainsString('--site-section-spacing: 3rem;', $html);
@@ -234,6 +294,9 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('--color-salon-button: #abcdef;', $html);
         $this->assertStringContainsString('Noto Sans JP', $html);
         $this->assertStringContainsString('Noto Serif JP', $html);
+        $this->assertStringContainsString('data-scroll-display="colored_scrollbar"', $html);
+        $this->assertStringNotContainsString('data-site-section-dots', $html);
+        $this->assertStringContainsString('site-mobile-bottom-bar', $html);
     }
 
     public function test_public_page_includes_default_css_vars(): void
@@ -250,8 +313,119 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('--site-scrollbar-thumb: #c8c0b2;', $html);
         $this->assertStringContainsString('--site-scrollbar-track: #f1ece3;', $html);
         $this->assertStringContainsString('--site-scrollbar-thumb-hover: #afa692;', $html);
+        $this->assertStringContainsString('--site-modal-overlay-color: #1e1a16;', $html);
+        $this->assertStringContainsString('--site-modal-overlay-opacity: 0.62;', $html);
+        $this->assertStringContainsString('--site-modal-overlay-filter: blur(2px);', $html);
         $this->assertStringContainsString('--site-button-radius: 9999px;', $html);
         $this->assertStringContainsString('--site-section-spacing: 5rem;', $html);
+        $this->assertStringContainsString('data-scroll-display="colored_scrollbar"', $html);
+        $this->assertStringContainsString('site-mobile-bottom-bar', $html);
+        $this->assertStringNotContainsString('data-site-section-dots', $html);
+    }
+
+    public function test_public_page_applies_selected_modal_overlay_css_vars(): void
+    {
+        DesignSetting::current()->update([
+            'modal_overlay_style' => DesignSetting::MODAL_OVERLAY_STANDARD,
+            'modal_overlay_color' => '#334455',
+        ]);
+
+        $html = $this->get(route('home'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('--site-modal-overlay-color: #334455;', $html);
+        $this->assertStringContainsString('--site-modal-overlay-rgb: 51, 68, 85;', $html);
+        $this->assertStringContainsString('--site-modal-overlay-opacity: 0.45;', $html);
+        $this->assertStringContainsString('--site-modal-overlay-filter: none;', $html);
+        $this->assertSame(DesignSetting::MODAL_OVERLAY_STANDARD, DesignSetting::current()->fresh()->resolvedModalOverlayStyle());
+    }
+
+    public function test_unset_modal_overlay_settings_use_compatible_defaults(): void
+    {
+        $design = new DesignSetting([
+            'modal_overlay_style' => null,
+            'modal_overlay_color' => null,
+        ]);
+
+        $this->assertSame(DesignSetting::MODAL_OVERLAY_BLUR, $design->resolvedModalOverlayStyle());
+        $this->assertSame('#1e1a16', $design->resolvedModalOverlayColor());
+        $this->assertSame('0.62', $design->resolvedModalOverlayOpacity());
+        $this->assertSame('2px', $design->resolvedModalOverlayBlur());
+        $this->assertSame('30, 26, 22', DesignSetting::hexToRgbChannels($design->resolvedModalOverlayColor()));
+    }
+
+    public function test_public_page_shows_vertical_indicator_when_selected(): void
+    {
+        SalonSetting::current()->update(['shop_name' => 'Indicator Salon']);
+        DesignSetting::current()->update([
+            'scroll_display_type' => DesignSetting::SCROLL_VERTICAL_INDICATOR,
+        ]);
+
+        $html = $this->get(route('home'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('data-scroll-display="vertical_indicator"', $html);
+        $this->assertStringContainsString('data-site-section-dots', $html);
+        $this->assertStringContainsString('site-section-dots', $html);
+        $this->assertStringContainsString('セクションナビゲーション', $html);
+        $this->assertStringContainsString('site-mobile-bottom-bar', $html);
+        $this->assertStringContainsString('Indicator Salon', $html);
+        $this->assertStringContainsString('id="hero-slider"', $html);
+        $this->assertStringContainsString('hero-slider-panel', $html);
+        $this->assertStringContainsString('data-site-header', $html);
+        $this->assertStringContainsString('home-vi-concept', $html);
+        $this->assertStringContainsString('home-vi-access', $html);
+        $this->assertStringContainsString('site-header-tools', $html);
+        $this->assertStringContainsString('site-mobile-nav-meta', $html);
+        $this->assertStringContainsString('Privacy Policy', $html);
+        $this->assertStringNotContainsString('site-footer', $html);
+        $this->assertStringNotContainsString('rounded-full bg-salon-line', $html);
+        $this->assertTrue(DesignSetting::current()->fresh()->usesVerticalScrollIndicator());
+        $this->assertFalse(DesignSetting::current()->fresh()->usesColoredScrollbar());
+    }
+
+    public function test_colored_scrollbar_home_keeps_classic_section_layout(): void
+    {
+        DesignSetting::current()->update([
+            'scroll_display_type' => DesignSetting::SCROLL_COLORED_SCROLLBAR,
+        ]);
+
+        $html = $this->get(route('home'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('id="concept"', $html);
+        $this->assertStringContainsString('site-section', $html);
+        $this->assertStringNotContainsString('home-vi-concept', $html);
+        $this->assertStringNotContainsString('home-vi-gallery', $html);
+        $this->assertStringNotContainsString('home-vi-access', $html);
+    }
+
+    public function test_unset_scroll_display_type_defaults_to_colored_scrollbar(): void
+    {
+        $design = new DesignSetting(['scroll_display_type' => null]);
+
+        $this->assertSame(DesignSetting::SCROLL_COLORED_SCROLLBAR, $design->resolvedScrollDisplayType());
+        $this->assertTrue($design->usesColoredScrollbar());
+        $this->assertFalse($design->usesVerticalScrollIndicator());
+    }
+
+    public function test_unset_detail_display_defaults_to_page(): void
+    {
+        $design = new DesignSetting([
+            'news_detail_display' => null,
+            'blog_detail_display' => null,
+            'gallery_detail_display' => null,
+        ]);
+
+        $this->assertSame(DesignSetting::DETAIL_DISPLAY_PAGE, $design->resolvedNewsDetailDisplay());
+        $this->assertSame(DesignSetting::DETAIL_DISPLAY_PAGE, $design->resolvedBlogDetailDisplay());
+        $this->assertSame(DesignSetting::DETAIL_DISPLAY_PAGE, $design->resolvedGalleryDetailDisplay());
+        $this->assertFalse($design->usesNewsDetailModal());
+        $this->assertFalse($design->usesBlogDetailModal());
+        $this->assertFalse($design->usesGalleryDetailModal());
     }
 
     public function test_editor_cannot_access_design_settings(): void

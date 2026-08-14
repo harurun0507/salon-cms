@@ -138,4 +138,59 @@ class MenuCategory extends Model
     {
         return $this->menus()->where('menus.is_published', true);
     }
+
+    /**
+     * Payload for the public vertical-indicator menu modal.
+     *
+     * @return array{
+     *     id: int,
+     *     name: string,
+     *     englishName: ?string,
+     *     isCombination: bool,
+     *     menus: list<array{
+     *         id: int,
+     *         name: string,
+     *         price: ?string,
+     *         isInquiryPrice: bool,
+     *         description: ?string,
+     *         tags: list<string>
+     *     }>
+     * }
+     */
+    public function toPublicModalData(): array
+    {
+        $this->loadMissing([
+            'publishedMenus.categories' => fn ($q) => $q->orderBy('menu_categories.sort_order'),
+        ]);
+
+        $menus = $this->publishedMenus
+            ->filter(fn (Menu $menu) => $this->includesMenuOnPublicListing($menu))
+            ->values()
+            ->map(function (Menu $menu) {
+                $tags = $this->isCombination()
+                    ? $menu->constituentCategoriesForDisplay()
+                        ->map(fn (self $category) => (string) $category->name)
+                        ->values()
+                        ->all()
+                    : [];
+
+                return [
+                    'id' => (int) $menu->id,
+                    'name' => (string) $menu->name,
+                    'price' => filled($menu->price) ? (string) $menu->price : null,
+                    'isInquiryPrice' => $menu->isInquiryPrice(),
+                    'description' => filled($menu->description) ? (string) $menu->description : null,
+                    'tags' => $tags,
+                ];
+            })
+            ->all();
+
+        return [
+            'id' => (int) $this->id,
+            'name' => (string) $this->name,
+            'englishName' => $this->englishName(),
+            'isCombination' => $this->isCombination(),
+            'menus' => $menus,
+        ];
+    }
 }

@@ -45,10 +45,17 @@
         }
 
         $countSections = $sections->filter(fn ($section) => $section->supportsDisplayCount());
+        $hasConceptImage = $setting->hasConceptImage();
     @endphp
 
     
-    <form id="top-page-form" method="POST" action="{{ route('admin.home.top.update') }}" class="space-y-5">
+    <form
+        id="top-page-form"
+        method="POST"
+        action="{{ route('admin.home.top.update') }}"
+        class="space-y-5"
+        enctype="multipart/form-data"
+    >
         @csrf @method('PUT')
 
         <div class="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-2">
@@ -78,7 +85,7 @@
             <section class="admin-card min-w-0 space-y-5">
                 <div>
                     <h2 class="text-base font-medium text-admin-text">コンセプト設定</h2>
-                    <p class="mt-1 text-sm text-admin-muted">トップページのコンセプト欄に表示する内容です。</p>
+                    <p class="mt-1 text-sm text-admin-muted">トップページのコンセプト欄に表示する内容です。Concept画像は縦インジケーターモードで使用されます。</p>
                 </div>
                 <div class="min-w-0">
                     <label for="concept_title" class="admin-label">コンセプト見出し</label>
@@ -93,6 +100,61 @@
                     @error('concept')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                </div>
+                <div class="min-w-0">
+                    <span class="admin-label">Concept画像</span>
+                    <div class="mt-2 flex flex-wrap items-start gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div
+                                id="concept-image-dropzone"
+                                data-concept-dropzone
+                                class="banner-dropzone cursor-pointer {{ $hasConceptImage ? 'overflow-hidden rounded-lg' : 'is-empty' }}"
+                            >
+                                <div data-concept-preview class="{{ $hasConceptImage ? '' : 'hidden' }}">
+                                    @if($hasConceptImage)
+                                        <img
+                                            id="concept-image-preview"
+                                            src="{{ asset('storage/'.$setting->concept_image) }}"
+                                            alt="{{ $setting->conceptImageAlt() }}"
+                                            class="aspect-[4/3] h-auto w-full object-cover"
+                                            data-concept-image
+                                        >
+                                    @endif
+                                </div>
+                                <div
+                                    data-concept-placeholder
+                                    class="banner-dropzone-placeholder {{ $hasConceptImage ? 'hidden' : '' }} min-h-30 flex-col items-center justify-center px-4 text-center"
+                                >
+                                    <div class="banner-dropzone-main">
+                                        <svg class="banner-dropzone-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                            <circle cx="9" cy="10.5" r="1.5" fill="currentColor" opacity="0.7"/>
+                                            <path d="M5.5 16.5l4-3.5 2.5 2 3.5-3.5 3 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        <p class="banner-dropzone-text text-sm text-gray-700">Concept画像をドラッグ＆ドロップ、またはクリックして選択</p>
+                                    </div>
+                                    <p class="banner-dropzone-hint mt-2 text-xs text-gray-500">
+                                        JPEG・PNG・WebP、5MBまで。<br>
+                                        縦インジケーターモードのConceptセクションに大きく表示されます。
+                                    </p>
+                                </div>
+                                <p class="banner-dropzone-drag-message" aria-hidden="true">ここにConcept画像をドロップしてください</p>
+                            </div>
+                            <p id="concept-image-filename" class="mt-2 hidden text-sm text-gray-600"></p>
+                            <p class="mt-1 text-xs text-admin-muted {{ $hasConceptImage ? '' : 'hidden' }}" data-concept-replace-hint>クリックまたは DnD で画像を変更できます。未設定時はヒーロー画像をフォールバック表示します。</p>
+                            <p id="concept-image-error" class="mt-2 hidden text-sm text-red-600" role="alert"></p>
+                            @error('concept_image')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        @if($hasConceptImage)
+                            <x-admin.delete-button
+                                form="concept-image-delete-form"
+                                message="Concept画像を削除しますか？"
+                            >削除</x-admin.delete-button>
+                        @endif
+                    </div>
+                    <input type="file" name="concept_image" id="concept_image" accept="image/jpeg,image/png,image/webp" class="hidden">
                 </div>
             </section>
         </div>
@@ -207,6 +269,13 @@
             </ul>
         </div>
     </form>
+
+    @if($hasConceptImage)
+        <form id="concept-image-delete-form" method="POST" action="{{ route('admin.home.top.concept-image.destroy') }}" class="hidden">
+            @csrf
+            @method('DELETE')
+        </form>
+    @endif
 
     <style>
         .top-section-drag-handle {
@@ -410,6 +479,122 @@
                 };
                 input.addEventListener('change', sync);
                 sync();
+            });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+            const maxSize = 5 * 1024 * 1024;
+            const input = document.getElementById('concept_image');
+            const dropzone = document.getElementById('concept-image-dropzone');
+            const preview = dropzone?.querySelector('[data-concept-preview]');
+            const placeholder = dropzone?.querySelector('[data-concept-placeholder]');
+            const filenameEl = document.getElementById('concept-image-filename');
+            const errorEl = document.getElementById('concept-image-error');
+            const replaceHint = document.querySelector('[data-concept-replace-hint]');
+            if (!input || !dropzone) {
+                return;
+            }
+
+            function clearError() {
+                if (!errorEl) {
+                    return;
+                }
+                errorEl.textContent = '';
+                errorEl.classList.add('hidden');
+            }
+
+            function showError(message) {
+                if (errorEl) {
+                    errorEl.textContent = message;
+                    errorEl.classList.remove('hidden');
+                }
+                if (typeof window.showToast === 'function') {
+                    window.showToast(message, 'error');
+                }
+            }
+
+            function isValid(file) {
+                if (!allowedTypes.includes(file.type)) {
+                    showError('JPEG / PNG / WebP形式の画像を選択してください。');
+                    return false;
+                }
+                if (file.size > maxSize) {
+                    showError('画像サイズは5MB以下にしてください。');
+                    return false;
+                }
+                return true;
+            }
+
+            function showPreview(file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    let img = document.getElementById('concept-image-preview');
+                    if (!img && preview) {
+                        img = document.createElement('img');
+                        img.id = 'concept-image-preview';
+                        img.className = 'aspect-[4/3] h-auto w-full object-cover';
+                        img.setAttribute('data-concept-image', '');
+                        img.alt = '';
+                        preview.appendChild(img);
+                    }
+                    if (img) {
+                        img.src = e.target.result;
+                    }
+                    placeholder?.classList.add('hidden');
+                    preview?.classList.remove('hidden');
+                    dropzone.classList.remove('is-empty');
+                    dropzone.classList.add('overflow-hidden', 'rounded-lg');
+                    replaceHint?.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+
+            function handleFile(file) {
+                clearError();
+                if (!file || !isValid(file)) {
+                    input.value = '';
+                    filenameEl.textContent = '';
+                    filenameEl.classList.add('hidden');
+                    return;
+                }
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                input.files = dt.files;
+                filenameEl.textContent = '選択中: ' + file.name;
+                filenameEl.classList.remove('hidden');
+                showPreview(file);
+            }
+
+            dropzone.addEventListener('click', function () {
+                input.click();
+            });
+            input.addEventListener('change', function () {
+                handleFile(input.files?.[0] || null);
+            });
+
+            dropzone.addEventListener('dragenter', function (e) {
+                e.preventDefault();
+                dropzone._dragCounter = (dropzone._dragCounter || 0) + 1;
+                dropzone.classList.add('is-drag-active');
+            });
+            dropzone.addEventListener('dragleave', function (e) {
+                e.preventDefault();
+                dropzone._dragCounter = Math.max(0, (dropzone._dragCounter || 0) - 1);
+                if (dropzone._dragCounter === 0) {
+                    dropzone.classList.remove('is-drag-active');
+                }
+            });
+            dropzone.addEventListener('dragover', function (e) {
+                e.preventDefault();
+            });
+            dropzone.addEventListener('drop', function (e) {
+                e.preventDefault();
+                dropzone._dragCounter = 0;
+                dropzone.classList.remove('is-drag-active');
+                handleFile(e.dataTransfer?.files?.[0] || null);
             });
         })();
     </script>

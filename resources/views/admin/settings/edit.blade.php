@@ -47,12 +47,141 @@
                     <textarea name="access_directions" id="access_directions" rows="5" class="admin-input">{{ old('access_directions', $setting->access_directions) }}</textarea>
                 </div>
                 <div>
-                    <label for="business_hours" class="admin-label">営業時間</label>
-                    <textarea name="business_hours" id="business_hours" rows="4" class="admin-input">{{ old('business_hours', $setting->business_hours) }}</textarea>
+                    <span class="admin-label">営業時間</span>
+                    <div class="mt-2 space-y-3">
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                            <span class="w-14 shrink-0 text-sm text-admin-text">平日</span>
+                            <input
+                                type="time"
+                                name="weekday_open_time"
+                                id="weekday_open_time"
+                                value="{{ old('weekday_open_time', $setting->weekdayOpenTimeInputValue()) }}"
+                                class="admin-input max-w-[9rem]"
+                                aria-label="平日の開店時間"
+                            >
+                            <span class="text-sm text-admin-muted" aria-hidden="true">～</span>
+                            <input
+                                type="time"
+                                name="weekday_close_time"
+                                id="weekday_close_time"
+                                value="{{ old('weekday_close_time', $setting->weekdayCloseTimeInputValue()) }}"
+                                class="admin-input max-w-[9rem]"
+                                aria-label="平日の閉店時間"
+                            >
+                        </div>
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                            <span class="w-14 shrink-0 text-sm text-admin-text">土日祝</span>
+                            <input
+                                type="time"
+                                name="weekend_open_time"
+                                id="weekend_open_time"
+                                value="{{ old('weekend_open_time', $setting->weekendOpenTimeInputValue()) }}"
+                                class="admin-input max-w-[9rem]"
+                                aria-label="土日祝の開店時間"
+                            >
+                            <span class="text-sm text-admin-muted" aria-hidden="true">～</span>
+                            <input
+                                type="time"
+                                name="weekend_close_time"
+                                id="weekend_close_time"
+                                value="{{ old('weekend_close_time', $setting->weekendCloseTimeInputValue()) }}"
+                                class="admin-input max-w-[9rem]"
+                                aria-label="土日祝の閉店時間"
+                            >
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-admin-muted">公開サイトには「平日 10:00 - 20:00」の形式で表示されます。</p>
+                    @error('weekday_open_time')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('weekday_close_time')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('weekend_open_time')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('weekend_close_time')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
-                <div>
-                    <label for="closed_days" class="admin-label">定休日</label>
-                    <input type="text" name="closed_days" id="closed_days" value="{{ old('closed_days', $setting->closed_days) }}" class="admin-input">
+                @php
+                    $weekdayLabels = $weekdayLabels ?? \App\Models\SalonSetting::WEEKDAY_SHORT_LABELS;
+                    $selectedClosedWeekdays = collect(old('closed_weekdays', $setting->closedWeekdayValues()))
+                        ->map(fn ($v) => (int) $v)
+                        ->all();
+                    $selectedClosedNth = old('closed_nth');
+                    if (! is_array($selectedClosedNth)) {
+                        $selectedClosedNth = collect($setting->closedNthWeekdayRules())
+                            ->map(fn (array $rule) => [
+                                'week' => $rule['week'],
+                                'weekday' => $rule['weekday'],
+                            ])
+                            ->all();
+                    }
+                @endphp
+                <div data-closed-days-settings>
+                    <span class="admin-label">定休日</span>
+                    <div class="mt-3 space-y-4">
+                        <div>
+                            <p class="text-sm text-admin-text">毎週</p>
+                            <div class="news-weekday-choices mt-1 notranslate" role="group" aria-label="毎週の定休日" translate="no" lang="ja">
+                                @foreach($weekdayLabels as $weekdayValue => $weekdayLabel)
+                                    <label class="news-weekday-option">
+                                        <input
+                                            type="checkbox"
+                                            name="closed_weekdays[]"
+                                            value="{{ $weekdayValue }}"
+                                            class="news-weekday-input"
+                                            @checked(in_array((int) $weekdayValue, $selectedClosedWeekdays, true))
+                                        >
+                                        <span class="news-weekday-face">{{ $weekdayLabel }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm text-admin-text">追加定休日（第○週の○曜日）</p>
+                            <div class="mt-2 space-y-2 notranslate" data-closed-nth-list translate="no" lang="ja">
+                                @foreach($selectedClosedNth as $index => $rule)
+                                    <div class="flex flex-wrap items-center gap-2" data-closed-nth-row>
+                                        <select name="closed_nth[{{ $index }}][week]" class="admin-input max-w-[7.5rem] notranslate" aria-label="週" translate="no" lang="ja">
+                                            @for($week = 1; $week <= 5; $week++)
+                                                <option value="{{ $week }}" @selected((int) ($rule['week'] ?? 0) === $week)>第{{ $week }}週</option>
+                                            @endfor
+                                        </select>
+                                        <select name="closed_nth[{{ $index }}][weekday]" class="admin-input max-w-[7rem] notranslate" aria-label="曜日" translate="no" lang="ja">
+                                            @foreach($weekdayLabels as $weekdayValue => $weekdayLabel)
+                                                <option value="{{ $weekdayValue }}" @selected((int) ($rule['weekday'] ?? -1) === (int) $weekdayValue)>{{ $weekdayLabel }}</option>
+                                            @endforeach
+                                        </select>
+                                        <button type="button" class="admin-icon-btn admin-icon-btn-delete" data-closed-nth-remove aria-label="削除" title="削除">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                @endforeach
+                            </div>
+                            {{-- Always present so week labels stay as 第N週 even when no rows are saved yet. --}}
+                            <select class="sr-only notranslate" aria-hidden="true" tabindex="-1" translate="no" lang="ja" data-closed-nth-week-labels>
+                                @for($week = 1; $week <= 5; $week++)
+                                    <option value="{{ $week }}">第{{ $week }}週</option>
+                                @endfor
+                            </select>
+                            <button type="button" class="admin-btn-secondary mt-2 text-sm" data-closed-nth-add>＋ 追加定休日を追加</button>
+                            <p class="mt-1 text-xs text-admin-muted">例：第3水曜日、第1・第3水曜日</p>
+                        </div>
+                    </div>
+                    @error('closed_weekdays')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('closed_nth')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('closed_nth.*.week')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('closed_nth.*.weekday')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
                     <label for="phone" class="admin-label">電話番号</label>
@@ -369,6 +498,46 @@
             });
             document.querySelectorAll('input[name="shop_name_display_type"]').forEach(function (radio) {
                 radio.addEventListener('change', updateLogoWarning);
+            });
+
+            const closedNthList = document.querySelector('[data-closed-nth-list]');
+            const closedNthAdd = document.querySelector('[data-closed-nth-add]');
+            const weekdayOptions = @json($weekdayLabels ?? \App\Models\SalonSetting::WEEKDAY_SHORT_LABELS);
+            let closedNthIndex = {{ count($selectedClosedNth ?? []) }};
+
+            function closedNthRowHtml(index) {
+                const weekOptions = [1, 2, 3, 4, 5].map(function (week) {
+                    return '<option value="' + week + '">第' + week + '週</option>';
+                }).join('');
+                const dayOptions = Object.keys(weekdayOptions).map(function (value) {
+                    return '<option value="' + value + '">' + weekdayOptions[value] + '</option>';
+                }).join('');
+
+                return '' +
+                    '<div class="flex flex-wrap items-center gap-2" data-closed-nth-row>' +
+                        '<select name="closed_nth[' + index + '][week]" class="admin-input max-w-[7.5rem] notranslate" aria-label="週" translate="no" lang="ja">' + weekOptions + '</select>' +
+                        '<select name="closed_nth[' + index + '][weekday]" class="admin-input max-w-[7rem] notranslate" aria-label="曜日" translate="no" lang="ja">' + dayOptions + '</select>' +
+                        '<button type="button" class="admin-icon-btn admin-icon-btn-delete" data-closed-nth-remove aria-label="削除" title="削除">' +
+                            '<span aria-hidden="true">&times;</span>' +
+                        '</button>' +
+                    '</div>';
+            }
+
+            closedNthAdd?.addEventListener('click', function () {
+                if (!closedNthList) {
+                    return;
+                }
+                closedNthList.insertAdjacentHTML('beforeend', closedNthRowHtml(closedNthIndex));
+                closedNthIndex += 1;
+            });
+
+            closedNthList?.addEventListener('click', function (event) {
+                const button = event.target.closest('[data-closed-nth-remove]');
+                if (!button || !closedNthList.contains(button)) {
+                    return;
+                }
+                const row = button.closest('[data-closed-nth-row]');
+                row?.remove();
             });
         })();
     </script>

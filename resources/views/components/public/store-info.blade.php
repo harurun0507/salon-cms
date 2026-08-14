@@ -6,8 +6,8 @@
 @php
     $leftItems = array_values(array_filter([
         ['label' => '店名', 'value' => $setting->shop_name, 'multiline' => false],
-        ['label' => '営業時間', 'value' => $setting->business_hours, 'multiline' => true],
-        ['label' => '定休日', 'value' => $setting->closed_days, 'multiline' => false],
+        ['label' => '営業時間', 'value' => $setting->businessHoursDisplayText(), 'multiline' => true],
+        ['label' => '定休日', 'value' => $setting->closedDaysDisplayText(), 'multiline' => false],
         ['label' => '電話番号', 'value' => $setting->phone, 'multiline' => false],
     ], static fn (array $item): bool => filled($item['value'])));
 

@@ -13,6 +13,7 @@ class GalleryPageController extends Controller
     {
         return view('public.gallery', [
             'galleries' => Gallery::published()->get(),
+            'setting' => SalonSetting::current(),
         ]);
     }
 

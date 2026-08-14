@@ -54,6 +54,7 @@ Route::middleware(['web', 'auth', 'active'])->prefix('admin')->name('admin.')->g
 
     Route::get('home/top', [TopPageSettingController::class, 'edit'])->name('home.top');
     Route::put('home/top', [TopPageSettingController::class, 'update'])->name('home.top.update');
+    Route::delete('home/top/concept-image', [TopPageSettingController::class, 'destroyConceptImage'])->name('home.top.concept-image.destroy');
 
     Route::get('home/banners', [BannerController::class, 'edit'])->name('home.banners');
     Route::put('home/banners', [BannerController::class, 'update'])->name('home.banners.update');

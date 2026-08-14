@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\DesignSetting;
+use App\Models\HeroImage;
 use App\Models\SalonSetting;
 use App\Models\SocialLink;
 use App\Models\TopPageSection;
@@ -78,6 +80,8 @@ class SalonSettingScreensTest extends TestCase
         $this->assertStringContainsString('name="hero_title"', $html);
         $this->assertStringContainsString('name="concept_title"', $html);
         $this->assertStringContainsString('name="concept"', $html);
+        $this->assertStringContainsString('name="concept_image"', $html);
+        $this->assertStringContainsString('Concept画像', $html);
         $this->assertStringContainsString('name="sections[news][display_count]"', $html);
         $this->assertStringContainsString('name="sections[menu][display_count]"', $html);
         $this->assertStringContainsString('name="sections[gallery][display_count]"', $html);
@@ -549,5 +553,67 @@ class SalonSettingScreensTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('<title>メニュー・料金 | SEO Site Title</title>', $menuHtml);
+    }
+
+    public function test_top_page_can_upload_and_delete_concept_image(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.home.top.update'), $this->topPagePayload([
+                'concept_image' => UploadedFile::fake()->image('concept.jpg', 1200, 900),
+            ]))
+            ->assertRedirect(route('admin.home.top'));
+
+        $setting = SalonSetting::current()->fresh();
+        $this->assertTrue($setting->hasConceptImage());
+        $this->assertNotNull($setting->conceptImagePath());
+        Storage::disk('public')->assertExists($setting->concept_image);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.home.top'))
+            ->assertOk()
+            ->getContent();
+        $this->assertStringContainsString('storage/'.$setting->concept_image, $html);
+        $this->assertStringContainsString('concept-image-delete-form', $html);
+
+        $path = $setting->concept_image;
+        $this->actingAs($this->admin())
+            ->delete(route('admin.home.top.concept-image.destroy'))
+            ->assertRedirect(route('admin.home.top'));
+
+        $this->assertFalse(SalonSetting::current()->fresh()->hasConceptImage());
+        Storage::disk('public')->assertMissing($path);
+    }
+
+    public function test_vertical_indicator_concept_uses_dedicated_image_with_hero_fallback(): void
+    {
+        Storage::fake('public');
+        DesignSetting::current()->update([
+            'scroll_display_type' => DesignSetting::SCROLL_VERTICAL_INDICATOR,
+        ]);
+
+        $setting = SalonSetting::current();
+        $heroPath = UploadedFile::fake()->image('hero.jpg', 1600, 900)->store('settings/hero', 'public');
+        HeroImage::query()->create([
+            'salon_setting_id' => $setting->id,
+            'image_path' => $heroPath,
+            'alt_text' => 'Hero fallback',
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+
+        $fallbackHtml = $this->get(route('home'))->assertOk()->getContent();
+        $this->assertStringContainsString('home-vi-concept', $fallbackHtml);
+        $this->assertStringContainsString('storage/'.$heroPath, $fallbackHtml);
+
+        $conceptPath = UploadedFile::fake()->image('concept-main.jpg', 1400, 1000)->store('settings/concept', 'public');
+        $setting->update(['concept_image' => $conceptPath]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+        preg_match('/id="concept"[\s\S]*?<\/section>/', $html, $conceptSection);
+        $this->assertNotEmpty($conceptSection);
+        $this->assertStringContainsString('storage/'.$conceptPath, $conceptSection[0]);
+        $this->assertStringNotContainsString('storage/'.$heroPath, $conceptSection[0]);
     }
 }

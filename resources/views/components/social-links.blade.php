@@ -25,6 +25,21 @@
                 </a>
             @endforeach
         </div>
+    @elseif($variant === 'icons')
+        <div {{ $attributes->class('site-social-icons') }}>
+            @foreach($items as $link)
+                <a
+                    href="{{ $link->url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="site-social-icons__link"
+                    aria-label="{{ $link->label() }}"
+                    title="{{ $link->label() }}"
+                >
+                    <x-social-icon :service="$link->service_key" class="site-social-icons__icon" />
+                </a>
+            @endforeach
+        </div>
     @else
         <div {{ $attributes->class('flex flex-wrap items-center gap-4 text-sm') }}>
             @foreach($items as $link)

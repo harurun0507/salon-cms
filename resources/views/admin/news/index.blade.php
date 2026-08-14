@@ -12,7 +12,7 @@
                 data-confirm-form="news-bulk-form"
                 data-confirm-title="お知らせ保存の確認"
                 data-confirm-message="変更内容を保存します。&#10;よろしいですか？"
-                data-confirm-note="タイトル、お知らせの種類、休業日、本文、公開日時、公開状態、表示順、削除など、現在入力されている内容が反映されます。"
+                data-confirm-note="営業カレンダーの色、タイトル、お知らせの種類、定休日／休業日／営業時間変更、本文、公開日時、公開状態、表示順、削除など、現在入力されている内容が反映されます。"
                 data-confirm-submit-label="保存する"
             >保存する</button>
             <p class="text-sm text-admin-muted">
@@ -45,6 +45,29 @@
                 return '';
             }
         };
+
+        $formatTime = function ($value) {
+            if ($value === null || $value === '') {
+                return '';
+            }
+            try {
+                return \Illuminate\Support\Carbon::parse($value)->format('H:i');
+            } catch (\Throwable) {
+                return '';
+            }
+        };
+
+        $calendarColorDefaults = [
+            'calendar_holiday_color' => \App\Models\DesignSetting::DEFAULTS['calendar_holiday_color'],
+            'calendar_temporary_color' => \App\Models\DesignSetting::DEFAULTS['calendar_temporary_color'],
+            'calendar_hours_color' => \App\Models\DesignSetting::DEFAULTS['calendar_hours_color'],
+        ];
+
+        $regularBusinessHours = $regularBusinessHours ?? [
+            'weekday' => ['open' => '', 'close' => ''],
+            'weekend' => ['open' => '', 'close' => ''],
+            'holidayDates' => [],
+        ];
 
         $oldNewNews = old('new_news', []);
         if (! is_array($oldNewNews)) {
@@ -160,12 +183,17 @@
             @endforeach
         </div>
 
+        @include('admin.news.partials.calendar-settings', [
+            'calendarColors' => $calendarColors ?? \App\Models\DesignSetting::current()->resolvedBusinessCalendarColors(),
+        ])
+
         <div id="news-grid" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" data-news-grid>
             @foreach($workspaceCards as $workspaceCard)
                 @if($workspaceCard['kind'] === 'existing')
                     @include('admin.news.partials.card-existing', [
                         'news' => $workspaceCard['news'],
                         'formatLocal' => $formatLocal,
+                        'formatTime' => $formatTime,
                         'categories' => $categories,
                         'weekdayLabels' => $weekdayLabels,
                         'normalizeClosedDates' => $normalizeClosedDates,
@@ -177,6 +205,7 @@
                     @include('admin.news.partials.card-new', [
                         'key' => $workspaceCard['key'],
                         'newItem' => $workspaceCard['newItem'],
+                        'formatTime' => $formatTime,
                         'categories' => $categories,
                         'weekdayLabels' => $weekdayLabels,
                         'normalizeClosedDates' => $normalizeClosedDates,
@@ -396,6 +425,9 @@
             const closedDateCategories = (@json($closedDateCategoryKeys)).slice();
             const closedWeekdayCategories = (@json($closedWeekdayCategoryKeys)).slice();
             const weekdayShortLabels = @json($weekdayLabels);
+            const calendarColorDefaults = @json($calendarColorDefaults);
+            const regularBusinessHours = @json($regularBusinessHours);
+            const holidayDateSet = new Set((regularBusinessHours.holidayDates || []).map(String));
             const appTimezone = @json(config('app.timezone'));
             const serverNowMs = {{ (int) now()->getTimestampMs() }};
             const clientPageLoadMs = Date.now();
@@ -593,18 +625,184 @@
                     '</div>';
             }
 
+            function usesWeekendBusinessHours(dateValue) {
+                if (!dateValue || !/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+                    return false;
+                }
+                if (holidayDateSet.has(dateValue)) {
+                    return true;
+                }
+                const parts = dateValue.split('-');
+                const date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+                const day = date.getDay();
+                return day === 0 || day === 6;
+            }
+
+            function regularHoursForDate(dateValue) {
+                const bucket = usesWeekendBusinessHours(dateValue) ? 'weekend' : 'weekday';
+                const hours = regularBusinessHours[bucket] || {};
+                return {
+                    open: hours.open || '',
+                    close: hours.close || '',
+                    bucket: bucket,
+                };
+            }
+
+            function isNewNewsCard(card) {
+                return card.getAttribute('data-news-new') === '1';
+            }
+
+            function areHoursTimesManual(card) {
+                const start = card.querySelector('[data-news-hours-start]');
+                const end = card.querySelector('[data-news-hours-end]');
+                if (!start || !end) {
+                    return true;
+                }
+                return start.getAttribute('data-hours-manual') === '1'
+                    || end.getAttribute('data-hours-manual') === '1';
+            }
+
+            function markHoursTimesAuto(card, isAuto) {
+                const start = card.querySelector('[data-news-hours-start]');
+                const end = card.querySelector('[data-news-hours-end]');
+                [start, end].forEach(function (input) {
+                    if (!input) {
+                        return;
+                    }
+                    if (isAuto) {
+                        input.setAttribute('data-hours-auto', '1');
+                        input.removeAttribute('data-hours-manual');
+                    } else {
+                        input.removeAttribute('data-hours-auto');
+                    }
+                });
+            }
+
+            function lockHoursTimes(card) {
+                const start = card.querySelector('[data-news-hours-start]');
+                const end = card.querySelector('[data-news-hours-end]');
+                [start, end].forEach(function (input) {
+                    if (!input) {
+                        return;
+                    }
+                    input.setAttribute('data-hours-manual', '1');
+                    input.removeAttribute('data-hours-auto');
+                });
+            }
+
+            function applyRegularHoursDefaults(card, options) {
+                const opts = options || {};
+                if (!isNewNewsCard(card)) {
+                    return;
+                }
+                const checked = card.querySelector('[data-news-category]:checked');
+                if (!checked || checked.value !== 'hours') {
+                    return;
+                }
+                const dateInput = card.querySelector('[data-news-hours-change-date]');
+                const start = card.querySelector('[data-news-hours-start]');
+                const end = card.querySelector('[data-news-hours-end]');
+                if (!dateInput || !start || !end || !dateInput.value) {
+                    return;
+                }
+                if (!opts.force && areHoursTimesManual(card)) {
+                    return;
+                }
+                const bothEmpty = !start.value && !end.value;
+                const wasAuto = start.getAttribute('data-hours-auto') === '1'
+                    && end.getAttribute('data-hours-auto') === '1';
+                if (!opts.force && !bothEmpty && !wasAuto) {
+                    return;
+                }
+
+                const hours = regularHoursForDate(dateInput.value);
+                if (!hours.open && !hours.close) {
+                    return;
+                }
+                start.value = hours.open;
+                end.value = hours.close;
+                markHoursTimesAuto(card, true);
+            }
+
             function syncClosureVisibility(card) {
                 const checked = card.querySelector('[data-news-category]:checked');
                 const weekdayWrap = card.querySelector('[data-news-weekday-wrap]');
                 const dateWrap = card.querySelector('[data-news-closed-wrap]');
+                const hoursWrap = card.querySelector('[data-news-hours-wrap]');
+                const holidayHint = card.querySelector('[data-news-holiday-hint]');
+                const bodyLabel = card.querySelector('[data-news-body-label]');
+                const bodyHint = card.querySelector('[data-news-body-hint]');
                 const value = checked ? checked.value : '';
+                const isHours = value === 'hours';
+                const isHoliday = value === 'holiday';
                 if (weekdayWrap) {
                     weekdayWrap.hidden = closedWeekdayCategories.indexOf(value) === -1;
                 }
                 if (dateWrap) {
                     dateWrap.hidden = closedDateCategories.indexOf(value) === -1;
                 }
+                if (hoursWrap) {
+                    hoursWrap.hidden = !isHours;
+                }
+                if (holidayHint) {
+                    holidayHint.hidden = !isHoliday;
+                }
+                if (bodyLabel) {
+                    bodyLabel.textContent = isHours ? '補足説明（任意）' : '本文';
+                }
+                if (bodyHint) {
+                    bodyHint.hidden = !isHours;
+                }
             }
+
+            function normalizeHex(value) {
+                let hex = String(value || '').trim().toLowerCase();
+                if (hex && hex.charAt(0) !== '#') {
+                    hex = '#' + hex;
+                }
+                return hex;
+            }
+
+            function bindCalendarColorFields() {
+                form.querySelectorAll('[data-news-color-field]').forEach(function (field) {
+                    const swatch = field.querySelector('[data-news-color-swatch]');
+                    const hex = field.querySelector('[data-news-color-hex]');
+                    if (!swatch || !hex || field.getAttribute('data-color-bound') === '1') {
+                        return;
+                    }
+                    field.setAttribute('data-color-bound', '1');
+                    swatch.addEventListener('input', function () {
+                        hex.value = normalizeHex(swatch.value);
+                    });
+                    hex.addEventListener('change', function () {
+                        const normalized = normalizeHex(hex.value);
+                        if (/^#[0-9a-f]{6}$/.test(normalized)) {
+                            hex.value = normalized;
+                            swatch.value = normalized;
+                        }
+                    });
+                });
+            }
+
+            function resetCalendarColorFields() {
+                Object.keys(calendarColorDefaults).forEach(function (name) {
+                    const hexInput = form.querySelector('[data-news-color-hex][name="' + name + '"]');
+                    if (!hexInput) {
+                        return;
+                    }
+                    const value = normalizeHex(calendarColorDefaults[name]);
+                    hexInput.value = value;
+                    const field = hexInput.closest('[data-news-color-field]');
+                    const swatch = field ? field.querySelector('[data-news-color-swatch]') : null;
+                    if (swatch) {
+                        swatch.value = value;
+                    }
+                });
+            }
+
+            document.addEventListener('news-calendar-colors-reset', function () {
+                resetCalendarColorFields();
+            });
 
             function initClosedCalendar(card) {
                 const mount = card.querySelector('[data-news-closed-calendar]');
@@ -757,6 +955,9 @@
                 const titleInput = card.querySelector('[data-news-title-input]');
                 const categoryInputs = card.querySelectorAll('[data-news-category]');
                 const publishInputs = card.querySelectorAll('[data-news-is-published]');
+                const hoursDateInput = card.querySelector('[data-news-hours-change-date]');
+                const hoursStartInput = card.querySelector('[data-news-hours-start]');
+                const hoursEndInput = card.querySelector('[data-news-hours-end]');
 
                 titleInput?.addEventListener('input', function () {
                     lockTitle(card);
@@ -768,6 +969,7 @@
                     input.addEventListener('change', function () {
                         syncClosureVisibility(card);
                         applySuggestedTitle(card);
+                        applyRegularHoursDefaults(card);
                     });
                 });
 
@@ -779,8 +981,21 @@
                     });
                 });
 
+                hoursDateInput?.addEventListener('change', function () {
+                    applyRegularHoursDefaults(card);
+                });
+                [hoursStartInput, hoursEndInput].forEach(function (input) {
+                    input?.addEventListener('input', function () {
+                        if (!isNewNewsCard(card)) {
+                            return;
+                        }
+                        lockHoursTimes(card);
+                    });
+                });
+
                 initClosedCalendar(card);
                 initializeTitleAutoState(card);
+                syncClosureVisibility(card);
 
                 removeBtn?.addEventListener('click', function () {
                     const existingId = card.getAttribute('data-news-id');
@@ -840,14 +1055,31 @@
                             '<span class="admin-label">定休日 <span class="admin-required-badge">必須</span></span>' +
                             weekdayChoicesHtml('new_news[' + key + ']', []) +
                         '</div>' +
+                        '<p class="text-xs text-admin-muted" data-news-holiday-hint hidden>通常の定休日は「店舗情報」の基本情報で設定します。こちらは告知用のお知らせです。</p>' +
                         '<div data-news-closed-wrap hidden>' +
                             '<span class="admin-label">休業日 <span class="admin-required-badge">必須</span></span>' +
                             '<div class="news-closed-calendar mt-1" data-news-closed-calendar data-field-prefix="new_news[' + key + ']" data-selected-dates=""></div>' +
                             '<p class="mt-2 text-xs text-admin-muted" data-news-closed-summary></p>' +
                         '</div>' +
-                        '<div>' +
-                            '<label class="admin-label">本文</label>' +
+                        '<div class="space-y-3" data-news-hours-wrap hidden>' +
+                            '<div>' +
+                                '<label class="admin-label">変更日 <span class="admin-required-badge">必須</span></label>' +
+                                '<input type="date" name="new_news[' + key + '][hours_change_date]" value="" class="admin-input" data-news-hours-change-date>' +
+                            '</div>' +
+                            '<div>' +
+                                '<span class="admin-label">営業時間 <span class="admin-required-badge">必須</span></span>' +
+                                '<div class="mt-1 flex flex-wrap items-center gap-2">' +
+                                    '<input type="time" name="new_news[' + key + '][hours_start_time]" value="" class="admin-input max-w-[9rem]" data-news-hours-start aria-label="開始時間">' +
+                                    '<span class="text-sm text-admin-muted" aria-hidden="true">〜</span>' +
+                                    '<input type="time" name="new_news[' + key + '][hours_end_time]" value="" class="admin-input max-w-[9rem]" data-news-hours-end aria-label="終了時間">' +
+                                '</div>' +
+                                '<p class="mt-1 text-xs text-admin-muted">変更日に応じて基本情報の通常営業時間（平日／土日祝）を初期表示します。この日だけ変える場合に編集してください。公開カレンダーには変更後の時間が表示されます。</p>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div data-news-body-wrap>' +
+                            '<label class="admin-label" data-news-body-label>本文</label>' +
                             '<textarea name="new_news[' + key + '][body]" rows="6" class="admin-input"></textarea>' +
+                            '<p class="mt-1 text-xs text-admin-muted" data-news-body-hint hidden>営業時間は上の専用項目で登録します。追加の案内がある場合のみ入力してください。</p>' +
                         '</div>' +
                         '<div>' +
                             '<label class="admin-label">公開日時 <span class="admin-required-badge">必須</span></label>' +
@@ -979,6 +1211,8 @@
                     createEmptyCard('start');
                 });
             }
+
+            bindCalendarColorFields();
         })();
     </script>
 @endsection

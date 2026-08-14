@@ -1,42 +1,37 @@
+@php
+    $setting = $setting ?? \App\Models\SalonSetting::current();
+    $design = $design ?? \App\Models\DesignSetting::current();
+    $scrollDisplayType = $design->resolvedScrollDisplayType();
+    $usesVerticalScrollIndicator = $design->usesVerticalScrollIndicator();
+    $siteTitle = $setting->seoSiteTitle();
+    $pageTitle = trim($__env->yieldContent('title'));
+    $documentTitle = $pageTitle !== '' && $pageTitle !== $siteTitle
+        ? $pageTitle.' | '.$siteTitle
+        : ($pageTitle !== '' ? $pageTitle : $siteTitle);
+    $ogTitle = $setting->seoOgTitle();
+    $ogDescription = $setting->seoOgDescription();
+    $metaDescription = filled($setting->meta_description) ? (string) $setting->meta_description : null;
+    $metaKeywords = filled($setting->meta_keywords) ? (string) $setting->meta_keywords : null;
+    $ogImageUrl = $setting->seoOgImageUrl();
+    $twitterCard = $setting->seoTwitterCard();
+    $faviconUrl = $setting->faviconUrl();
+    $hasCustomFavicon = $setting->hasCustomFavicon();
+    $siteFaviconVersion = '2';
+    $canonicalUrl = url()->current();
+    $gaMeasurementId = $setting->hasGaMeasurementId() ? (string) $setting->ga_measurement_id : null;
+    $showPublicGallery = $showPublicGallery
+        ?? \App\Models\Gallery::query()
+            ->where('is_published', true)
+            ->whereHas('images')
+            ->exists();
+    $topSectionVisibility = $topSectionVisibility
+        ?? \App\Models\TopPageSection::visibilityByKey();
+    $headerNavItems = \App\Models\TopPageSection::publicHeaderNavItems($topSectionVisibility);
+    $publicScrollSectionMeta = \App\Models\TopPageSection::publicScrollSectionMeta();
+@endphp
 <!DOCTYPE html>
-<html lang="ja" class="scroll-smooth">
+<html lang="ja" class="scroll-smooth" data-scroll-display="{{ $scrollDisplayType }}">
 <head>
-    @php
-        $setting = $setting ?? \App\Models\SalonSetting::current();
-        $design = $design ?? \App\Models\DesignSetting::current();
-        $siteTitle = $setting->seoSiteTitle();
-        $pageTitle = trim($__env->yieldContent('title'));
-        $documentTitle = $pageTitle !== '' && $pageTitle !== $siteTitle
-            ? $pageTitle.' | '.$siteTitle
-            : ($pageTitle !== '' ? $pageTitle : $siteTitle);
-        $ogTitle = $setting->seoOgTitle();
-        $ogDescription = $setting->seoOgDescription();
-        $metaDescription = filled($setting->meta_description) ? (string) $setting->meta_description : null;
-        $metaKeywords = filled($setting->meta_keywords) ? (string) $setting->meta_keywords : null;
-        $ogImageUrl = $setting->seoOgImageUrl();
-        $twitterCard = $setting->seoTwitterCard();
-        $faviconUrl = $setting->faviconUrl();
-        $hasCustomFavicon = $setting->hasCustomFavicon();
-        $siteFaviconVersion = '2';
-        $canonicalUrl = url()->current();
-        $gaMeasurementId = $setting->hasGaMeasurementId() ? (string) $setting->ga_measurement_id : null;
-        $showPublicGallery = $showPublicGallery
-            ?? \App\Models\Gallery::query()
-                ->where('is_published', true)
-                ->whereHas('images')
-                ->exists();
-        $topSectionVisibility = $topSectionVisibility
-            ?? \App\Models\TopPageSection::visibilityByKey();
-        $showNavNews = ($topSectionVisibility[\App\Models\TopPageSection::KEY_NEWS] ?? false)
-            || ($topSectionVisibility[\App\Models\TopPageSection::KEY_BLOG] ?? false);
-        $newsNavHref = ($topSectionVisibility[\App\Models\TopPageSection::KEY_NEWS] ?? false)
-            ? url('/#news')
-            : url('/#blog');
-        $showNavGallery = $topSectionVisibility[\App\Models\TopPageSection::KEY_GALLERY] ?? false;
-        $showNavMenu = $topSectionVisibility[\App\Models\TopPageSection::KEY_MENU] ?? false;
-        $showNavStaff = $topSectionVisibility[\App\Models\TopPageSection::KEY_STAFF] ?? false;
-        $showNavAccess = $topSectionVisibility[\App\Models\TopPageSection::KEY_ACCESS] ?? false;
-    @endphp
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -176,7 +171,17 @@
             font-family: var(--site-heading-font, var(--font-serif));
         }
         html { scroll-behavior: smooth; }
-        #concept, #menu, #gallery, #staff, #access, #news { scroll-margin-top: 5.5rem; }
+        #concept, #menu, #gallery, #staff, #access, #news, #blog { scroll-margin-top: 5.5rem; }
+        html[data-scroll-display='vertical_indicator'] #concept,
+        html[data-scroll-display='vertical_indicator'] #menu,
+        html[data-scroll-display='vertical_indicator'] #gallery,
+        html[data-scroll-display='vertical_indicator'] #staff,
+        html[data-scroll-display='vertical_indicator'] #access,
+        html[data-scroll-display='vertical_indicator'] #news,
+        html[data-scroll-display='vertical_indicator'] #blog,
+        html[data-scroll-display='vertical_indicator'] #banners {
+            scroll-margin-top: var(--site-header-offset, 5.5rem);
+        }
         [data-menu-category-section] {
             scroll-margin-top: var(
                 --menu-category-scroll-margin,
@@ -188,7 +193,7 @@
         }
     </style>
 </head>
-<body class="font-sans">
+<body class="font-sans has-mobile-bottom-bar">
     <header class="sticky top-0 z-50 border-b border-salon-line bg-salon-bg/95 backdrop-blur" data-site-header>
         <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-6 md:py-3.5">
             <a href="{{ route('home') }}" class="inline-flex min-h-[48px] max-w-[200px] shrink-0 items-center sm:max-w-[240px] md:min-h-[64px] md:max-w-[280px]">
@@ -205,27 +210,30 @@
                 @endif
             </a>
 
-            <nav class="hidden items-center gap-8 text-sm md:flex" aria-label="メインメニュー">
-                <a href="{{ url('/#concept') }}" class="hover:text-salon-accent">Concept</a>
-                @if($showNavNews)
-                    <a href="{{ $newsNavHref }}" class="hover:text-salon-accent">News</a>
-                @endif
-                @if($showNavGallery)
-                    <a href="{{ url('/#gallery') }}" class="hover:text-salon-accent">Gallery</a>
-                @endif
-                @if($showNavMenu)
-                    <a href="{{ url('/#menu') }}" class="hover:text-salon-accent">Menu</a>
-                @endif
-                @if($showNavStaff)
-                    <a href="{{ url('/#staff') }}" class="hover:text-salon-accent">Staff</a>
-                @endif
-                @if($showNavAccess)
-                    <a href="{{ url('/#access') }}" class="hover:text-salon-accent">Access</a>
-                @endif
+            <nav @class([
+                'hidden items-center text-sm md:flex',
+                'gap-5 lg:gap-7' => $usesVerticalScrollIndicator,
+                'gap-8' => ! $usesVerticalScrollIndicator,
+            ]) aria-label="メインメニュー">
+                @foreach($headerNavItems as $navItem)
+                    <a href="{{ $navItem['href'] }}" class="hover:text-salon-accent">{{ $navItem['label'] }}</a>
+                @endforeach
             </nav>
 
-            @if($setting->hot_pepper_url)
-                <a href="{{ $setting->hot_pepper_url }}" target="_blank" rel="noopener" class="btn-primary hidden md:inline-flex">Reserve</a>
+            @if($usesVerticalScrollIndicator || $setting->hot_pepper_url)
+                <div @class([
+                    'hidden items-center md:flex',
+                    'site-header-tools' => $usesVerticalScrollIndicator,
+                ])>
+                    @if($usesVerticalScrollIndicator)
+                        <a href="{{ route('privacy') }}" class="site-header-tools__privacy">Privacy Policy</a>
+                        <x-social-links variant="icons" class="site-header-tools__socials" />
+                    @endif
+
+                    @if($setting->hot_pepper_url)
+                        <a href="{{ $setting->hot_pepper_url }}" target="_blank" rel="noopener" class="btn-primary">Reserve</a>
+                    @endif
+                </div>
             @endif
 
             <button
@@ -278,41 +286,19 @@
 
         <nav class="site-mobile-nav-panel" aria-label="モバイルメニュー">
             <div class="site-mobile-nav-links">
-                <a href="{{ url('/#concept') }}" data-nav-link class="site-mobile-nav-link">
-                    <span>Concept</span>
-                    <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </a>
-                @if($showNavNews)
-                    <a href="{{ $newsNavHref }}" data-nav-link class="site-mobile-nav-link">
-                        <span>News</span>
+                @foreach($headerNavItems as $navItem)
+                    <a href="{{ $navItem['href'] }}" data-nav-link class="site-mobile-nav-link">
+                        <span>{{ $navItem['label'] }}</span>
                         <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </a>
-                @endif
-                @if($showNavGallery)
-                    <a href="{{ url('/#gallery') }}" data-nav-link class="site-mobile-nav-link">
-                        <span>Gallery</span>
-                        <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </a>
-                @endif
-                @if($showNavMenu)
-                    <a href="{{ url('/#menu') }}" data-nav-link class="site-mobile-nav-link">
-                        <span>Menu</span>
-                        <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </a>
-                @endif
-                @if($showNavStaff)
-                    <a href="{{ url('/#staff') }}" data-nav-link class="site-mobile-nav-link">
-                        <span>Staff</span>
-                        <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </a>
-                @endif
-                @if($showNavAccess)
-                    <a href="{{ url('/#access') }}" data-nav-link class="site-mobile-nav-link">
-                        <span>Access</span>
-                        <svg class="site-mobile-nav-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </a>
-                @endif
+                @endforeach
             </div>
+            @if($usesVerticalScrollIndicator)
+                <div class="site-mobile-nav-meta">
+                    <a href="{{ route('privacy') }}" class="site-mobile-nav-meta__privacy" data-nav-link>Privacy Policy</a>
+                    <x-social-links variant="icons" class="site-mobile-nav-meta__socials" />
+                </div>
+            @endif
             @if($setting->hot_pepper_url)
                 <div class="site-mobile-nav-cta">
                     <a href="{{ $setting->hot_pepper_url }}" target="_blank" rel="noopener" class="btn-primary w-full text-center" data-nav-link>Reserve</a>
@@ -323,30 +309,55 @@
 
     <main>@yield('content')</main>
 
-    <footer class="border-t border-salon-line bg-white/50">
-        <div class="mx-auto max-w-6xl px-4 py-12 md:px-6">
-            <div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <p class="font-serif text-lg">{{ $setting->shop_name }}</p>
-                    <p class="mt-2 text-sm text-salon-muted">{{ $setting->address }}</p>
+    @unless($usesVerticalScrollIndicator)
+        <footer class="site-footer border-t border-salon-line bg-white/50">
+            <div class="mx-auto max-w-6xl px-4 py-12 md:px-6">
+                <div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <p class="font-serif text-lg">{{ $setting->shop_name }}</p>
+                        <p class="mt-2 text-sm text-salon-muted">{{ $setting->address }}</p>
+                    </div>
+                    <div class="flex flex-col items-start gap-4 text-sm sm:flex-row sm:items-center sm:gap-6">
+                        <a href="{{ route('privacy') }}" class="hover:text-salon-accent">Privacy Policy</a>
+                        <x-social-links variant="footer" />
+                    </div>
                 </div>
-                <div class="flex flex-col items-start gap-4 text-sm sm:flex-row sm:items-center sm:gap-6">
-                    <a href="{{ route('privacy') }}" class="hover:text-salon-accent">Privacy Policy</a>
-                    <x-social-links variant="footer" />
-                </div>
+                <p class="mt-8 text-center text-xs text-salon-muted">&copy; {{ date('Y') }} {{ $setting->shop_name }}</p>
             </div>
-            <p class="mt-8 text-center text-xs text-salon-muted">&copy; {{ date('Y') }} {{ $setting->shop_name }}</p>
-        </div>
-    </footer>
+        </footer>
+    @endunless
+
+    <div class="site-mobile-bottom-bar" aria-hidden="true">
+        <span class="site-mobile-bottom-bar__name">{{ $setting->shop_name }}</span>
+    </div>
+
+    @if($usesVerticalScrollIndicator)
+        <nav class="site-section-dots" aria-label="セクションナビゲーション" data-site-section-dots hidden></nav>
+    @endif
 
     <script>
         (function () {
             const mobileMenu = document.querySelector('[data-mobile-menu]');
             const openBtn = document.querySelector('[data-mobile-menu-toggle]');
             const closeBtns = document.querySelectorAll('[data-mobile-menu-close]');
+            const siteHeader = document.querySelector('[data-site-header]');
             const mqDesktop = window.matchMedia('(min-width: 768px)');
             let lockedScrollY = 0;
             let isOpen = false;
+
+            function syncSiteHeaderOffset() {
+                if (!siteHeader) {
+                    return;
+                }
+                const headerHeight = Math.round(siteHeader.getBoundingClientRect().height);
+                document.documentElement.style.setProperty('--site-header-offset', headerHeight + 'px');
+            }
+
+            syncSiteHeaderOffset();
+            window.addEventListener('resize', syncSiteHeaderOffset);
+            if (typeof ResizeObserver !== 'undefined' && siteHeader) {
+                new ResizeObserver(syncSiteHeaderOffset).observe(siteHeader);
+            }
 
             function lockScroll() {
                 lockedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
@@ -411,14 +422,508 @@
             function scrollToHashTarget() {
                 const id = window.location.hash.replace(/^#/, '');
                 if (!id) return;
+                const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+                // Top / hero must land at the true page origin (not section offset under sticky header).
+                if (id === 'hero-slider') {
+                    window.scrollTo({ top: 0, left: 0, behavior: behavior });
+                    return;
+                }
                 const target = document.getElementById(id);
                 if (!target) return;
-                target.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+                target.scrollIntoView({ behavior: behavior, block: 'start' });
             }
 
             window.addEventListener('load', scrollToHashTarget);
             window.addEventListener('hashchange', scrollToHashTarget);
         })();
     </script>
+    @if($usesVerticalScrollIndicator)
+        <script>
+            (function () {
+                const nav = document.querySelector('[data-site-section-dots]');
+                if (!nav) {
+                    return;
+                }
+
+                const SECTION_META = @json($publicScrollSectionMeta);
+                const HOME_PATH = @json(parse_url(route('home'), PHP_URL_PATH) ?: '/');
+                const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+                const SWIPE_THRESHOLD_PX = 64;
+                const EDGE_EPSILON_PX = 12;
+                const ANIMATION_MS = 900;
+                const ANIMATION_MS_REDUCED = 80;
+
+                let sections = [];
+                let buttons = [];
+                let activeIndex = -1;
+                let ticking = false;
+                let isAnimating = false;
+                let animTimer = null;
+                let scrollEndHandler = null;
+                let touchStartX = null;
+                let touchStartY = null;
+                let touchIntent = 0;
+
+                function prefersReducedMotion() {
+                    return reduceMotionQuery.matches;
+                }
+
+                function isMobileMenuOpen() {
+                    return document.documentElement.classList.contains('is-mobile-menu-open');
+                }
+
+                function isPublicModalOpen() {
+                    return document.documentElement.classList.contains('is-public-modal-open');
+                }
+
+                function currentScrollY() {
+                    return window.scrollY
+                        || window.pageYOffset
+                        || document.documentElement.scrollTop
+                        || 0;
+                }
+
+                function isTopSection(section) {
+                    return Boolean(section && section.id === 'hero-slider');
+                }
+
+                function scrollBehavior() {
+                    return prefersReducedMotion() ? 'auto' : 'smooth';
+                }
+
+                function scrollToPageTop() {
+                    window.scrollTo({
+                        top: 0,
+                        left: 0,
+                        behavior: scrollBehavior(),
+                    });
+                }
+
+                function collectSections() {
+                    const found = [];
+                    SECTION_META.forEach(function (meta) {
+                        const el = document.getElementById(meta.id);
+                        if (!el) {
+                            return;
+                        }
+                        if (found.some(function (item) { return item.el.contains(el); })) {
+                            return;
+                        }
+                        found.push({ el: el, id: meta.id, label: meta.label });
+                    });
+                    return found;
+                }
+
+                function setActive(index) {
+                    if (index < 0 || index >= buttons.length) {
+                        return;
+                    }
+                    if (index === activeIndex) {
+                        return;
+                    }
+                    activeIndex = index;
+                    buttons.forEach(function (button, i) {
+                        const active = i === index;
+                        button.classList.toggle('is-active', active);
+                        if (active) {
+                            button.setAttribute('aria-current', 'true');
+                        } else {
+                            button.removeAttribute('aria-current');
+                        }
+                    });
+                }
+
+                function sectionIndexAt(focusY) {
+                    for (let i = 0; i < sections.length; i += 1) {
+                        const rect = sections[i].el.getBoundingClientRect();
+                        if (focusY >= rect.top && focusY < rect.bottom) {
+                            return i;
+                        }
+                    }
+
+                    let best = 0;
+                    let bestDist = Infinity;
+                    for (let i = 0; i < sections.length; i += 1) {
+                        const rect = sections[i].el.getBoundingClientRect();
+                        const mid = (rect.top + rect.bottom) / 2;
+                        const dist = Math.abs(mid - focusY);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            best = i;
+                        }
+                    }
+                    return best;
+                }
+
+                function currentSectionIndex() {
+                    if (activeIndex >= 0 && activeIndex < sections.length) {
+                        return activeIndex;
+                    }
+                    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+                    return sectionIndexAt(viewportHeight * 0.5);
+                }
+
+                function getSectionScrollState(index) {
+                    const section = sections[index];
+                    if (!section) {
+                        return { isTall: false, atStart: true, atEnd: true };
+                    }
+                    // Top / hero uses true page origin; do not treat sticky-header offset as "inside" the section.
+                    if (isTopSection(section)) {
+                        const scrollY = currentScrollY();
+                        return {
+                            isTall: false,
+                            atStart: scrollY <= EDGE_EPSILON_PX,
+                            atEnd: scrollY <= EDGE_EPSILON_PX,
+                        };
+                    }
+                    const rect = section.el.getBoundingClientRect();
+                    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+                    const isTall = rect.height > viewportHeight + EDGE_EPSILON_PX;
+                    const atStart = rect.top >= -EDGE_EPSILON_PX;
+                    const atEnd = rect.bottom <= viewportHeight + EDGE_EPSILON_PX;
+                    return { isTall: isTall, atStart: atStart, atEnd: atEnd };
+                }
+
+                function updateHash(section) {
+                    if (!history.replaceState) {
+                        return;
+                    }
+                    if (section.id && section.id !== 'hero-slider') {
+                        history.replaceState(null, '', '#' + section.id);
+                        return;
+                    }
+                    history.replaceState(null, '', window.location.pathname + window.location.search);
+                }
+
+                function unlockAnimation() {
+                    isAnimating = false;
+                    if (animTimer) {
+                        window.clearTimeout(animTimer);
+                        animTimer = null;
+                    }
+                    if (scrollEndHandler) {
+                        window.removeEventListener('scrollend', scrollEndHandler);
+                        scrollEndHandler = null;
+                    }
+                }
+
+                function goToSection(index) {
+                    if (!sections.length || index < 0 || index >= sections.length) {
+                        return false;
+                    }
+                    if (isAnimating) {
+                        return false;
+                    }
+
+                    const section = sections[index];
+                    isAnimating = true;
+                    setActive(index);
+                    updateHash(section);
+
+                    // Top section: always scrollY = 0 (ignore section offset / sticky header).
+                    if (isTopSection(section)) {
+                        scrollToPageTop();
+                    } else {
+                        section.el.scrollIntoView({
+                            behavior: scrollBehavior(),
+                            block: 'start',
+                        });
+                    }
+
+                    const duration = prefersReducedMotion() ? ANIMATION_MS_REDUCED : ANIMATION_MS;
+                    if (animTimer) {
+                        window.clearTimeout(animTimer);
+                    }
+                    animTimer = window.setTimeout(function () {
+                        unlockAnimation();
+                        updateActiveFromScroll();
+                    }, duration);
+
+                    if ('onscrollend' in window) {
+                        if (scrollEndHandler) {
+                            window.removeEventListener('scrollend', scrollEndHandler);
+                        }
+                        scrollEndHandler = function () {
+                            unlockAnimation();
+                            updateActiveFromScroll();
+                        };
+                        window.addEventListener('scrollend', scrollEndHandler, { once: true });
+                    }
+
+                    return true;
+                }
+
+                function canNavigate(direction) {
+                    if (!sections.length || sections.length < 2 || isMobileMenuOpen() || isPublicModalOpen()) {
+                        return null;
+                    }
+
+                    const current = currentSectionIndex();
+                    const state = getSectionScrollState(current);
+
+                    if (direction > 0) {
+                        if (state.isTall && !state.atEnd) {
+                            return null;
+                        }
+                        if (current >= sections.length - 1) {
+                            return null;
+                        }
+                        return current + 1;
+                    }
+
+                    if (state.isTall && !state.atStart) {
+                        return null;
+                    }
+                    if (current <= 0) {
+                        // Re-snap to true page top if the top section is active but scrollY is not 0.
+                        if (isTopSection(sections[0]) && currentScrollY() > EDGE_EPSILON_PX) {
+                            return 0;
+                        }
+                        return null;
+                    }
+                    return current - 1;
+                }
+
+                function updateActiveFromScroll() {
+                    if (!sections.length) {
+                        ticking = false;
+                        return;
+                    }
+                    if (isAnimating) {
+                        ticking = false;
+                        return;
+                    }
+
+                    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+                    const focusY = viewportHeight * 0.5;
+                    const hysteresis = Math.min(96, Math.max(48, viewportHeight * 0.1));
+                    const candidate = sectionIndexAt(focusY);
+
+                    if (activeIndex < 0) {
+                        setActive(candidate);
+                        ticking = false;
+                        return;
+                    }
+
+                    if (candidate === activeIndex) {
+                        ticking = false;
+                        return;
+                    }
+
+                    const candidateRect = sections[candidate].el.getBoundingClientRect();
+                    const depthIntoCandidate = candidate > activeIndex
+                        ? focusY - candidateRect.top
+                        : candidateRect.bottom - focusY;
+
+                    if (depthIntoCandidate >= hysteresis) {
+                        setActive(candidate);
+                    }
+
+                    ticking = false;
+                }
+
+                function requestUpdate() {
+                    if (ticking) {
+                        return;
+                    }
+                    ticking = true;
+                    window.requestAnimationFrame(updateActiveFromScroll);
+                }
+
+                function onWheel(event) {
+                    if (event.ctrlKey || !sections.length || sections.length < 2 || isPublicModalOpen()) {
+                        return;
+                    }
+                    if (Math.abs(event.deltaY) < 1) {
+                        return;
+                    }
+
+                    const direction = event.deltaY > 0 ? 1 : -1;
+
+                    if (isAnimating) {
+                        event.preventDefault();
+                        return;
+                    }
+
+                    const targetIndex = canNavigate(direction);
+                    if (targetIndex === null) {
+                        // Already at true page top: further upward wheel must not move the page.
+                        if (
+                            direction < 0
+                            && currentSectionIndex() === 0
+                            && isTopSection(sections[0])
+                            && currentScrollY() <= EDGE_EPSILON_PX
+                        ) {
+                            event.preventDefault();
+                        }
+                        return;
+                    }
+
+                    event.preventDefault();
+                    goToSection(targetIndex);
+                }
+
+                function onTouchStart(event) {
+                    if (event.touches.length !== 1 || isMobileMenuOpen() || isPublicModalOpen()) {
+                        touchStartX = null;
+                        touchStartY = null;
+                        touchIntent = 0;
+                        return;
+                    }
+                    touchStartX = event.touches[0].clientX;
+                    touchStartY = event.touches[0].clientY;
+                    touchIntent = 0;
+                }
+
+                function onTouchMove(event) {
+                    if (touchStartY === null || event.touches.length !== 1 || isPublicModalOpen()) {
+                        return;
+                    }
+
+                    if (isAnimating) {
+                        event.preventDefault();
+                        return;
+                    }
+
+                    const currentX = event.touches[0].clientX;
+                    const currentY = event.touches[0].clientY;
+                    const dx = currentX - touchStartX;
+                    const dy = touchStartY - currentY;
+
+                    if (Math.abs(dy) < SWIPE_THRESHOLD_PX) {
+                        touchIntent = 0;
+                        return;
+                    }
+
+                    // 横スワイプ（ヒーローカルーセル等）は邪魔しない
+                    if (Math.abs(dx) > Math.abs(dy) * 0.75) {
+                        touchIntent = 0;
+                        return;
+                    }
+
+                    const direction = dy > 0 ? 1 : -1;
+                    const targetIndex = canNavigate(direction);
+                    if (targetIndex === null) {
+                        touchIntent = 0;
+                        return;
+                    }
+
+                    touchIntent = direction;
+                    event.preventDefault();
+                }
+
+                function onTouchEnd() {
+                    if (touchIntent && !isAnimating) {
+                        const targetIndex = canNavigate(touchIntent);
+                        if (targetIndex !== null) {
+                            goToSection(targetIndex);
+                        }
+                    }
+                    touchStartX = null;
+                    touchStartY = null;
+                    touchIntent = 0;
+                }
+
+                function onTouchCancel() {
+                    touchStartX = null;
+                    touchStartY = null;
+                    touchIntent = 0;
+                }
+
+                function buildNav() {
+                    sections = collectSections();
+                    nav.innerHTML = '';
+                    buttons = [];
+                    activeIndex = -1;
+
+                    if (sections.length < 2) {
+                        nav.hidden = true;
+                        nav.classList.remove('is-ready');
+                        return;
+                    }
+
+                    const list = document.createElement('ul');
+                    list.className = 'site-section-dots__list';
+                    list.setAttribute('role', 'list');
+
+                    sections.forEach(function (section, index) {
+                        const item = document.createElement('li');
+                        item.className = 'site-section-dots__item';
+
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'site-section-dots__button';
+                        button.setAttribute('aria-label', section.label + 'へ移動');
+                        button.dataset.sectionId = section.id;
+                        button.dataset.sectionIndex = String(index);
+                        button.innerHTML = '<span class="site-section-dots__dot" aria-hidden="true"></span>';
+                        button.addEventListener('click', function () {
+                            goToSection(index);
+                        });
+
+                        item.appendChild(button);
+                        list.appendChild(item);
+                        buttons.push(button);
+                    });
+
+                    nav.appendChild(list);
+                    nav.hidden = false;
+                    nav.classList.add('is-ready');
+                    updateActiveFromScroll();
+                }
+
+                function onHomeLogoClick(event) {
+                    const link = event.currentTarget;
+                    if (!(link instanceof HTMLAnchorElement)) {
+                        return;
+                    }
+                    let url;
+                    try {
+                        url = new URL(link.href, window.location.origin);
+                    } catch (err) {
+                        return;
+                    }
+                    if (url.pathname !== HOME_PATH) {
+                        return;
+                    }
+                    if (url.hash && url.hash !== '#hero-slider') {
+                        return;
+                    }
+                    if (window.location.pathname !== HOME_PATH) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const topIndex = sections.findIndex(function (section) {
+                        return isTopSection(section);
+                    });
+                    if (topIndex >= 0) {
+                        goToSection(topIndex);
+                        return;
+                    }
+                    scrollToPageTop();
+                    if (history.replaceState) {
+                        history.replaceState(null, '', HOME_PATH + url.search);
+                    }
+                }
+
+                buildNav();
+
+                document.querySelectorAll('[data-site-header] a[href], [data-mobile-menu] a[href]').forEach(function (link) {
+                    link.addEventListener('click', onHomeLogoClick);
+                });
+
+                window.addEventListener('scroll', requestUpdate, { passive: true });
+                window.addEventListener('resize', requestUpdate);
+                window.addEventListener('hashchange', requestUpdate);
+                window.addEventListener('wheel', onWheel, { passive: false });
+                window.addEventListener('touchstart', onTouchStart, { passive: true });
+                window.addEventListener('touchmove', onTouchMove, { passive: false });
+                window.addEventListener('touchend', onTouchEnd, { passive: true });
+                window.addEventListener('touchcancel', onTouchCancel, { passive: true });
+            })();
+        </script>
+    @endif
 </body>
 </html>

@@ -42,6 +42,25 @@ class TopPageSection extends Model
         self::KEY_ACCESS => 'アクセス',
     ];
 
+    /**
+     * Single source of truth for public top section flow.
+     * Aligns with header nav: Concept → News → Gallery → Menu → Staff → Access.
+     * Campaign sits after Concept (not in header). Blog scrolls with / after News.
+     *
+     * @var list<array{id: string, label: string, header: bool, keys: list<string>}>
+     */
+    public const PUBLIC_SECTION_FLOW = [
+        ['id' => 'hero-slider', 'label' => 'トップ', 'header' => false, 'keys' => []],
+        ['id' => 'concept', 'label' => 'Concept', 'header' => true, 'keys' => []],
+        ['id' => 'banners', 'label' => 'Campaign', 'header' => false, 'keys' => [self::KEY_BANNER]],
+        ['id' => 'news', 'label' => 'News', 'header' => true, 'keys' => [self::KEY_NEWS, self::KEY_BLOG]],
+        ['id' => 'blog', 'label' => 'Blog', 'header' => false, 'keys' => [self::KEY_BLOG]],
+        ['id' => 'gallery', 'label' => 'Gallery', 'header' => true, 'keys' => [self::KEY_GALLERY]],
+        ['id' => 'menu', 'label' => 'Menu', 'header' => true, 'keys' => [self::KEY_MENU]],
+        ['id' => 'staff', 'label' => 'Staff', 'header' => true, 'keys' => [self::KEY_STAFF]],
+        ['id' => 'access', 'label' => 'Access', 'header' => true, 'keys' => [self::KEY_ACCESS]],
+    ];
+
     public const DEFAULTS = [
         self::KEY_BANNER => ['is_visible' => true, 'display_order' => 0, 'display_count' => null],
         self::KEY_NEWS => ['is_visible' => true, 'display_order' => 1, 'display_count' => 3],
@@ -115,6 +134,115 @@ class TopPageSection extends Model
         static::ensureDefaults();
 
         return static::query()->visible()->ordered()->get();
+    }
+
+    /**
+     * Configurable section keys in public nav / top-page flow order.
+     *
+     * @return list<string>
+     */
+    public static function publicConfigurableKeysInOrder(): array
+    {
+        $keys = [];
+        foreach (self::PUBLIC_SECTION_FLOW as $item) {
+            foreach ($item['keys'] as $key) {
+                if (! in_array($key, $keys, true)) {
+                    $keys[] = $key;
+                }
+            }
+        }
+
+        return $keys;
+    }
+
+    /**
+     * Sort visible top-page sections into the shared public flow order.
+     * Hidden sections are already excluded by the caller.
+     */
+    public static function sortByPublicOrder(Collection $sections): Collection
+    {
+        $order = array_flip(self::publicConfigurableKeysInOrder());
+
+        return $sections
+            ->sortBy(fn (self $section) => $order[$section->section_key] ?? 1000)
+            ->values();
+    }
+
+    /**
+     * Visible sections ordered for the public top page under vertical-indicator mode.
+     */
+    public static function visibleOrderedForPublicNav(): Collection
+    {
+        return self::sortByPublicOrder(self::visibleOrdered());
+    }
+
+    /**
+     * Meta for the vertical scroll indicator / wheel navigation.
+     *
+     * @return list<array{id: string, label: string}>
+     */
+    public static function publicScrollSectionMeta(): array
+    {
+        return array_map(
+            static fn (array $item): array => [
+                'id' => $item['id'],
+                'label' => $item['label'],
+            ],
+            self::PUBLIC_SECTION_FLOW
+        );
+    }
+
+    /**
+     * Header / mobile nav items derived from the shared public flow.
+     *
+     * @param  array<string, bool>  $visibilityByKey
+     * @return list<array{id: string, label: string, href: string}>
+     */
+    public static function publicHeaderNavItems(array $visibilityByKey): array
+    {
+        $items = [];
+
+        foreach (self::PUBLIC_SECTION_FLOW as $item) {
+            if (! $item['header']) {
+                continue;
+            }
+
+            $keys = $item['keys'];
+            if ($keys === []) {
+                // Concept (and similar always-on anchors)
+                $items[] = [
+                    'id' => $item['id'],
+                    'label' => $item['label'],
+                    'href' => url('/#'.$item['id']),
+                ];
+
+                continue;
+            }
+
+            $visible = false;
+            foreach ($keys as $key) {
+                if ($visibilityByKey[$key] ?? false) {
+                    $visible = true;
+                    break;
+                }
+            }
+            if (! $visible) {
+                continue;
+            }
+
+            $hrefId = $item['id'];
+            if ($item['id'] === 'news') {
+                $hrefId = ($visibilityByKey[self::KEY_NEWS] ?? false) ? 'news' : 'blog';
+            }
+
+            $items[] = [
+                'id' => $item['id'],
+                'label' => $item['label'],
+                'href' => url('/#'.$hrefId),
+            ];
+        }
+
+        return $items;
     }
 
     /**

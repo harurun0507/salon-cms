@@ -146,4 +146,54 @@ class Gallery extends Model
 
         return null;
     }
+
+    /**
+     * Payload for the public in-page gallery modal.
+     *
+     * @return array{
+     *     id: int,
+     *     url: string,
+     *     categoryLabel: string,
+     *     title: string,
+     *     description: ?string,
+     *     images: list<array{src: string, alt: string}>,
+     *     staff: ?array{name: string, role: ?string, photo: ?string}
+     * }
+     */
+    public function toPublicModalData(): array
+    {
+        $this->loadMissing(['images', 'staffMember']);
+
+        $title = $this->displayTitle();
+        $images = $this->images
+            ->map(static function (GalleryImage $image) use ($title): array {
+                return [
+                    'src' => asset('storage/'.$image->image_path),
+                    'alt' => filled($image->alt_text) ? (string) $image->alt_text : $title,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $staff = null;
+        if ($this->staffMember) {
+            $staff = [
+                'name' => (string) $this->staffMember->name,
+                'role' => filled($this->staffMember->role) ? (string) $this->staffMember->role : null,
+                'photo' => filled($this->staffMember->photo_path)
+                    ? asset('storage/'.$this->staffMember->photo_path)
+                    : null,
+            ];
+        }
+
+        return [
+            'id' => (int) $this->id,
+            'url' => route('gallery.show', $this),
+            'categoryLabel' => 'HAIR STYLE',
+            'title' => $title,
+            'description' => $this->displayDescription(),
+            'images' => $images,
+            'staff' => $staff,
+        ];
+    }
 }

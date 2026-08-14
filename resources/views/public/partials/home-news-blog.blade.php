@@ -4,6 +4,9 @@
     $homeBlogList = $blogList ?? collect();
     $showNewsBlock = $homeNewsList->isNotEmpty();
     $showBlogBlock = $homeBlogList->isNotEmpty();
+    $design = $design ?? \App\Models\DesignSetting::current();
+    $useNewsModal = $design->usesNewsDetailModal();
+    $useBlogModal = $design->usesBlogDetailModal();
 @endphp
 
 @if($showNewsBlock || $showBlogBlock)
@@ -22,6 +25,10 @@
                                 <a
                                     href="{{ route('news.show', $news->slug) }}"
                                     class="group flex flex-col gap-2 py-4 transition hover:text-salon-accent sm:flex-row sm:items-center sm:gap-6"
+                                    @if($useNewsModal)
+                                        data-news-modal-trigger
+                                        data-news-id="{{ $news->id }}"
+                                    @endif
                                 >
                                     <span class="shrink-0 text-xs tracking-widest text-salon-accent">NEWS</span>
                                     <time class="shrink-0 text-sm tabular-nums text-salon-muted sm:w-24">
@@ -58,11 +65,19 @@
                                     class="home-blog-card-hit"
                                     tabindex="-1"
                                     aria-hidden="true"
+                                    @if($useBlogModal)
+                                        data-blog-modal-trigger
+                                        data-blog-id="{{ $blog->id }}"
+                                    @endif
                                 ></a>
                                 <a
                                     href="{{ $blogUrl }}"
                                     class="home-blog-card-more"
                                     aria-label="{{ $blog->title }}の詳細を見る"
+                                    @if($useBlogModal)
+                                        data-blog-modal-trigger
+                                        data-blog-id="{{ $blog->id }}"
+                                    @endif
                                 >
                                     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
                                         <path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>

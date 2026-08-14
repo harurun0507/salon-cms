@@ -8,10 +8,15 @@
         $heroCount = $heroImages->count();
         $heroSliderEnabled = $heroCount > 1;
         $topSections = $topSections ?? collect();
+        $design = $design ?? \App\Models\DesignSetting::current();
+        $isVerticalIndicator = $design->usesVerticalScrollIndicator();
+        $useGalleryModal = $design->usesGalleryDetailModal();
+        $useNewsModal = $design->usesNewsDetailModal();
+        $useBlogModal = $design->usesBlogDetailModal();
     @endphp
 
     {{-- Hero --}}
-    <section class="relative min-h-[70vh] overflow-hidden" id="hero-slider" data-hero-count="{{ $heroCount }}" @if($heroSliderEnabled) data-autoplay="5000" @endif>
+    <section class="hero-slider relative min-h-[70vh] overflow-hidden" id="hero-slider" data-hero-count="{{ $heroCount }}" @if($heroSliderEnabled) data-autoplay="5000" @endif>
         @if($heroCount > 0)
             <div class="absolute inset-0" id="hero-slides" aria-live="polite">
                 @foreach($heroImages as $index => $heroImage)
@@ -30,7 +35,7 @@
 
         <div class="absolute inset-0 z-10 bg-black/30 pointer-events-none"></div>
 
-        <div class="relative z-20 mx-auto flex min-h-[70vh] max-w-6xl flex-col justify-center px-4 py-20 text-white md:px-6">
+        <div class="hero-slider-panel relative z-20 mx-auto flex min-h-[70vh] max-w-6xl flex-col justify-center px-4 py-20 text-white md:px-6">
             @if(!empty($setting->hero_label))
                 <p class="mb-4 text-sm tracking-[0.3em] uppercase opacity-90">{{ $setting->hero_label }}</p>
             @endif
@@ -155,21 +160,27 @@
         </script>
     @endif
 
-    {{-- Concept --}}
-    <section id="concept" class="site-section">
-        <div class="mx-auto max-w-3xl px-4 text-center md:px-6">
-            <p class="mb-3 text-sm tracking-widest text-salon-accent">Concept</p>
-            @if(!empty($setting->concept_title))
-                <h2 class="section-title mb-8">{{ $setting->concept_title }}</h2>
-            @endif
-            <p class="leading-8 text-salon-muted whitespace-pre-line">{{ $setting->concept }}</p>
-        </div>
-    </section>
+    @if($isVerticalIndicator)
+        @include('public.partials.home-vi.concept')
+    @else
+        {{-- Concept --}}
+        <section id="concept" class="site-section">
+            <div class="mx-auto max-w-3xl px-4 text-center md:px-6">
+                <p class="mb-3 text-sm tracking-widest text-salon-accent">Concept</p>
+                @if(!empty($setting->concept_title))
+                    <h2 class="section-title mb-8">{{ $setting->concept_title }}</h2>
+                @endif
+                <p class="leading-8 text-salon-muted whitespace-pre-line">{{ $setting->concept }}</p>
+            </div>
+        </section>
+    @endif
 
     @foreach($topSections as $section)
         @switch($section->section_key)
             @case('banner')
-                @if(($banners ?? collect())->isNotEmpty())
+                @if($isVerticalIndicator)
+                    @include('public.partials.home-vi.campaign')
+                @elseif(($banners ?? collect())->isNotEmpty())
                     <section id="banners" class="site-section">
                         <div class="mx-auto max-w-6xl px-4 md:px-6">
                             <div class="mb-12 text-center">
@@ -195,90 +206,96 @@
                     $shouldRenderNewsBlog = $newsBlogKeys->first() === $section->section_key;
                 @endphp
                 @if($shouldRenderNewsBlog)
-                    @include('public.partials.home-news-blog')
+                    @include($isVerticalIndicator ? 'public.partials.home-vi.news-blog' : 'public.partials.home-news-blog')
                 @endif
                 @break
 
             @case('menu')
-                <section id="menu" class="site-section">
-                    <div class="home-menu-section mx-auto max-w-6xl px-4 md:px-6">
-                        <div class="mb-12">
-                            <p class="mb-2 text-sm tracking-widest text-salon-accent">Menu</p>
-                            <h2 class="section-title">メニュー・料金</h2>
-                        </div>
-                        <div class="home-menu-categories">
-                            @foreach($categories as $category)
-                                @php
-                                    $englishName = $category->englishName();
-                                    $menuCategoryUrl = route('menu').'#'.$category->publicAnchorSlug();
-                                @endphp
-                                <article
-                                    @class([
-                                        'home-menu-category',
-                                        'home-menu-category--combination' => $category->isCombination(),
-                                    ])
-                                    data-home-menu-href="{{ $menuCategoryUrl }}"
-                                >
-                                    <a
-                                        href="{{ $menuCategoryUrl }}"
-                                        class="home-menu-category-hit"
-                                        tabindex="-1"
-                                        aria-hidden="true"
-                                    ></a>
-                                    <a
-                                        href="{{ $menuCategoryUrl }}"
-                                        class="home-menu-category-more"
-                                        aria-label="{{ $category->name }}の詳細を見る"
+                @if($isVerticalIndicator)
+                    @include('public.partials.home-vi.menu')
+                @else
+                    <section id="menu" class="site-section">
+                        <div class="home-menu-section mx-auto max-w-6xl px-4 md:px-6">
+                            <div class="mb-12">
+                                <p class="mb-2 text-sm tracking-widest text-salon-accent">Menu</p>
+                                <h2 class="section-title">メニュー・料金</h2>
+                            </div>
+                            <div class="home-menu-categories">
+                                @foreach($categories as $category)
+                                    @php
+                                        $englishName = $category->englishName();
+                                        $menuCategoryUrl = route('menu').'#'.$category->publicAnchorSlug();
+                                    @endphp
+                                    <article
+                                        @class([
+                                            'home-menu-category',
+                                            'home-menu-category--combination' => $category->isCombination(),
+                                        ])
+                                        data-home-menu-href="{{ $menuCategoryUrl }}"
                                     >
-                                        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                                            <path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg>
-                                    </a>
-                                    <header class="home-menu-category-heading">
-                                        @if($englishName)
-                                            <p class="home-menu-category-en">{{ $englishName }}</p>
-                                        @endif
-                                        <h3 class="home-menu-category-title">{{ $category->name }}</h3>
-                                    </header>
-                                    <ul class="home-menu-list">
-                                        @foreach($category->publishedMenus as $menu)
-                                            @php
-                                                $constituentCategories = $category->isCombination()
-                                                    ? $menu->constituentCategoriesForDisplay()
-                                                    : collect();
-                                            @endphp
-                                            <li class="home-menu-item">
-                                                @if($constituentCategories->isNotEmpty())
-                                                    <ul class="menu-price-tags" aria-label="含まれるカテゴリ">
-                                                        @foreach($constituentCategories as $tagCategory)
-                                                            <x-public.menu-category-tag :name="$tagCategory->name" />
-                                                        @endforeach
-                                                    </ul>
-                                                @endif
-                                                <div class="menu-price-row">
-                                                    <span class="menu-price-name">{{ $menu->name }}</span>
-                                                    <span class="menu-price-leader" aria-hidden="true"></span>
-                                                    @if($menu->isInquiryPrice())
-                                                        <span class="menu-price-inquiry">{{ $menu->price }}</span>
-                                                    @elseif(filled($menu->price))
-                                                        <span class="menu-price-value">{{ $menu->price }}</span>
+                                        <a
+                                            href="{{ $menuCategoryUrl }}"
+                                            class="home-menu-category-hit"
+                                            tabindex="-1"
+                                            aria-hidden="true"
+                                        ></a>
+                                        <a
+                                            href="{{ $menuCategoryUrl }}"
+                                            class="home-menu-category-more"
+                                            aria-label="{{ $category->name }}の詳細を見る"
+                                        >
+                                            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                                <path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </a>
+                                        <header class="home-menu-category-heading">
+                                            @if($englishName)
+                                                <p class="home-menu-category-en">{{ $englishName }}</p>
+                                            @endif
+                                            <h3 class="home-menu-category-title">{{ $category->name }}</h3>
+                                        </header>
+                                        <ul class="home-menu-list">
+                                            @foreach($category->publishedMenus as $menu)
+                                                @php
+                                                    $constituentCategories = $category->isCombination()
+                                                        ? $menu->constituentCategoriesForDisplay()
+                                                        : collect();
+                                                @endphp
+                                                <li class="home-menu-item">
+                                                    @if($constituentCategories->isNotEmpty())
+                                                        <ul class="menu-price-tags" aria-label="含まれるカテゴリ">
+                                                            @foreach($constituentCategories as $tagCategory)
+                                                                <x-public.menu-category-tag :name="$tagCategory->name" />
+                                                            @endforeach
+                                                        </ul>
                                                     @endif
-                                                </div>
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                </article>
-                            @endforeach
+                                                    <div class="menu-price-row">
+                                                        <span class="menu-price-name">{{ $menu->name }}</span>
+                                                        <span class="menu-price-leader" aria-hidden="true"></span>
+                                                        @if($menu->isInquiryPrice())
+                                                            <span class="menu-price-inquiry">{{ $menu->price }}</span>
+                                                        @elseif(filled($menu->price))
+                                                            <span class="menu-price-value">{{ $menu->price }}</span>
+                                                        @endif
+                                                    </div>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </article>
+                                @endforeach
+                            </div>
+                            <div class="mt-12 text-center">
+                                <x-section-more-link :href="route('menu')">すべて見る →</x-section-more-link>
+                            </div>
                         </div>
-                        <div class="mt-12 text-center">
-                            <x-section-more-link :href="route('menu')">すべて見る →</x-section-more-link>
-                        </div>
-                    </div>
-                </section>
+                    </section>
+                @endif
                 @break
 
             @case('gallery')
-                @if(($galleries ?? collect())->isNotEmpty())
+                @if($isVerticalIndicator)
+                    @include('public.partials.home-vi.gallery')
+                @elseif(($galleries ?? collect())->isNotEmpty())
                     <section id="gallery" class="site-section">
                         <div class="mx-auto max-w-6xl px-4 md:px-6">
                             <div class="mb-12 text-center">
@@ -310,11 +327,19 @@
                                                 class="home-gallery-card-hit"
                                                 tabindex="-1"
                                                 aria-hidden="true"
+                                                @if($useGalleryModal)
+                                                    data-gallery-modal-trigger
+                                                    data-gallery-id="{{ $gallery->id }}"
+                                                @endif
                                             ></a>
                                             <a
                                                 href="{{ $galleryUrl }}"
                                                 class="home-gallery-card-more"
                                                 aria-label="{{ $gallery->displayTitle() }}の詳細を見る"
+                                                @if($useGalleryModal)
+                                                    data-gallery-modal-trigger
+                                                    data-gallery-id="{{ $gallery->id }}"
+                                                @endif
                                             >
                                                 <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
                                                     <path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -348,50 +373,77 @@
                 @break
 
             @case('staff')
-                <section id="staff" class="site-section border-t border-salon-line">
-                    <div class="mx-auto max-w-6xl px-4 md:px-6">
-                        <div class="mb-12 text-center">
-                            <p class="mb-2 text-sm tracking-widest text-salon-accent">Staff</p>
-                            <h2 class="section-title">スタッフ紹介</h2>
-                        </div>
-                        <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-                            @forelse($staffMembers as $member)
-                                <article class="text-center">
-                                    <div class="mx-auto mb-4 aspect-square w-40 overflow-hidden rounded-full bg-salon-line">
-                                        @if($member->photo_path)
-                                            <img src="{{ asset('storage/'.$member->photo_path) }}" alt="{{ $member->name }}" class="h-full w-full object-cover">
+                @if($isVerticalIndicator)
+                    @include('public.partials.home-vi.staff')
+                @else
+                    <section id="staff" class="site-section border-t border-salon-line">
+                        <div class="mx-auto max-w-6xl px-4 md:px-6">
+                            <div class="mb-12 text-center">
+                                <p class="mb-2 text-sm tracking-widest text-salon-accent">Staff</p>
+                                <h2 class="section-title">スタッフ紹介</h2>
+                            </div>
+                            <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                                @forelse($staffMembers as $member)
+                                    <article class="text-center">
+                                        <div class="mx-auto mb-4 aspect-square w-40 overflow-hidden rounded-full bg-salon-line">
+                                            @if($member->photo_path)
+                                                <img src="{{ asset('storage/'.$member->photo_path) }}" alt="{{ $member->name }}" class="h-full w-full object-cover">
+                                            @endif
+                                        </div>
+                                        <h3 class="font-medium">{{ $member->name }}</h3>
+                                        @if($member->role)
+                                            <p class="mt-1 text-sm text-salon-accent">{{ $member->role }}</p>
                                         @endif
-                                    </div>
-                                    <h3 class="font-medium">{{ $member->name }}</h3>
-                                    @if($member->role)
-                                        <p class="mt-1 text-sm text-salon-accent">{{ $member->role }}</p>
-                                    @endif
-                                </article>
-                            @empty
-                                <p class="col-span-full text-center text-salon-muted">スタッフ情報準備中です。</p>
-                            @endforelse
+                                    </article>
+                                @empty
+                                    <p class="col-span-full text-center text-salon-muted">スタッフ情報準備中です。</p>
+                                @endforelse
+                            </div>
+                            <div class="mt-10 text-center">
+                                <x-section-more-link :href="route('staff')">すべて見る →</x-section-more-link>
+                            </div>
                         </div>
-                        <div class="mt-10 text-center">
-                            <x-section-more-link :href="route('staff')">すべて見る →</x-section-more-link>
-                        </div>
-                    </div>
-                </section>
+                    </section>
+                @endif
                 @break
 
             @case('access')
-                <section id="access" class="site-section border-t border-salon-line bg-white/60">
-                    <div class="mx-auto max-w-6xl px-4 md:px-6">
-                        <div class="mb-10 text-center md:mb-12">
-                            <p class="mb-2 text-sm tracking-widest text-salon-accent">Access</p>
-                            <h2 class="section-title">店舗情報</h2>
+                @if($isVerticalIndicator)
+                    @include('public.partials.home-vi.access')
+                @else
+                    <section id="access" class="site-section border-t border-salon-line bg-white/60">
+                        <div class="mx-auto max-w-6xl px-4 md:px-6">
+                            <div class="mb-10 text-center md:mb-12">
+                                <p class="mb-2 text-sm tracking-widest text-salon-accent">Access</p>
+                                <h2 class="section-title">店舗情報</h2>
+                            </div>
+                            <x-public.store-info :setting="$setting" />
+                            <div class="mt-10 text-center">
+                                <x-section-more-link :href="route('access')">店舗情報を見る →</x-section-more-link>
+                            </div>
                         </div>
-                        <x-public.store-info :setting="$setting" />
-                        <div class="mt-10 text-center">
-                            <x-section-more-link :href="route('access')">店舗情報を見る →</x-section-more-link>
-                        </div>
-                    </div>
-                </section>
+                    </section>
+                @endif
                 @break
         @endswitch
     @endforeach
+
+    @if($useGalleryModal && ($galleries ?? collect())->isNotEmpty())
+        <x-public.gallery-modal
+            :galleries="$galleries"
+            :reserve-url="$setting->hot_pepper_url ?? null"
+        />
+    @endif
+
+    @if($useNewsModal && ($newsList ?? collect())->isNotEmpty())
+        <x-public.news-modal :news-items="$newsList" />
+    @endif
+
+    @if($useBlogModal && ($blogList ?? collect())->isNotEmpty())
+        <x-public.blog-modal :blogs="$blogList" />
+    @endif
+
+    @if($isVerticalIndicator && ($menuModalCategories ?? collect())->isNotEmpty())
+        <x-public.menu-modal :categories="$menuModalCategories" />
+    @endif
 @endsection

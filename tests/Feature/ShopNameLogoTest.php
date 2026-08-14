@@ -186,8 +186,20 @@ class ShopNameLogoTest extends TestCase
         $this->assertStringContainsString('name="shop_name"', $html);
         $this->assertStringContainsString('name="address"', $html);
         $this->assertStringContainsString('name="access_directions"', $html);
-        $this->assertStringContainsString('name="business_hours"', $html);
-        $this->assertStringContainsString('name="closed_days"', $html);
+        $this->assertStringContainsString('name="weekday_open_time"', $html);
+        $this->assertStringContainsString('name="weekday_close_time"', $html);
+        $this->assertStringContainsString('name="weekend_open_time"', $html);
+        $this->assertStringContainsString('name="weekend_close_time"', $html);
+        $this->assertStringContainsString('type="time"', $html);
+        $this->assertStringNotContainsString('name="business_hours"', $html);
+        $this->assertStringContainsString('name="closed_weekdays[]"', $html);
+        $this->assertStringContainsString('data-closed-nth-list', $html);
+        $this->assertStringContainsString('data-closed-nth-add', $html);
+        $this->assertStringContainsString('第1週', $html);
+        $this->assertStringContainsString('第5週', $html);
+        $this->assertStringContainsString('translate="no"', $html);
+        $this->assertStringContainsString('notranslate', $html);
+        $this->assertStringNotContainsString('name="closed_days"', $html);
         $this->assertStringContainsString('name="phone"', $html);
         $this->assertStringContainsString('name="payment_methods"', $html);
         $this->assertStringContainsString('name="cut_price"', $html);
@@ -245,8 +257,14 @@ class ShopNameLogoTest extends TestCase
             'shop_name_display_type' => SalonSetting::DISPLAY_TYPE_TEXT,
             'address' => '埼玉県川口市幸町２－14－27－102号',
             'access_directions' => "銀座通り商店街を抜けて進みます。\n黒い看板が目印です。",
-            'business_hours' => "平日 10:00 - 20:00\n土日祝 9:00 - 19:00",
-            'closed_days' => '毎週火曜日・第3水曜日',
+            'weekday_open_time' => '10:00',
+            'weekday_close_time' => '20:00',
+            'weekend_open_time' => '09:00',
+            'weekend_close_time' => '19:00',
+            'closed_weekdays' => ['2'],
+            'closed_nth' => [
+                ['week' => 3, 'weekday' => 3],
+            ],
             'phone' => '0120-111-1111',
             'payment_methods' => 'Visa／Mastercard／JCB',
             'cut_price' => '¥5,940',
@@ -264,6 +282,14 @@ class ShopNameLogoTest extends TestCase
 
         $fresh = SalonSetting::current()->fresh();
         $this->assertSame($payload['access_directions'], $fresh->access_directions);
+        $this->assertSame('10:00', $fresh->weekdayOpenTimeInputValue());
+        $this->assertSame('20:00', $fresh->weekdayCloseTimeInputValue());
+        $this->assertSame('09:00', $fresh->weekendOpenTimeInputValue());
+        $this->assertSame('19:00', $fresh->weekendCloseTimeInputValue());
+        $this->assertSame("平日 10:00 - 20:00\n土日祝 9:00 - 19:00", $fresh->businessHoursDisplayText());
+        $this->assertSame([2], $fresh->closedWeekdayValues());
+        $this->assertSame([['week' => 3, 'weekday' => 3]], $fresh->closedNthWeekdayRules());
+        $this->assertSame('毎週火曜日・第3水曜日', $fresh->closedDaysDisplayText());
         $this->assertSame('¥5,940', $fresh->cut_price);
         $this->assertSame('セット面3席', $fresh->seat_count);
         $this->assertSame('スタイリスト1人', $fresh->staff_count);
@@ -284,6 +310,9 @@ class ShopNameLogoTest extends TestCase
             ->getContent();
         $this->assertStringContainsString('アクセス・道案内', $accessHtml);
         $this->assertStringContainsString('黒い看板が目印です。', $accessHtml);
+        $this->assertStringContainsString('平日 10:00 - 20:00', $accessHtml);
+        $this->assertStringContainsString('土日祝 9:00 - 19:00', $accessHtml);
+        $this->assertStringContainsString('毎週火曜日・第3水曜日', $accessHtml);
         $this->assertStringContainsString('支払い方法', $accessHtml);
         $this->assertStringContainsString('カット価格', $accessHtml);
         $this->assertStringContainsString('¥5,940', $accessHtml);
@@ -309,8 +338,10 @@ class ShopNameLogoTest extends TestCase
         SalonSetting::current()->update([
             'shop_name' => 'Sun＆ Me',
             'address' => '埼玉県川口市',
-            'business_hours' => '10:00 - 20:00',
-            'closed_days' => '火曜定休',
+            'weekday_open_time' => '10:00:00',
+            'weekday_close_time' => '20:00:00',
+            'weekend_open_time' => null,
+            'weekend_close_time' => null,
             'phone' => '0120-111-1111',
             'access_directions' => null,
             'payment_methods' => null,
@@ -322,6 +353,10 @@ class ShopNameLogoTest extends TestCase
             'notes' => null,
             'other_info' => null,
         ]);
+        $setting = SalonSetting::current();
+        $setting->closedWeekdays()->delete();
+        $setting->closedNthWeekdays()->delete();
+        $setting->closedWeekdays()->create(['weekday' => 2]);
 
         $html = $this->get(route('access'))
             ->assertOk()
@@ -329,6 +364,7 @@ class ShopNameLogoTest extends TestCase
 
         $this->assertStringContainsString('住所', $html);
         $this->assertStringContainsString('埼玉県川口市', $html);
+        $this->assertStringContainsString('毎週火曜日', $html);
         $this->assertStringNotContainsString('アクセス・道案内', $html);
         $this->assertStringNotContainsString('支払い方法', $html);
         $this->assertStringNotContainsString('カット価格', $html);
@@ -338,5 +374,40 @@ class ShopNameLogoTest extends TestCase
         $this->assertStringNotContainsString('こだわり条件', $html);
         $this->assertStringNotContainsString('備考', $html);
         $this->assertStringNotContainsString('その他', $html);
+        $this->assertStringContainsString('平日 10:00 - 20:00', $html);
+    }
+
+    public function test_settings_rejects_business_hours_when_close_is_not_after_open(): void
+    {
+        SalonSetting::current();
+
+        $this->actingAs($this->admin())
+            ->from(route('admin.settings.edit'))
+            ->put(route('admin.settings.update'), [
+                'shop_name' => 'Sun＆ Me',
+                'shop_name_display_type' => SalonSetting::DISPLAY_TYPE_TEXT,
+                'weekday_open_time' => '20:00',
+                'weekday_close_time' => '10:00',
+                'weekend_open_time' => '09:00',
+                'weekend_close_time' => '19:00',
+            ])
+            ->assertRedirect(route('admin.settings.edit'))
+            ->assertSessionHasErrors(['weekday_close_time']);
+    }
+
+    public function test_settings_rejects_incomplete_business_hour_pair(): void
+    {
+        SalonSetting::current();
+
+        $this->actingAs($this->admin())
+            ->from(route('admin.settings.edit'))
+            ->put(route('admin.settings.update'), [
+                'shop_name' => 'Sun＆ Me',
+                'shop_name_display_type' => SalonSetting::DISPLAY_TYPE_TEXT,
+                'weekday_open_time' => '10:00',
+                'weekday_close_time' => '',
+            ])
+            ->assertRedirect(route('admin.settings.edit'))
+            ->assertSessionHasErrors(['weekday_close_time']);
     }
 }

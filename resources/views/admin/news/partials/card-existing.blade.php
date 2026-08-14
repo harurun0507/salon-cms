@@ -14,6 +14,19 @@
                     $closedWeekdays = $normalizeClosedWeekdays(
                         old($prefix.'.closed_weekdays', $news->closedWeekdays->pluck('weekday')->all())
                     );
+                    $hoursChangeDate = old(
+                        $prefix.'.hours_change_date',
+                        $news->hours_change_date?->format('Y-m-d')
+                    );
+                    $hoursStartTime = old(
+                        $prefix.'.hours_start_time',
+                        $formatTime($news->hours_start_time)
+                    );
+                    $hoursEndTime = old(
+                        $prefix.'.hours_end_time',
+                        $formatTime($news->hours_end_time)
+                    );
+                    $isHoursCategory = \App\Models\News::usesHoursChangeFields($category);
                 @endphp
                 <div
                     class="admin-card news-card"
@@ -113,6 +126,13 @@
                                 @endforeach
                             </div>
                         </div>
+                        <p
+                            class="text-xs text-admin-muted"
+                            data-news-holiday-hint
+                            @if((string) $category !== \App\Models\News::CATEGORY_HOLIDAY) hidden @endif
+                        >
+                            通常の定休日は「店舗情報」の基本情報で設定します。こちらは告知用のお知らせです。
+                        </p>
                         <div
                             data-news-closed-wrap
                             @if(! $usesClosedDates($category)) hidden @endif
@@ -126,14 +146,59 @@
                             ></div>
                             <p class="mt-2 text-xs text-admin-muted" data-news-closed-summary></p>
                         </div>
-                        <div>
-                            <label for="news_body_{{ $news->id }}" class="admin-label">本文</label>
+                        <div
+                            class="space-y-3"
+                            data-news-hours-wrap
+                            @if(! $isHoursCategory) hidden @endif
+                        >
+                            <div>
+                                <label for="news_hours_change_date_{{ $news->id }}" class="admin-label">変更日 <span class="admin-required-badge">必須</span></label>
+                                <input
+                                    type="date"
+                                    name="news[{{ $news->id }}][hours_change_date]"
+                                    id="news_hours_change_date_{{ $news->id }}"
+                                    value="{{ $hoursChangeDate }}"
+                                    class="admin-input"
+                                    data-news-hours-change-date
+                                >
+                            </div>
+                            <div>
+                                <span class="admin-label">営業時間 <span class="admin-required-badge">必須</span></span>
+                                <div class="mt-1 flex flex-wrap items-center gap-2">
+                                    <input
+                                        type="time"
+                                        name="news[{{ $news->id }}][hours_start_time]"
+                                        value="{{ $hoursStartTime }}"
+                                        class="admin-input max-w-[9rem]"
+                                        data-news-hours-start
+                                        aria-label="開始時間"
+                                    >
+                                    <span class="text-sm text-admin-muted" aria-hidden="true">〜</span>
+                                    <input
+                                        type="time"
+                                        name="news[{{ $news->id }}][hours_end_time]"
+                                        value="{{ $hoursEndTime }}"
+                                        class="admin-input max-w-[9rem]"
+                                        data-news-hours-end
+                                        aria-label="終了時間"
+                                    >
+                                </div>
+                                <p class="mt-1 text-xs text-admin-muted">保存済みの変更営業時間を表示しています。公開サイトの通常営業時間（基本情報）は変わりません。カレンダー上ではこの日だけ変更後の時間が表示されます。</p>
+                            </div>
+                        </div>
+                        <div data-news-body-wrap>
+                            <label for="news_body_{{ $news->id }}" class="admin-label" data-news-body-label>
+                                {{ $isHoursCategory ? '補足説明（任意）' : '本文' }}
+                            </label>
                             <textarea
                                 name="news[{{ $news->id }}][body]"
                                 id="news_body_{{ $news->id }}"
                                 rows="6"
                                 class="admin-input"
                             >{{ old($prefix.'.body', $news->body) }}</textarea>
+                            <p class="mt-1 text-xs text-admin-muted" data-news-body-hint @if(! $isHoursCategory) hidden @endif>
+                                営業時間は上の専用項目で登録します。追加の案内がある場合のみ入力してください。
+                            </p>
                         </div>
                         <div>
                             <label for="news_published_at_{{ $news->id }}" class="admin-label">公開日時 <span class="admin-required-badge">必須</span></label>

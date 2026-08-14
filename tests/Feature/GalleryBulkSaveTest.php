@@ -428,6 +428,21 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringContainsString('gallery-media-card', $html);
         $this->assertStringContainsString('gallery-media-frame', $html);
         $this->assertStringNotContainsString('gallery-media-image--fluid', $html);
+        // Default detail display is page transition.
+        $this->assertStringNotContainsString('data-gallery-modal-trigger', $html);
+        $this->assertStringNotContainsString('data-gallery-modal-data', $html);
+
+        \App\Models\DesignSetting::current()->update([
+            'gallery_detail_display' => \App\Models\DesignSetting::DETAIL_DISPLAY_MODAL,
+        ]);
+
+        $modalHtml = $this->get(route('gallery'))->assertOk()->getContent();
+        $this->assertStringContainsString('data-gallery-modal', $modalHtml);
+        $this->assertStringContainsString('data-gallery-modal-trigger', $modalHtml);
+        $this->assertStringContainsString('data-gallery-id="'.$withImage->id.'"', $modalHtml);
+        $this->assertStringContainsString('data-gallery-modal-data', $modalHtml);
+        $this->assertStringContainsString('data-gallery-modal-thumbs', $modalHtml);
+        $this->assertStringContainsString('"categoryLabel":"HAIR STYLE"', $modalHtml);
     }
 
     public function test_home_gallery_section_hides_when_no_published_galleries(): void
@@ -478,6 +493,15 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringContainsString('home-gallery-card-hit', $html);
         $this->assertStringContainsString('gallery-media-tab-label', $html);
         $this->assertStringContainsString('ショートボブ', $html);
+        $this->assertStringNotContainsString('data-gallery-modal-trigger', $html);
+
+        \App\Models\DesignSetting::current()->update([
+            'gallery_detail_display' => \App\Models\DesignSetting::DETAIL_DISPLAY_MODAL,
+        ]);
+        $modalHtml = $this->get(route('home'))->assertOk()->getContent();
+        $this->assertStringContainsString('data-gallery-modal', $modalHtml);
+        $this->assertStringContainsString('data-gallery-modal-trigger', $modalHtml);
+        $this->assertStringContainsString('data-gallery-id="'.$gallery->id.'"', $modalHtml);
 
         preg_match(
             '/href="'.preg_quote(route('gallery.show', $untitled), '/').'"[\s\S]*?<\/article>/',
@@ -492,6 +516,26 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringNotContainsString('gallery-media-card--home-titled', $listHtml);
         $this->assertStringNotContainsString('gallery-media-tab-label', $listHtml);
         $this->assertStringNotContainsString('home-gallery-card-more', $listHtml);
+    }
+
+    public function test_public_gallery_detail_page_remains_available_via_direct_url(): void
+    {
+        Storage::fake('public');
+        $gallery = $this->createGallery([
+            'image_path' => UploadedFile::fake()->image('direct.jpg')->store('galleries', 'public'),
+            'title' => '直接アクセス作品',
+            'caption' => '詳細ページは残す',
+            'is_published' => true,
+        ]);
+
+        $html = $this->get(route('gallery.show', $gallery))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('直接アクセス作品', $html);
+        $this->assertStringContainsString('詳細ページは残す', $html);
+        $this->assertStringContainsString('gallery-detail-layout', $html);
+        $this->assertStringNotContainsString('data-gallery-modal-trigger', $html);
     }
 
     public function test_public_gallery_detail_shows_carousel_only_for_multiple_images(): void

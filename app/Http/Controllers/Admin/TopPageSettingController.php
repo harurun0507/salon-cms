@@ -38,18 +38,30 @@ class TopPageSettingController extends AdminController
             'hero_title' => ['nullable', 'string'],
             'concept_title' => ['nullable', 'string', 'max:255'],
             'concept' => ['nullable', 'string'],
+            'concept_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
             'section_order' => ['required', 'array', 'size:'.count(TopPageSection::KEYS)],
             'section_order.*' => ['required', 'string', Rule::in(TopPageSection::KEYS), 'distinct'],
             'sections' => ['required', 'array'],
             'sections.*.is_visible' => ['nullable', 'boolean'],
-        ], $countRules));
+        ], $countRules), [
+            'concept_image.image' => 'Concept画像は画像ファイルを選択してください。',
+            'concept_image.mimes' => 'Concept画像は JPEG / PNG / WebP 形式でアップロードしてください。',
+            'concept_image.max' => 'Concept画像は5MB以下にしてください。',
+        ]);
 
-        DB::transaction(function () use ($validated) {
-            SalonSetting::current()->update([
+        DB::transaction(function () use ($request, $validated) {
+            $setting = SalonSetting::current();
+
+            $setting->update([
                 'hero_label' => $validated['hero_label'] ?? null,
                 'hero_title' => $validated['hero_title'] ?? null,
                 'concept_title' => $validated['concept_title'] ?? null,
                 'concept' => $validated['concept'] ?? null,
+                'concept_image' => $this->storeImage(
+                    $request->file('concept_image'),
+                    'settings/concept',
+                    $setting->concept_image
+                ),
             ]);
 
             foreach ($validated['section_order'] as $index => $key) {
@@ -72,5 +84,19 @@ class TopPageSettingController extends AdminController
         });
 
         return redirect()->route('admin.home.top')->with('success', 'トップページ設定を更新しました。');
+    }
+
+    public function destroyConceptImage(): RedirectResponse
+    {
+        $setting = SalonSetting::current();
+
+        if ($setting->concept_image) {
+            $this->deleteImage($setting->concept_image);
+            $setting->update([
+                'concept_image' => null,
+            ]);
+        }
+
+        return redirect()->route('admin.home.top')->with('success', 'Concept画像を削除しました。');
     }
 }

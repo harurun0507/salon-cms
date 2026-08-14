@@ -42,6 +42,59 @@ class DesignSetting extends Model
         self::DENSITY_RELAXED,
     ];
 
+    public const SCROLL_COLORED_SCROLLBAR = 'colored_scrollbar';
+
+    public const SCROLL_VERTICAL_INDICATOR = 'vertical_indicator';
+
+    public const SCROLL_DISPLAY_TYPES = [
+        self::SCROLL_COLORED_SCROLLBAR,
+        self::SCROLL_VERTICAL_INDICATOR,
+    ];
+
+    public const DETAIL_DISPLAY_PAGE = 'page';
+
+    public const DETAIL_DISPLAY_MODAL = 'modal';
+
+    public const DETAIL_DISPLAY_TYPES = [
+        self::DETAIL_DISPLAY_PAGE,
+        self::DETAIL_DISPLAY_MODAL,
+    ];
+
+    public const MODAL_OVERLAY_LIGHT = 'light';
+
+    public const MODAL_OVERLAY_STANDARD = 'standard';
+
+    public const MODAL_OVERLAY_DARK = 'dark';
+
+    public const MODAL_OVERLAY_BLUR = 'blur';
+
+    public const MODAL_OVERLAY_STYLES = [
+        self::MODAL_OVERLAY_LIGHT,
+        self::MODAL_OVERLAY_STANDARD,
+        self::MODAL_OVERLAY_DARK,
+        self::MODAL_OVERLAY_BLUR,
+    ];
+
+    public const MODAL_OVERLAY_LABELS = [
+        self::MODAL_OVERLAY_LIGHT => '薄い',
+        self::MODAL_OVERLAY_STANDARD => '標準',
+        self::MODAL_OVERLAY_DARK => '濃い',
+        self::MODAL_OVERLAY_BLUR => 'ぼかしあり',
+    ];
+
+    /**
+     * Overlay opacity / blur tokens for public content modals.
+     * "blur" matches the previous hard-coded look (rgb(30 26 22 / 0.62) + blur(2px)).
+     *
+     * @var array<string, array{opacity: float, blur: string}>
+     */
+    public const MODAL_OVERLAY_TOKENS = [
+        self::MODAL_OVERLAY_LIGHT => ['opacity' => 0.28, 'blur' => '0px'],
+        self::MODAL_OVERLAY_STANDARD => ['opacity' => 0.45, 'blur' => '0px'],
+        self::MODAL_OVERLAY_DARK => ['opacity' => 0.72, 'blur' => '0px'],
+        self::MODAL_OVERLAY_BLUR => ['opacity' => 0.62, 'blur' => '2px'],
+    ];
+
     /** Soft fill derived from accent: ~35% accent + ~65% white (hover backgrounds). */
     public const SECONDARY_SOFT_MIX_AMOUNT = 0.35;
 
@@ -54,6 +107,16 @@ class DesignSetting extends Model
         'scrollbar_thumb_color' => '#c8c0b2',
         'scrollbar_track_color' => '#f1ece3',
         'scrollbar_thumb_hover_color' => '#afa692',
+        'scroll_display_type' => self::SCROLL_COLORED_SCROLLBAR,
+        'news_detail_display' => self::DETAIL_DISPLAY_PAGE,
+        'blog_detail_display' => self::DETAIL_DISPLAY_PAGE,
+        'gallery_detail_display' => self::DETAIL_DISPLAY_PAGE,
+        'modal_overlay_style' => self::MODAL_OVERLAY_BLUR,
+        'modal_overlay_color' => '#1e1a16',
+        /** Soft fills matching the public business-calendar defaults. */
+        'calendar_holiday_color' => '#d1d4c8',
+        'calendar_temporary_color' => '#ded6cd',
+        'calendar_hours_color' => '#d1c4b4',
         'heading_font' => self::FONT_SERIF,
         'body_font' => self::FONT_SANS,
         'button_radius' => self::RADIUS_LARGE,
@@ -105,6 +168,15 @@ class DesignSetting extends Model
         'scrollbar_thumb_color',
         'scrollbar_track_color',
         'scrollbar_thumb_hover_color',
+        'scroll_display_type',
+        'news_detail_display',
+        'blog_detail_display',
+        'gallery_detail_display',
+        'modal_overlay_style',
+        'modal_overlay_color',
+        'calendar_holiday_color',
+        'calendar_temporary_color',
+        'calendar_hours_color',
         'heading_font',
         'body_font',
         'button_radius',
@@ -125,6 +197,24 @@ class DesignSetting extends Model
     public static function normalizeHex(string $value): string
     {
         return strtolower(trim($value));
+    }
+
+    /**
+     * Comma-separated RGB channels for use in rgba(var(--x), opacity).
+     */
+    public static function hexToRgbChannels(string $hex): string
+    {
+        $normalized = self::normalizeHex($hex);
+        if (! self::isValidHex($normalized)) {
+            $normalized = self::DEFAULTS['modal_overlay_color'];
+        }
+
+        return sprintf(
+            '%d, %d, %d',
+            hexdec(substr($normalized, 1, 2)),
+            hexdec(substr($normalized, 3, 2)),
+            hexdec(substr($normalized, 5, 2))
+        );
     }
 
     /**
@@ -187,11 +277,185 @@ class DesignSetting extends Model
         return self::DENSITY_TOKENS[$density]['card_padding'];
     }
 
+    public function resolvedScrollDisplayType(): string
+    {
+        return $this->safeEnum(
+            $this->scroll_display_type,
+            self::SCROLL_DISPLAY_TYPES,
+            self::DEFAULTS['scroll_display_type']
+        );
+    }
+
+    public function usesVerticalScrollIndicator(): bool
+    {
+        return $this->resolvedScrollDisplayType() === self::SCROLL_VERTICAL_INDICATOR;
+    }
+
+    public function usesColoredScrollbar(): bool
+    {
+        return $this->resolvedScrollDisplayType() === self::SCROLL_COLORED_SCROLLBAR;
+    }
+
+    public function resolvedNewsDetailDisplay(): string
+    {
+        return $this->safeEnum(
+            $this->news_detail_display,
+            self::DETAIL_DISPLAY_TYPES,
+            self::DEFAULTS['news_detail_display']
+        );
+    }
+
+    public function resolvedBlogDetailDisplay(): string
+    {
+        return $this->safeEnum(
+            $this->blog_detail_display,
+            self::DETAIL_DISPLAY_TYPES,
+            self::DEFAULTS['blog_detail_display']
+        );
+    }
+
+    public function resolvedGalleryDetailDisplay(): string
+    {
+        return $this->safeEnum(
+            $this->gallery_detail_display,
+            self::DETAIL_DISPLAY_TYPES,
+            self::DEFAULTS['gallery_detail_display']
+        );
+    }
+
+    public function usesNewsDetailModal(): bool
+    {
+        return $this->resolvedNewsDetailDisplay() === self::DETAIL_DISPLAY_MODAL;
+    }
+
+    public function usesBlogDetailModal(): bool
+    {
+        return $this->resolvedBlogDetailDisplay() === self::DETAIL_DISPLAY_MODAL;
+    }
+
+    public function usesGalleryDetailModal(): bool
+    {
+        return $this->resolvedGalleryDetailDisplay() === self::DETAIL_DISPLAY_MODAL;
+    }
+
+    public function resolvedModalOverlayStyle(): string
+    {
+        return $this->safeEnum(
+            $this->modal_overlay_style,
+            self::MODAL_OVERLAY_STYLES,
+            self::DEFAULTS['modal_overlay_style']
+        );
+    }
+
+    public function resolvedModalOverlayColor(): string
+    {
+        return $this->safeHex($this->modal_overlay_color, self::DEFAULTS['modal_overlay_color']);
+    }
+
+    /**
+     * @return array{opacity: float, blur: string}
+     */
+    public function resolvedModalOverlayTokens(): array
+    {
+        return self::MODAL_OVERLAY_TOKENS[$this->resolvedModalOverlayStyle()];
+    }
+
+    public function resolvedModalOverlayOpacity(): string
+    {
+        return number_format($this->resolvedModalOverlayTokens()['opacity'], 2, '.', '');
+    }
+
+    public function resolvedModalOverlayBlur(): string
+    {
+        return $this->resolvedModalOverlayTokens()['blur'];
+    }
+
     /**
      * Whitelisted CSS custom properties for public site / admin preview.
      *
      * @return array<string, string>
      */
+    /**
+     * Resolved business-calendar fill colors (admin pickers / CSS).
+     *
+     * @return array{holiday: string, temporary: string, hours: string}
+     */
+    public function resolvedBusinessCalendarColors(): array
+    {
+        return [
+            'holiday' => $this->safeHex(
+                $this->calendar_holiday_color,
+                self::DEFAULTS['calendar_holiday_color']
+            ),
+            'temporary' => $this->safeHex(
+                $this->calendar_temporary_color,
+                self::DEFAULTS['calendar_temporary_color']
+            ),
+            'hours' => $this->safeHex(
+                $this->calendar_hours_color,
+                self::DEFAULTS['calendar_hours_color']
+            ),
+        ];
+    }
+
+    /**
+     * Derive readable text / border / accent from a calendar fill color.
+     *
+     * @return array{bg: string, border: string, text: string, accent: string}
+     */
+    public static function businessCalendarSwatchTokens(string $backgroundHex): array
+    {
+        $bg = self::isValidHex(self::normalizeHex($backgroundHex))
+            ? self::normalizeHex($backgroundHex)
+            : self::DEFAULTS['calendar_holiday_color'];
+        $ink = '#3a332e';
+
+        return [
+            'bg' => $bg,
+            'border' => self::mixHex($bg, $ink, 0.38),
+            'text' => self::mixHex($bg, $ink, 0.62),
+            'accent' => self::mixHex($bg, $ink, 0.72),
+        ];
+    }
+
+    /**
+     * Mix two #RRGGBB colors. $toRatio is the amount of $to (0–1).
+     */
+    public static function mixHex(string $from, string $to, float $toRatio): string
+    {
+        $from = self::normalizeHex($from);
+        $to = self::normalizeHex($to);
+        if (! self::isValidHex($from) || ! self::isValidHex($to)) {
+            return self::DEFAULTS['text_color'];
+        }
+
+        $ratio = max(0.0, min(1.0, $toRatio));
+        $fromRgb = self::hexToRgbArray($from);
+        $toRgb = self::hexToRgbArray($to);
+
+        $mixed = [
+            (int) round($fromRgb[0] * (1 - $ratio) + $toRgb[0] * $ratio),
+            (int) round($fromRgb[1] * (1 - $ratio) + $toRgb[1] * $ratio),
+            (int) round($fromRgb[2] * (1 - $ratio) + $toRgb[2] * $ratio),
+        ];
+
+        return sprintf('#%02x%02x%02x', $mixed[0], $mixed[1], $mixed[2]);
+    }
+
+    /**
+     * @return array{0: int, 1: int, 2: int}
+     */
+    public static function hexToRgbArray(string $hex): array
+    {
+        $hex = ltrim(self::normalizeHex($hex), '#');
+
+        return [
+            hexdec(substr($hex, 0, 2)),
+            hexdec(substr($hex, 2, 2)),
+            hexdec(substr($hex, 4, 2)),
+        ];
+    }
+
     public function cssVariables(): array
     {
         $primary = $this->safeHex($this->primary_color, self::DEFAULTS['primary_color']);
@@ -201,6 +465,12 @@ class DesignSetting extends Model
         $scrollbarThumb = $this->safeHex($this->scrollbar_thumb_color, self::DEFAULTS['scrollbar_thumb_color']);
         $scrollbarTrack = $this->safeHex($this->scrollbar_track_color, self::DEFAULTS['scrollbar_track_color']);
         $scrollbarThumbHover = $this->safeHex($this->scrollbar_thumb_hover_color, self::DEFAULTS['scrollbar_thumb_hover_color']);
+        $modalOverlayColor = $this->resolvedModalOverlayColor();
+        $modalOverlayBlur = $this->resolvedModalOverlayBlur();
+        $calendarColors = $this->resolvedBusinessCalendarColors();
+        $holidayTokens = self::businessCalendarSwatchTokens($calendarColors['holiday']);
+        $temporaryTokens = self::businessCalendarSwatchTokens($calendarColors['temporary']);
+        $hoursTokens = self::businessCalendarSwatchTokens($calendarColors['hours']);
 
         return [
             '--site-primary' => $primary,
@@ -211,6 +481,21 @@ class DesignSetting extends Model
             '--site-scrollbar-thumb' => $scrollbarThumb,
             '--site-scrollbar-track' => $scrollbarTrack,
             '--site-scrollbar-thumb-hover' => $scrollbarThumbHover,
+            '--site-modal-overlay-color' => $modalOverlayColor,
+            '--site-modal-overlay-rgb' => self::hexToRgbChannels($modalOverlayColor),
+            '--site-modal-overlay-opacity' => $this->resolvedModalOverlayOpacity(),
+            '--site-modal-overlay-blur' => $modalOverlayBlur,
+            '--site-modal-overlay-filter' => $modalOverlayBlur === '0px' ? 'none' : 'blur('.$modalOverlayBlur.')',
+            '--site-calendar-holiday-bg' => $holidayTokens['bg'],
+            '--site-calendar-holiday-border' => $holidayTokens['border'],
+            '--site-calendar-holiday-text' => $holidayTokens['text'],
+            '--site-calendar-temporary-bg' => $temporaryTokens['bg'],
+            '--site-calendar-temporary-border' => $temporaryTokens['border'],
+            '--site-calendar-temporary-text' => $temporaryTokens['text'],
+            '--site-calendar-hours-bg' => $hoursTokens['bg'],
+            '--site-calendar-hours-border' => $hoursTokens['border'],
+            '--site-calendar-hours-text' => $hoursTokens['text'],
+            '--site-calendar-hours-accent' => $hoursTokens['accent'],
             '--site-button-radius' => $this->resolvedButtonRadius(),
             '--site-card-radius' => $this->resolvedCardRadius(),
             '--site-section-spacing' => $this->resolvedSectionSpacing(),
