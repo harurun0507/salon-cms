@@ -1429,15 +1429,8 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         outline-offset: 2px;
     }
 
-    /* Shared hero carousel: horizontal track + drag/swipe follow */
-    .hero-slides {
-        position: absolute;
-        inset: 0;
-        z-index: 0;
-        overflow: hidden;
-    }
-
-    .hero-slides-track {
+    /* Shared slide carousel track (hero + gallery detail) */
+    [data-slide-carousel-track] {
         display: flex;
         height: 100%;
         width: 100%;
@@ -1448,20 +1441,43 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         transition-duration: 0ms;
     }
 
-    .hero-slider.is-animating .hero-slides-track {
+    [data-slide-carousel].is-animating [data-slide-carousel-track] {
         transition-duration: 450ms;
     }
 
-    .hero-slider.is-dragging .hero-slides-track {
+    [data-slide-carousel].is-dragging [data-slide-carousel-track] {
         transition-duration: 0ms;
     }
 
-    .hero-slide {
+    [data-slide-carousel-slide] {
         position: relative;
         flex: 0 0 100%;
         width: 100%;
-        height: 100%;
         min-width: 100%;
+        height: 100%;
+    }
+
+    [data-slide-carousel][data-slide-carousel-draggable] {
+        cursor: grab;
+        touch-action: pan-y;
+        -webkit-user-drag: none;
+    }
+
+    [data-slide-carousel][data-slide-carousel-draggable].is-dragging {
+        cursor: grabbing;
+        user-select: none;
+    }
+
+    [data-slide-carousel][data-slide-carousel-draggable].is-dragging * {
+        cursor: grabbing;
+    }
+
+    /* Shared hero carousel: horizontal track + drag/swipe follow */
+    .hero-slides {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        overflow: hidden;
     }
 
     .hero-slide-image {
@@ -3826,34 +3842,49 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         }
     }
 
+    .gallery-detail-track {
+        height: 100%;
+    }
+
     .gallery-detail-slide {
-        position: absolute;
-        inset: 0;
-        z-index: 0;
         display: flex;
         align-items: center;
         justify-content: center;
         margin: 0;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.35s ease;
     }
 
-    .gallery-detail-slide.is-active {
-        z-index: 1;
-        opacity: 1;
-        pointer-events: auto;
+    /* Single-image gallery: keep fill inside the framed area */
+    .gallery-detail-image-frame > .gallery-detail-slide {
+        position: absolute;
+        inset: 0;
     }
 
     .gallery-detail-slide .gallery-media-image--contain {
         width: 100%;
         height: 100%;
+        -webkit-user-drag: none;
+        user-select: none;
+        pointer-events: none;
     }
 
-    @media (prefers-reduced-motion: reduce) {
-        .gallery-detail-slide {
-            transition: none;
-        }
+    .gallery-detail-media--carousel {
+        cursor: grab;
+        touch-action: pan-y;
+    }
+
+    .gallery-detail-media--carousel.is-dragging {
+        cursor: grabbing;
+        user-select: none;
+    }
+
+    .gallery-detail-media--carousel [data-slide-carousel-controls],
+    .gallery-detail-media--carousel [data-slide-carousel-controls] * {
+        cursor: auto;
+    }
+
+    .gallery-detail-media--carousel .gallery-detail-nav,
+    .gallery-detail-media--carousel .site-carousel-dot {
+        cursor: pointer;
     }
 
     .gallery-detail-nav {

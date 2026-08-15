@@ -10,9 +10,10 @@
         $topSections = $topSections ?? collect();
         $design = $design ?? \App\Models\DesignSetting::current();
         $isVerticalIndicator = $design->usesVerticalScrollIndicator();
-        $useGalleryModal = $design->usesGalleryDetailModal();
-        $useNewsModal = $design->usesNewsDetailModal();
-        $useBlogModal = $design->usesBlogDetailModal();
+        // VIトップは管理画面の詳細表示設定に関わらずモーダルを優先（「すべて見る」は一覧遷移のまま）
+        $useGalleryModal = $isVerticalIndicator || $design->usesGalleryDetailModal();
+        $useNewsModal = $isVerticalIndicator || $design->usesNewsDetailModal();
+        $useBlogModal = $isVerticalIndicator || $design->usesBlogDetailModal();
     @endphp
 
     {{-- Hero --}}
@@ -20,15 +21,22 @@
         class="hero-slider relative min-h-[70vh] overflow-hidden{{ $heroSliderEnabled ? ' hero-slider--draggable' : '' }}"
         id="hero-slider"
         data-hero-count="{{ $heroCount }}"
-        @if($heroSliderEnabled) data-autoplay="5000" data-hero-drag @endif
+        @if($heroSliderEnabled)
+            data-autoplay="5000"
+            data-hero-drag
+            data-slide-carousel
+            data-slide-carousel-interval="5000"
+            data-slide-carousel-draggable
+        @endif
     >
         @if($heroCount > 0)
-            <div class="hero-slides" id="hero-slides" aria-live="polite">
-                <div class="hero-slides-track" id="hero-slides-track">
+            <div class="hero-slides" id="hero-slides" data-slide-carousel-viewport aria-live="polite">
+                <div class="hero-slides-track" id="hero-slides-track" data-slide-carousel-track>
                     @foreach($heroImages as $index => $heroImage)
                         <div
                             class="hero-slide"
                             data-hero-index="{{ $index }}"
+                            data-slide-carousel-slide
                             @if($index !== 0) aria-hidden="true" @endif
                         >
                             <img
@@ -63,303 +71,31 @@
         </div>
 
         @if($heroSliderEnabled)
-            <div class="hero-slider-controls" data-hero-controls>
+            <div class="hero-slider-controls" data-hero-controls data-slide-carousel-controls>
                 <div id="hero-dots" class="flex items-center gap-2" role="tablist" aria-label="メインビジュアルの位置">
                     @foreach($heroImages as $index => $heroImage)
                         <button
                             type="button"
                             class="hero-dot site-carousel-dot {{ $index === 0 ? 'is-active' : '' }}"
                             data-hero-dot="{{ $index }}"
+                            data-slide-carousel-dot
+                            data-slide-carousel-index="{{ $index }}"
                             aria-label="画像{{ $index + 1 }}"
                             @if($index === 0) aria-current="true" @endif
                         ></button>
                     @endforeach
                 </div>
                 <div class="hero-slider-navs">
-                    <button type="button" id="hero-prev" class="hero-slider-nav" aria-label="前の画像">
+                    <button type="button" id="hero-prev" class="hero-slider-nav" data-slide-carousel-prev aria-label="前の画像">
                         <svg class="hero-slider-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7"/></svg>
                     </button>
-                    <button type="button" id="hero-next" class="hero-slider-nav" aria-label="次の画像">
+                    <button type="button" id="hero-next" class="hero-slider-nav" data-slide-carousel-next aria-label="次の画像">
                         <svg class="hero-slider-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/></svg>
                     </button>
                 </div>
             </div>
         @endif
     </section>
-
-    @if($heroSliderEnabled)
-        <script>
-            (function () {
-                const root = document.getElementById('hero-slider');
-                const slidesEl = document.getElementById('hero-slides');
-                const track = document.getElementById('hero-slides-track');
-                if (!root || !slidesEl || !track) return;
-
-                const realSlides = Array.from(track.querySelectorAll('.hero-slide'));
-                const dots = Array.from(root.querySelectorAll('.hero-dot'));
-                const prevBtn = document.getElementById('hero-prev');
-                const nextBtn = document.getElementById('hero-next');
-                const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-                const intervalMs = parseInt(root.dataset.autoplay || '5000', 10);
-                const DRAG_THRESHOLD_PX = 56;
-                const SLIDE_MS = reduceMotion ? 0 : 450;
-                const slideCount = realSlides.length;
-
-                if (slideCount < 2) return;
-
-                // 無限ループ用に前後クローン
-                const firstClone = realSlides[0].cloneNode(true);
-                const lastClone = realSlides[slideCount - 1].cloneNode(true);
-                firstClone.removeAttribute('data-hero-index');
-                lastClone.removeAttribute('data-hero-index');
-                firstClone.setAttribute('aria-hidden', 'true');
-                lastClone.setAttribute('aria-hidden', 'true');
-                firstClone.classList.add('hero-slide--clone');
-                lastClone.classList.add('hero-slide--clone');
-                track.insertBefore(lastClone, realSlides[0]);
-                track.appendChild(firstClone);
-
-                let index = 0; // 論理インデックス 0..n-1
-                let position = 1; // トラック位置（クローン込み）
-                let timer = null;
-                let isAnimating = false;
-                let dragPointerId = null;
-                let dragStartX = null;
-                let dragDeltaX = 0;
-                let dragActive = false;
-
-                function viewportWidth() {
-                    return slidesEl.clientWidth || root.clientWidth || 1;
-                }
-
-                function setTrackOffset(offsetPx, withTransition) {
-                    if (withTransition && SLIDE_MS > 0) {
-                        root.classList.add('is-animating');
-                        track.style.transitionDuration = SLIDE_MS + 'ms';
-                    } else {
-                        root.classList.remove('is-animating');
-                        track.style.transitionDuration = '0ms';
-                    }
-                    track.style.transform = 'translate3d(' + offsetPx + 'px, 0, 0)';
-                }
-
-                function offsetForPosition(pos, dragPx) {
-                    return -pos * viewportWidth() + (dragPx || 0);
-                }
-
-                function updateDotsAndAria() {
-                    realSlides.forEach(function (slide, i) {
-                        const active = i === index;
-                        slide.setAttribute('aria-hidden', active ? 'false' : 'true');
-                    });
-                    dots.forEach(function (dot, i) {
-                        const active = i === index;
-                        dot.classList.toggle('is-active', active);
-                        if (active) {
-                            dot.setAttribute('aria-current', 'true');
-                        } else {
-                            dot.removeAttribute('aria-current');
-                        }
-                    });
-                }
-
-                function normalizePosition() {
-                    if (position === 0) {
-                        position = slideCount;
-                        index = slideCount - 1;
-                        setTrackOffset(offsetForPosition(position, 0), false);
-                    } else if (position === slideCount + 1) {
-                        position = 1;
-                        index = 0;
-                        setTrackOffset(offsetForPosition(position, 0), false);
-                    } else {
-                        index = position - 1;
-                    }
-                    updateDotsAndAria();
-                }
-
-                function afterSlideTransition(callback) {
-                    if (SLIDE_MS <= 0) {
-                        callback();
-                        return;
-                    }
-                    let done = false;
-                    const finish = function () {
-                        if (done) return;
-                        done = true;
-                        track.removeEventListener('transitionend', onEnd);
-                        window.clearTimeout(fallback);
-                        callback();
-                    };
-                    const onEnd = function (event) {
-                        if (event.target !== track) return;
-                        if (event.propertyName && event.propertyName !== 'transform') return;
-                        finish();
-                    };
-                    track.addEventListener('transitionend', onEnd);
-                    const fallback = window.setTimeout(finish, SLIDE_MS + 80);
-                }
-
-                function goToPosition(nextPosition, restart) {
-                    if (isAnimating || dragActive) return;
-                    if (nextPosition === position) {
-                        if (restart) startTimer();
-                        return;
-                    }
-
-                    isAnimating = true;
-                    stopTimer();
-                    position = nextPosition;
-                    setTrackOffset(offsetForPosition(position, 0), true);
-
-                    afterSlideTransition(function () {
-                        normalizePosition();
-                        isAnimating = false;
-                        root.classList.remove('is-animating');
-                        if (restart !== false) startTimer();
-                    });
-                }
-
-                // 左右ボタン・ドット・自動・ドラッグ共通
-                function goPrev() {
-                    goToPosition(position - 1, true);
-                }
-
-                function goNext() {
-                    goToPosition(position + 1, true);
-                }
-
-                function goToIndex(targetIndex) {
-                    const next = ((targetIndex % slideCount) + slideCount) % slideCount;
-                    if (next === index && !isAnimating) {
-                        startTimer();
-                        return;
-                    }
-                    goToPosition(next + 1, true);
-                }
-
-                function startTimer() {
-                    stopTimer();
-                    if (reduceMotion || slideCount < 2) return;
-                    timer = window.setInterval(function () {
-                        goNext();
-                    }, intervalMs);
-                }
-
-                function stopTimer() {
-                    if (timer) {
-                        window.clearInterval(timer);
-                        timer = null;
-                    }
-                }
-
-                function isDragIgnoredTarget(target) {
-                    if (!(target instanceof Element)) return true;
-                    return Boolean(target.closest('a, button, input, textarea, select, label, [data-hero-controls]'));
-                }
-
-                function clearDragListeners() {
-                    window.removeEventListener('pointermove', onWindowPointerMove, true);
-                    window.removeEventListener('pointerup', onWindowPointerUp, true);
-                    window.removeEventListener('pointercancel', onWindowPointerCancel, true);
-                }
-
-                function endDragState() {
-                    dragPointerId = null;
-                    dragStartX = null;
-                    dragDeltaX = 0;
-                    dragActive = false;
-                    root.classList.remove('is-dragging');
-                    clearDragListeners();
-                }
-
-                function onWindowPointerMove(event) {
-                    if (!dragActive || event.pointerId !== dragPointerId) return;
-                    dragDeltaX = event.clientX - dragStartX;
-                    event.preventDefault();
-                    setTrackOffset(offsetForPosition(position, dragDeltaX), false);
-                }
-
-                function onWindowPointerUp(event) {
-                    if (!dragActive) return;
-                    if (typeof event.pointerId === 'number' && event.pointerId !== dragPointerId) return;
-
-                    const deltaX = event.clientX - dragStartX;
-                    endDragState();
-
-                    if (deltaX <= -DRAG_THRESHOLD_PX) {
-                        goNext();
-                        return;
-                    }
-                    if (deltaX >= DRAG_THRESHOLD_PX) {
-                        goPrev();
-                        return;
-                    }
-
-                    // 閾値未満: 現在位置へスナップバック
-                    isAnimating = true;
-                    setTrackOffset(offsetForPosition(position, 0), true);
-                    afterSlideTransition(function () {
-                        isAnimating = false;
-                        root.classList.remove('is-animating');
-                        startTimer();
-                    });
-                }
-
-                function onWindowPointerCancel() {
-                    if (!dragActive) return;
-                    endDragState();
-                    isAnimating = true;
-                    setTrackOffset(offsetForPosition(position, 0), true);
-                    afterSlideTransition(function () {
-                        isAnimating = false;
-                        root.classList.remove('is-animating');
-                        startTimer();
-                    });
-                }
-
-                function onPointerDown(event) {
-                    if (isAnimating || dragActive) return;
-                    if (event.pointerType === 'mouse' && event.button !== 0) return;
-                    if (isDragIgnoredTarget(event.target)) return;
-
-                    dragActive = true;
-                    dragPointerId = event.pointerId;
-                    dragStartX = event.clientX;
-                    dragDeltaX = 0;
-                    stopTimer();
-                    root.classList.add('is-dragging');
-                    setTrackOffset(offsetForPosition(position, 0), false);
-
-                    window.addEventListener('pointermove', onWindowPointerMove, true);
-                    window.addEventListener('pointerup', onWindowPointerUp, true);
-                    window.addEventListener('pointercancel', onWindowPointerCancel, true);
-                }
-
-                prevBtn?.addEventListener('click', function () { goPrev(); });
-                nextBtn?.addEventListener('click', function () { goNext(); });
-                dots.forEach(function (dot) {
-                    dot.addEventListener('click', function () {
-                        goToIndex(parseInt(dot.dataset.heroDot || '0', 10));
-                    });
-                });
-
-                root.addEventListener('pointerdown', onPointerDown);
-                root.addEventListener('dragstart', function (event) {
-                    event.preventDefault();
-                });
-
-                window.addEventListener('resize', function () {
-                    setTrackOffset(offsetForPosition(position, 0), false);
-                });
-
-                // 初期位置（先頭クローンの次 = 実スライド0）
-                setTrackOffset(offsetForPosition(position, 0), false);
-                updateDotsAndAria();
-                startTimer();
-            })();
-        </script>
-    @endif
 
     @if($isVerticalIndicator)
         @include('public.partials.home-vi.concept')

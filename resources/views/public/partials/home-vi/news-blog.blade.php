@@ -5,8 +5,11 @@
     $showNewsBlock = $homeNewsList->isNotEmpty();
     $showBlogBlock = $featuredBlog !== null;
     $design = $design ?? \App\Models\DesignSetting::current();
-    $useNewsModal = $design->usesNewsDetailModal();
-    $useBlogModal = $design->usesBlogDetailModal();
+    // Prefer parent home flags; VI always opens detail modals on the top page.
+    $useNewsModal = $useNewsModal
+        ?? ($design->usesVerticalScrollIndicator() || $design->usesNewsDetailModal());
+    $useBlogModal = $useBlogModal
+        ?? ($design->usesVerticalScrollIndicator() || $design->usesBlogDetailModal());
     $bothColumns = $showNewsBlock && $showBlogBlock;
     $salon = $setting ?? \App\Models\SalonSetting::current();
 @endphp

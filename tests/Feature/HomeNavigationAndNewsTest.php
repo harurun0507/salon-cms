@@ -277,6 +277,79 @@ class HomeNavigationAndNewsTest extends TestCase
             $html
         );
         $this->assertStringNotContainsString('home-vi-more-link--on-dark', $html);
+
+        // VI home prefers modals even when detail_display defaults to page.
+        $this->assertStringContainsString('data-gallery-modal-trigger', $html);
+        $this->assertStringContainsString('data-gallery-modal', $html);
+        $this->assertMatchesRegularExpression(
+            '/href="'.preg_quote(route('gallery'), '/').'"[^>]*>\s*すべて見る →/u',
+            $html
+        );
+    }
+
+    public function test_vertical_indicator_home_forces_news_blog_gallery_modals_when_detail_display_is_page(): void
+    {
+        Storage::fake('public');
+        SalonSetting::current();
+        TopPageSection::ensureDefaults();
+        DesignSetting::current()->update([
+            'scroll_display_type' => DesignSetting::SCROLL_VERTICAL_INDICATOR,
+            'news_detail_display' => DesignSetting::DETAIL_DISPLAY_PAGE,
+            'blog_detail_display' => DesignSetting::DETAIL_DISPLAY_PAGE,
+            'gallery_detail_display' => DesignSetting::DETAIL_DISPLAY_PAGE,
+        ]);
+
+        $gallery = Gallery::query()->create([
+            'title' => 'VIモーダル確認',
+            'caption' => null,
+            'sort_order' => 1,
+            'is_published' => true,
+        ]);
+        GalleryImage::query()->create([
+            'gallery_id' => $gallery->id,
+            'image_path' => UploadedFile::fake()->image('vi-g.jpg')->store('galleries', 'public'),
+            'display_order' => 1,
+        ]);
+
+        News::query()->create([
+            'title' => 'VIお知らせモーダル',
+            'slug' => 'vi-news-modal',
+            'body' => '本文',
+            'is_published' => true,
+            'published_at' => now()->subDay(),
+            'display_order' => 1,
+        ]);
+        Blog::query()->create([
+            'title' => 'VIブログモーダル',
+            'slug' => 'vi-blog-modal',
+            'body' => '本文',
+            'is_published' => true,
+            'published_at' => now()->subDay(),
+            'display_order' => 1,
+        ]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('data-gallery-modal-trigger', $html);
+        $this->assertStringContainsString('data-gallery-modal', $html);
+        $this->assertStringContainsString('data-news-modal-trigger', $html);
+        $this->assertStringContainsString('data-news-modal', $html);
+        $this->assertStringContainsString('data-blog-modal-trigger', $html);
+        $this->assertStringContainsString('data-blog-modal', $html);
+
+        // 「すべて見る」は一覧ページへ
+        $this->assertMatchesRegularExpression(
+            '/href="'.preg_quote(route('gallery'), '/').'"[^>]*>\s*すべて見る →/u',
+            $html
+        );
+        $this->assertMatchesRegularExpression(
+            '/href="'.preg_quote(route('news.index'), '/').'"[^>]*>\s*すべて見る →/u',
+            $html
+        );
+        $this->assertMatchesRegularExpression(
+            '/href="'.preg_quote(route('blog.index'), '/').'"[^>]*>\s*すべて見る →/u',
+            $html
+        );
     }
 
     public function test_vertical_indicator_news_blog_uses_asymmetric_split_layout(): void

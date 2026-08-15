@@ -201,11 +201,10 @@ class HeroImageTest extends TestCase
         $this->assertStringContainsString('data-hero-drag', $html);
         $this->assertStringContainsString('draggable="false"', $html);
         $this->assertStringContainsString('hero-slides-track', $html);
-        $this->assertStringContainsString('DRAG_THRESHOLD_PX', $html);
-        $this->assertStringContainsString('function goPrev', $html);
-        $this->assertStringContainsString('function goNext', $html);
-        $this->assertStringContainsString('onWindowPointerMove', $html);
-        $this->assertStringContainsString('offsetForPosition', $html);
+        $this->assertStringContainsString('data-slide-carousel', $html);
+        $this->assertStringContainsString('data-slide-carousel-track', $html);
+        $this->assertStringContainsString('data-slide-carousel-prev', $html);
+        $this->assertStringContainsString('data-slide-carousel-next', $html);
         $this->assertStringContainsString('hero-slide-image', $html);
         $this->assertStringNotContainsString('transition-opacity duration-700', $html);
     }

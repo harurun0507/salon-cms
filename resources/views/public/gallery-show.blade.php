@@ -28,10 +28,16 @@
                 </div>
 
                 <div
-                    class="gallery-detail-media min-w-0"
+                    class="gallery-detail-media min-w-0{{ $hasCarousel ? ' gallery-detail-media--carousel' : '' }}"
                     @if($hasCarousel)
                         data-gallery-carousel
                         data-gallery-interval="5000"
+                        data-slide-carousel
+                        data-slide-carousel-interval="5000"
+                        data-slide-carousel-draggable
+                        data-slide-carousel-pause-hover
+                        data-slide-carousel-pause-focus
+                        data-slide-carousel-keyboard
                         tabindex="0"
                         role="region"
                         aria-roledescription="carousel"
@@ -39,30 +45,56 @@
                     @endif
                 >
                     <div class="gallery-detail-frame mx-auto w-full max-w-2xl lg:max-w-none">
-                        <div class="gallery-detail-image-frame" data-gallery-stage>
-                            @foreach($images as $index => $image)
-                                <figure
-                                    class="gallery-detail-slide {{ $index === 0 ? 'is-active' : '' }}"
-                                    data-gallery-slide
-                                    data-gallery-index="{{ $index }}"
-                                    @if($index !== 0) aria-hidden="true" @endif
-                                >
-                                    <img
-                                        src="{{ asset('storage/'.$image->image_path) }}"
-                                        alt="{{ $image->alt_text ?: $displayTitle }}"
-                                        class="gallery-media-image gallery-media-image--contain"
-                                        @if($index > 0) loading="lazy" @endif
+                        <div
+                            class="gallery-detail-image-frame"
+                            data-gallery-stage
+                            @if($hasCarousel) data-slide-carousel-viewport @endif
+                        >
+                            @if($hasCarousel)
+                                <div class="gallery-detail-track" data-slide-carousel-track>
+                                    @foreach($images as $index => $image)
+                                        <figure
+                                            class="gallery-detail-slide {{ $index === 0 ? 'is-active' : '' }}"
+                                            data-gallery-slide
+                                            data-gallery-index="{{ $index }}"
+                                            data-slide-carousel-slide
+                                            @if($index !== 0) aria-hidden="true" @endif
+                                        >
+                                            <img
+                                                src="{{ asset('storage/'.$image->image_path) }}"
+                                                alt="{{ $image->alt_text ?: $displayTitle }}"
+                                                class="gallery-media-image gallery-media-image--contain"
+                                                draggable="false"
+                                                @if($index > 0) loading="lazy" @endif
+                                            >
+                                        </figure>
+                                    @endforeach
+                                </div>
+                            @else
+                                @foreach($images as $index => $image)
+                                    <figure
+                                        class="gallery-detail-slide is-active"
+                                        data-gallery-slide
+                                        data-gallery-index="{{ $index }}"
                                     >
-                                </figure>
-                            @endforeach
+                                        <img
+                                            src="{{ asset('storage/'.$image->image_path) }}"
+                                            alt="{{ $image->alt_text ?: $displayTitle }}"
+                                            class="gallery-media-image gallery-media-image--contain"
+                                            draggable="false"
+                                        >
+                                    </figure>
+                                @endforeach
+                            @endif
                         </div>
 
                         @if($hasCarousel)
-                            <div class="mt-5 flex items-center justify-center gap-4">
+                            <div class="mt-5 flex items-center justify-center gap-4" data-slide-carousel-controls>
                                 <button
                                     type="button"
                                     class="gallery-detail-nav"
                                     data-gallery-prev
+                                    data-slide-carousel-prev
                                     aria-label="前の画像"
                                 >
                                     <svg class="gallery-detail-nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -77,6 +109,8 @@
                                             class="site-carousel-dot {{ $index === 0 ? 'is-active' : '' }}"
                                             data-gallery-dot
                                             data-gallery-index="{{ $index }}"
+                                            data-slide-carousel-dot
+                                            data-slide-carousel-index="{{ $index }}"
                                             aria-label="画像{{ $index + 1 }}を表示"
                                             @if($index === 0) aria-current="true" @endif
                                         ></button>
@@ -87,6 +121,7 @@
                                     type="button"
                                     class="gallery-detail-nav"
                                     data-gallery-next
+                                    data-slide-carousel-next
                                     aria-label="次の画像"
                                 >
                                     <svg class="gallery-detail-nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -138,156 +173,4 @@
             </div>
         </div>
     </section>
-
-    @if($hasCarousel)
-        <script>
-            (function () {
-                const root = document.querySelector('[data-gallery-carousel]');
-                if (!root) {
-                    return;
-                }
-
-                const slides = Array.prototype.slice.call(root.querySelectorAll('[data-gallery-slide]'));
-                const dots = Array.prototype.slice.call(root.querySelectorAll('[data-gallery-dot]'));
-                const prevBtn = root.querySelector('[data-gallery-prev]');
-                const nextBtn = root.querySelector('[data-gallery-next]');
-                const stage = root.querySelector('[data-gallery-stage]');
-                const intervalMs = parseInt(root.getAttribute('data-gallery-interval') || '5000', 10);
-                const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-                let index = 0;
-                let timerId = null;
-                let paused = false;
-                let touchStartX = null;
-                let touchStartY = null;
-
-                function goTo(nextIndex, fromUser) {
-                    if (!slides.length) {
-                        return;
-                    }
-                    index = (nextIndex + slides.length) % slides.length;
-                    slides.forEach(function (slide, i) {
-                        const active = i === index;
-                        slide.classList.toggle('is-active', active);
-                        if (active) {
-                            slide.removeAttribute('aria-hidden');
-                        } else {
-                            slide.setAttribute('aria-hidden', 'true');
-                        }
-                    });
-                    dots.forEach(function (dot, i) {
-                        const active = i === index;
-                        dot.classList.toggle('is-active', active);
-                        if (active) {
-                            dot.setAttribute('aria-current', 'true');
-                        } else {
-                            dot.removeAttribute('aria-current');
-                        }
-                    });
-                    if (fromUser) {
-                        restartTimer();
-                    }
-                }
-
-                function stopTimer() {
-                    if (timerId !== null) {
-                        window.clearInterval(timerId);
-                        timerId = null;
-                    }
-                }
-
-                function startTimer() {
-                    stopTimer();
-                    if (reduceMotion || paused || slides.length < 2 || document.hidden) {
-                        return;
-                    }
-                    timerId = window.setInterval(function () {
-                        goTo(index + 1, false);
-                    }, intervalMs);
-                }
-
-                function restartTimer() {
-                    stopTimer();
-                    startTimer();
-                }
-
-                function setPaused(nextPaused) {
-                    paused = !!nextPaused;
-                    if (paused) {
-                        stopTimer();
-                    } else {
-                        startTimer();
-                    }
-                }
-
-                prevBtn?.addEventListener('click', function () { goTo(index - 1, true); });
-                nextBtn?.addEventListener('click', function () { goTo(index + 1, true); });
-                dots.forEach(function (dot) {
-                    dot.addEventListener('click', function () {
-                        goTo(parseInt(dot.getAttribute('data-gallery-index') || '0', 10), true);
-                    });
-                });
-
-                root.addEventListener('keydown', function (e) {
-                    if (e.key === 'ArrowLeft') {
-                        e.preventDefault();
-                        goTo(index - 1, true);
-                    } else if (e.key === 'ArrowRight') {
-                        e.preventDefault();
-                        goTo(index + 1, true);
-                    }
-                });
-
-                root.addEventListener('mouseenter', function () { setPaused(true); });
-                root.addEventListener('mouseleave', function () {
-                    if (!root.contains(document.activeElement)) {
-                        setPaused(false);
-                    }
-                });
-                root.addEventListener('focusin', function () { setPaused(true); });
-                root.addEventListener('focusout', function (e) {
-                    if (!root.contains(e.relatedTarget)) {
-                        setPaused(false);
-                    }
-                });
-
-                document.addEventListener('visibilitychange', function () {
-                    if (document.hidden) {
-                        stopTimer();
-                    } else if (!paused) {
-                        startTimer();
-                    }
-                });
-
-                const swipeTarget = stage || root;
-                swipeTarget.addEventListener('touchstart', function (e) {
-                    if (!e.changedTouches || !e.changedTouches[0]) {
-                        return;
-                    }
-                    touchStartX = e.changedTouches[0].clientX;
-                    touchStartY = e.changedTouches[0].clientY;
-                }, { passive: true });
-
-                swipeTarget.addEventListener('touchend', function (e) {
-                    if (touchStartX === null || !e.changedTouches || !e.changedTouches[0]) {
-                        return;
-                    }
-                    const deltaX = e.changedTouches[0].clientX - touchStartX;
-                    const deltaY = e.changedTouches[0].clientY - (touchStartY || 0);
-                    touchStartX = null;
-                    touchStartY = null;
-                    if (Math.abs(deltaX) < 40 || Math.abs(deltaX) <= Math.abs(deltaY)) {
-                        return;
-                    }
-                    if (deltaX > 0) {
-                        goTo(index - 1, true);
-                    } else {
-                        goTo(index + 1, true);
-                    }
-                }, { passive: true });
-
-                startTimer();
-            })();
-        </script>
-    @endif
 @endsection

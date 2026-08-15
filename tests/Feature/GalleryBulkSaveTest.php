@@ -577,6 +577,7 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringNotContainsString('aspect-[3/4]', $singleHtml);
         $this->assertStringNotContainsString('data-gallery-prev', $singleHtml);
         $this->assertStringNotContainsString('data-gallery-dot', $singleHtml);
+        $this->assertStringNotContainsString('data-slide-carousel', $singleHtml);
         $this->assertStringNotContainsString('担当スタイリスト', $singleHtml);
 
         $multiHtml = $this->get(route('gallery.show', $multi))->assertOk()->getContent();
@@ -584,11 +585,14 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringContainsString('data-gallery-next', $multiHtml);
         $this->assertStringContainsString('data-gallery-dot', $multiHtml);
         $this->assertStringContainsString('data-gallery-interval="5000"', $multiHtml);
+        $this->assertStringContainsString('data-slide-carousel', $multiHtml);
+        $this->assertStringContainsString('data-slide-carousel-track', $multiHtml);
+        $this->assertStringContainsString('data-slide-carousel-draggable', $multiHtml);
+        $this->assertStringContainsString('gallery-detail-track', $multiHtml);
         $this->assertStringContainsString('aria-label="前の画像"', $multiHtml);
         $this->assertStringContainsString('aria-label="次の画像"', $multiHtml);
         $this->assertStringContainsString('画像1を表示', $multiHtml);
         $this->assertStringContainsString('gallery-media-image gallery-media-image--contain', $multiHtml);
-        $this->assertStringContainsString('setInterval', $multiHtml);
         $this->assertStringContainsString('予約する', $multiHtml);
         $this->assertStringContainsString('gallery-detail-layout', $multiHtml);
         $this->assertStringContainsString('max-w-2xl', $multiHtml);
