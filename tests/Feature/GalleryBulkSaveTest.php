@@ -444,7 +444,9 @@ class GalleryBulkSaveTest extends TestCase
         $this->assertStringContainsString('data-gallery-modal-thumbs', $modalHtml);
         $this->assertStringContainsString('"categoryLabel":"HAIR STYLE"', $modalHtml);
         $this->assertStringContainsString('canSwitchGalleries', $modalHtml);
-        $this->assertStringContainsString('IMAGE_AUTO_INTERVAL_MS', $modalHtml);
+        $this->assertStringContainsString('SalonPublicSlideCarousel', $modalHtml);
+        $this->assertStringContainsString('data-slide-carousel-viewport', $modalHtml);
+        $this->assertStringContainsString('data-slide-carousel-prev', $modalHtml);
         $this->assertStringContainsString('isVerticalIndicator()', $modalHtml);
     }
 

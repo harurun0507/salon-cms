@@ -1,5 +1,5 @@
 /**
- * Shared horizontal track carousel (hero / gallery detail).
+ * Shared horizontal track carousel (hero / gallery detail / gallery modal).
  * Drag/swipe with 1:1 follow, snap, clones for looping.
  */
 
@@ -45,8 +45,12 @@ export function initSlideCarousel(root, options = {}) {
     const pauseOnHover = options.pauseOnHover ?? root.hasAttribute('data-slide-carousel-pause-hover');
     const pauseOnFocus = options.pauseOnFocus ?? root.hasAttribute('data-slide-carousel-pause-focus');
     const enableKeyboard = options.enableKeyboard ?? root.hasAttribute('data-slide-carousel-keyboard');
+    const autoplay = options.autoplay !== false;
+    const onIndexChange = typeof options.onIndexChange === 'function' ? options.onIndexChange : null;
 
-    // Loop clones
+    // Remove leftover clones from a previous init on the same track.
+    track.querySelectorAll('.is-clone').forEach((clone) => clone.remove());
+
     const firstClone = realSlides[0].cloneNode(true);
     const lastClone = realSlides[slideCount - 1].cloneNode(true);
     [firstClone, lastClone].forEach((clone) => {
@@ -54,7 +58,9 @@ export function initSlideCarousel(root, options = {}) {
         clone.removeAttribute('data-hero-index');
         clone.removeAttribute('data-gallery-index');
         clone.removeAttribute('data-slide-carousel-index');
+        clone.removeAttribute('data-gallery-modal-slide');
         clone.setAttribute('aria-hidden', 'true');
+        clone.classList.remove('is-active');
     });
     track.insertBefore(lastClone, realSlides[0]);
     track.appendChild(firstClone);
@@ -67,6 +73,9 @@ export function initSlideCarousel(root, options = {}) {
     let dragPointerId = null;
     let dragStartX = null;
     let dragActive = false;
+    let destroyed = false;
+    const listeners = new AbortController();
+    const { signal } = listeners;
 
     function viewportWidth() {
         return viewport.clientWidth || root.clientWidth || 1;
@@ -102,6 +111,7 @@ export function initSlideCarousel(root, options = {}) {
                 dot.removeAttribute('aria-current');
             }
         });
+        onIndexChange?.(index);
     }
 
     function normalizePosition() {
@@ -126,7 +136,7 @@ export function initSlideCarousel(root, options = {}) {
         }
         let done = false;
         const finish = () => {
-            if (done) return;
+            if (done || destroyed) return;
             done = true;
             track.removeEventListener('transitionend', onEnd);
             window.clearTimeout(fallback);
@@ -143,7 +153,7 @@ export function initSlideCarousel(root, options = {}) {
 
     function startTimer() {
         stopTimer();
-        if (reduceMotion || paused || slideCount < 2 || document.hidden) {
+        if (!autoplay || reduceMotion || paused || slideCount < 2 || document.hidden || destroyed) {
             return;
         }
         timer = window.setInterval(() => {
@@ -168,7 +178,7 @@ export function initSlideCarousel(root, options = {}) {
     }
 
     function goToPosition(nextPosition, restart) {
-        if (isAnimating || dragActive) return;
+        if (destroyed || isAnimating || dragActive) return;
         if (nextPosition === position) {
             if (restart) startTimer();
             return;
@@ -180,6 +190,7 @@ export function initSlideCarousel(root, options = {}) {
         setTrackOffset(offsetForPosition(position, 0), true);
 
         afterSlideTransition(() => {
+            if (destroyed) return;
             normalizePosition();
             isAnimating = false;
             root.classList.remove('is-animating');
@@ -249,6 +260,7 @@ export function initSlideCarousel(root, options = {}) {
         isAnimating = true;
         setTrackOffset(offsetForPosition(position, 0), true);
         afterSlideTransition(() => {
+            if (destroyed) return;
             isAnimating = false;
             root.classList.remove('is-animating');
             startTimer();
@@ -261,6 +273,7 @@ export function initSlideCarousel(root, options = {}) {
         isAnimating = true;
         setTrackOffset(offsetForPosition(position, 0), true);
         afterSlideTransition(() => {
+            if (destroyed) return;
             isAnimating = false;
             root.classList.remove('is-animating');
             startTimer();
@@ -268,9 +281,13 @@ export function initSlideCarousel(root, options = {}) {
     }
 
     function onPointerDown(event) {
-        if (isAnimating || dragActive) return;
+        if (destroyed || isAnimating || dragActive) return;
         if (event.pointerType === 'mouse' && event.button !== 0) return;
         if (isDragIgnoredTarget(event.target)) return;
+        // Drag only from the image viewport (not thumbs / info outside).
+        if (!viewport.contains(event.target) && event.target !== viewport) {
+            return;
+        }
 
         dragActive = true;
         dragPointerId = event.pointerId;
@@ -284,22 +301,23 @@ export function initSlideCarousel(root, options = {}) {
         window.addEventListener('pointercancel', onWindowPointerCancel, true);
     }
 
-    prevBtn?.addEventListener('click', () => goPrev());
-    nextBtn?.addEventListener('click', () => goNext());
+    prevBtn?.addEventListener('click', () => goPrev(), { signal });
+    nextBtn?.addEventListener('click', () => goNext(), { signal });
     dots.forEach((dot) => {
         dot.addEventListener('click', () => {
             const raw = dot.getAttribute('data-slide-carousel-index')
                 || dot.getAttribute('data-gallery-index')
+                || dot.getAttribute('data-gallery-modal-image-index')
                 || dot.getAttribute('data-hero-dot')
                 || '0';
             goToIndex(parseInt(raw, 10));
-        });
+        }, { signal });
     });
 
-    root.addEventListener('pointerdown', onPointerDown);
+    root.addEventListener('pointerdown', onPointerDown, { signal });
     root.addEventListener('dragstart', (event) => {
         event.preventDefault();
-    });
+    }, { signal });
 
     if (enableKeyboard) {
         root.addEventListener('keydown', (event) => {
@@ -310,25 +328,25 @@ export function initSlideCarousel(root, options = {}) {
                 event.preventDefault();
                 goNext();
             }
-        });
+        }, { signal });
     }
 
     if (pauseOnHover) {
-        root.addEventListener('mouseenter', () => setPaused(true));
+        root.addEventListener('mouseenter', () => setPaused(true), { signal });
         root.addEventListener('mouseleave', () => {
             if (!root.contains(document.activeElement)) {
                 setPaused(false);
             }
-        });
+        }, { signal });
     }
 
     if (pauseOnFocus) {
-        root.addEventListener('focusin', () => setPaused(true));
+        root.addEventListener('focusin', () => setPaused(true), { signal });
         root.addEventListener('focusout', (event) => {
             if (!root.contains(event.relatedTarget)) {
                 setPaused(false);
             }
-        });
+        }, { signal });
     }
 
     document.addEventListener('visibilitychange', () => {
@@ -337,13 +355,16 @@ export function initSlideCarousel(root, options = {}) {
         } else if (!paused) {
             startTimer();
         }
-    });
+    }, { signal });
 
     window.addEventListener('resize', () => {
         setTrackOffset(offsetForPosition(position, 0), false);
-    });
+    }, { signal });
 
     root.classList.add('site-slide-carousel--ready');
+    if (root.hasAttribute('data-slide-carousel-draggable') || options.draggable) {
+        root.classList.add('site-slide-carousel--draggable');
+    }
     setTrackOffset(offsetForPosition(position, 0), false);
     updateDotsAndAria();
     startTimer();
@@ -352,9 +373,20 @@ export function initSlideCarousel(root, options = {}) {
         goPrev,
         goNext,
         goToIndex,
+        getIndex: () => index,
+        setPaused,
+        startTimer,
+        stopTimer,
         destroy() {
+            if (destroyed) return;
+            destroyed = true;
             stopTimer();
             endDragState();
+            listeners.abort();
+            track.querySelectorAll('.is-clone').forEach((clone) => clone.remove());
+            track.style.transform = '';
+            track.style.transitionDuration = '';
+            root.classList.remove('is-dragging', 'is-animating', 'site-slide-carousel--ready', 'site-slide-carousel--draggable');
         },
     };
 }
