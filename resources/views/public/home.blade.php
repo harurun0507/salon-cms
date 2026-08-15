@@ -16,18 +16,30 @@
     @endphp
 
     {{-- Hero --}}
-    <section class="hero-slider relative min-h-[70vh] overflow-hidden" id="hero-slider" data-hero-count="{{ $heroCount }}" @if($heroSliderEnabled) data-autoplay="5000" @endif>
+    <section
+        class="hero-slider relative min-h-[70vh] overflow-hidden{{ $heroSliderEnabled ? ' hero-slider--draggable' : '' }}"
+        id="hero-slider"
+        data-hero-count="{{ $heroCount }}"
+        @if($heroSliderEnabled) data-autoplay="5000" data-hero-drag @endif
+    >
         @if($heroCount > 0)
-            <div class="absolute inset-0" id="hero-slides" aria-live="polite">
-                @foreach($heroImages as $index => $heroImage)
-                    <img
-                        src="{{ asset('storage/'.$heroImage->image_path) }}"
-                        alt="{{ $heroImage->alt_text ?? '' }}"
-                        class="hero-slide absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-out {{ $index === 0 ? 'opacity-100' : 'opacity-0' }}"
-                        data-hero-index="{{ $index }}"
-                        @if($index !== 0) aria-hidden="true" @endif
-                    >
-                @endforeach
+            <div class="hero-slides" id="hero-slides" aria-live="polite">
+                <div class="hero-slides-track" id="hero-slides-track">
+                    @foreach($heroImages as $index => $heroImage)
+                        <div
+                            class="hero-slide"
+                            data-hero-index="{{ $index }}"
+                            @if($index !== 0) aria-hidden="true" @endif
+                        >
+                            <img
+                                src="{{ asset('storage/'.$heroImage->image_path) }}"
+                                alt="{{ $heroImage->alt_text ?? '' }}"
+                                class="hero-slide-image"
+                                draggable="false"
+                            >
+                        </div>
+                    @endforeach
+                </div>
             </div>
         @else
             <div class="absolute inset-0 bg-gradient-to-br from-[#E8E4DC] to-[#C5D4BC]"></div>
@@ -79,29 +91,65 @@
         <script>
             (function () {
                 const root = document.getElementById('hero-slider');
-                if (!root) return;
+                const slidesEl = document.getElementById('hero-slides');
+                const track = document.getElementById('hero-slides-track');
+                if (!root || !slidesEl || !track) return;
 
-                const slides = Array.from(root.querySelectorAll('.hero-slide'));
+                const realSlides = Array.from(track.querySelectorAll('.hero-slide'));
                 const dots = Array.from(root.querySelectorAll('.hero-dot'));
                 const prevBtn = document.getElementById('hero-prev');
                 const nextBtn = document.getElementById('hero-next');
                 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                 const intervalMs = parseInt(root.dataset.autoplay || '5000', 10);
-                let index = 0;
-                let timer = null;
+                const DRAG_THRESHOLD_PX = 56;
+                const SLIDE_MS = reduceMotion ? 0 : 450;
+                const slideCount = realSlides.length;
 
-                if (reduceMotion) {
-                    slides.forEach(function (slide) {
-                        slide.classList.remove('duration-700', 'transition-opacity');
-                    });
+                if (slideCount < 2) return;
+
+                // 無限ループ用に前後クローン
+                const firstClone = realSlides[0].cloneNode(true);
+                const lastClone = realSlides[slideCount - 1].cloneNode(true);
+                firstClone.removeAttribute('data-hero-index');
+                lastClone.removeAttribute('data-hero-index');
+                firstClone.setAttribute('aria-hidden', 'true');
+                lastClone.setAttribute('aria-hidden', 'true');
+                firstClone.classList.add('hero-slide--clone');
+                lastClone.classList.add('hero-slide--clone');
+                track.insertBefore(lastClone, realSlides[0]);
+                track.appendChild(firstClone);
+
+                let index = 0; // 論理インデックス 0..n-1
+                let position = 1; // トラック位置（クローン込み）
+                let timer = null;
+                let isAnimating = false;
+                let dragPointerId = null;
+                let dragStartX = null;
+                let dragDeltaX = 0;
+                let dragActive = false;
+
+                function viewportWidth() {
+                    return slidesEl.clientWidth || root.clientWidth || 1;
                 }
 
-                function show(nextIndex) {
-                    index = (nextIndex + slides.length) % slides.length;
-                    slides.forEach(function (slide, i) {
+                function setTrackOffset(offsetPx, withTransition) {
+                    if (withTransition && SLIDE_MS > 0) {
+                        root.classList.add('is-animating');
+                        track.style.transitionDuration = SLIDE_MS + 'ms';
+                    } else {
+                        root.classList.remove('is-animating');
+                        track.style.transitionDuration = '0ms';
+                    }
+                    track.style.transform = 'translate3d(' + offsetPx + 'px, 0, 0)';
+                }
+
+                function offsetForPosition(pos, dragPx) {
+                    return -pos * viewportWidth() + (dragPx || 0);
+                }
+
+                function updateDotsAndAria() {
+                    realSlides.forEach(function (slide, i) {
                         const active = i === index;
-                        slide.classList.toggle('opacity-100', active);
-                        slide.classList.toggle('opacity-0', !active);
                         slide.setAttribute('aria-hidden', active ? 'false' : 'true');
                     });
                     dots.forEach(function (dot, i) {
@@ -115,11 +163,86 @@
                     });
                 }
 
+                function normalizePosition() {
+                    if (position === 0) {
+                        position = slideCount;
+                        index = slideCount - 1;
+                        setTrackOffset(offsetForPosition(position, 0), false);
+                    } else if (position === slideCount + 1) {
+                        position = 1;
+                        index = 0;
+                        setTrackOffset(offsetForPosition(position, 0), false);
+                    } else {
+                        index = position - 1;
+                    }
+                    updateDotsAndAria();
+                }
+
+                function afterSlideTransition(callback) {
+                    if (SLIDE_MS <= 0) {
+                        callback();
+                        return;
+                    }
+                    let done = false;
+                    const finish = function () {
+                        if (done) return;
+                        done = true;
+                        track.removeEventListener('transitionend', onEnd);
+                        window.clearTimeout(fallback);
+                        callback();
+                    };
+                    const onEnd = function (event) {
+                        if (event.target !== track) return;
+                        if (event.propertyName && event.propertyName !== 'transform') return;
+                        finish();
+                    };
+                    track.addEventListener('transitionend', onEnd);
+                    const fallback = window.setTimeout(finish, SLIDE_MS + 80);
+                }
+
+                function goToPosition(nextPosition, restart) {
+                    if (isAnimating || dragActive) return;
+                    if (nextPosition === position) {
+                        if (restart) startTimer();
+                        return;
+                    }
+
+                    isAnimating = true;
+                    stopTimer();
+                    position = nextPosition;
+                    setTrackOffset(offsetForPosition(position, 0), true);
+
+                    afterSlideTransition(function () {
+                        normalizePosition();
+                        isAnimating = false;
+                        root.classList.remove('is-animating');
+                        if (restart !== false) startTimer();
+                    });
+                }
+
+                // 左右ボタン・ドット・自動・ドラッグ共通
+                function goPrev() {
+                    goToPosition(position - 1, true);
+                }
+
+                function goNext() {
+                    goToPosition(position + 1, true);
+                }
+
+                function goToIndex(targetIndex) {
+                    const next = ((targetIndex % slideCount) + slideCount) % slideCount;
+                    if (next === index && !isAnimating) {
+                        startTimer();
+                        return;
+                    }
+                    goToPosition(next + 1, true);
+                }
+
                 function startTimer() {
                     stopTimer();
-                    if (reduceMotion || slides.length < 2) return;
+                    if (reduceMotion || slideCount < 2) return;
                     timer = window.setInterval(function () {
-                        show(index + 1);
+                        goNext();
                     }, intervalMs);
                 }
 
@@ -130,31 +253,109 @@
                     }
                 }
 
-                function go(nextIndex) {
-                    show(nextIndex);
-                    startTimer();
+                function isDragIgnoredTarget(target) {
+                    if (!(target instanceof Element)) return true;
+                    return Boolean(target.closest('a, button, input, textarea, select, label, [data-hero-controls]'));
                 }
 
-                prevBtn?.addEventListener('click', function () { go(index - 1); });
-                nextBtn?.addEventListener('click', function () { go(index + 1); });
+                function clearDragListeners() {
+                    window.removeEventListener('pointermove', onWindowPointerMove, true);
+                    window.removeEventListener('pointerup', onWindowPointerUp, true);
+                    window.removeEventListener('pointercancel', onWindowPointerCancel, true);
+                }
+
+                function endDragState() {
+                    dragPointerId = null;
+                    dragStartX = null;
+                    dragDeltaX = 0;
+                    dragActive = false;
+                    root.classList.remove('is-dragging');
+                    clearDragListeners();
+                }
+
+                function onWindowPointerMove(event) {
+                    if (!dragActive || event.pointerId !== dragPointerId) return;
+                    dragDeltaX = event.clientX - dragStartX;
+                    event.preventDefault();
+                    setTrackOffset(offsetForPosition(position, dragDeltaX), false);
+                }
+
+                function onWindowPointerUp(event) {
+                    if (!dragActive) return;
+                    if (typeof event.pointerId === 'number' && event.pointerId !== dragPointerId) return;
+
+                    const deltaX = event.clientX - dragStartX;
+                    endDragState();
+
+                    if (deltaX <= -DRAG_THRESHOLD_PX) {
+                        goNext();
+                        return;
+                    }
+                    if (deltaX >= DRAG_THRESHOLD_PX) {
+                        goPrev();
+                        return;
+                    }
+
+                    // 閾値未満: 現在位置へスナップバック
+                    isAnimating = true;
+                    setTrackOffset(offsetForPosition(position, 0), true);
+                    afterSlideTransition(function () {
+                        isAnimating = false;
+                        root.classList.remove('is-animating');
+                        startTimer();
+                    });
+                }
+
+                function onWindowPointerCancel() {
+                    if (!dragActive) return;
+                    endDragState();
+                    isAnimating = true;
+                    setTrackOffset(offsetForPosition(position, 0), true);
+                    afterSlideTransition(function () {
+                        isAnimating = false;
+                        root.classList.remove('is-animating');
+                        startTimer();
+                    });
+                }
+
+                function onPointerDown(event) {
+                    if (isAnimating || dragActive) return;
+                    if (event.pointerType === 'mouse' && event.button !== 0) return;
+                    if (isDragIgnoredTarget(event.target)) return;
+
+                    dragActive = true;
+                    dragPointerId = event.pointerId;
+                    dragStartX = event.clientX;
+                    dragDeltaX = 0;
+                    stopTimer();
+                    root.classList.add('is-dragging');
+                    setTrackOffset(offsetForPosition(position, 0), false);
+
+                    window.addEventListener('pointermove', onWindowPointerMove, true);
+                    window.addEventListener('pointerup', onWindowPointerUp, true);
+                    window.addEventListener('pointercancel', onWindowPointerCancel, true);
+                }
+
+                prevBtn?.addEventListener('click', function () { goPrev(); });
+                nextBtn?.addEventListener('click', function () { goNext(); });
                 dots.forEach(function (dot) {
                     dot.addEventListener('click', function () {
-                        go(parseInt(dot.dataset.heroDot || '0', 10));
+                        goToIndex(parseInt(dot.dataset.heroDot || '0', 10));
                     });
                 });
 
-                let touchStartX = null;
-                root.addEventListener('touchstart', function (e) {
-                    touchStartX = e.changedTouches[0]?.clientX ?? null;
-                }, { passive: true });
-                root.addEventListener('touchend', function (e) {
-                    if (touchStartX === null) return;
-                    const delta = (e.changedTouches[0]?.clientX ?? touchStartX) - touchStartX;
-                    touchStartX = null;
-                    if (Math.abs(delta) < 40) return;
-                    go(delta < 0 ? index + 1 : index - 1);
-                }, { passive: true });
+                root.addEventListener('pointerdown', onPointerDown);
+                root.addEventListener('dragstart', function (event) {
+                    event.preventDefault();
+                });
 
+                window.addEventListener('resize', function () {
+                    setTrackOffset(offsetForPosition(position, 0), false);
+                });
+
+                // 初期位置（先頭クローンの次 = 実スライド0）
+                setTrackOffset(offsetForPosition(position, 0), false);
+                updateDotsAndAria();
                 startTimer();
             })();
         </script>

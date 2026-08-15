@@ -197,6 +197,17 @@ class HeroImageTest extends TestCase
         $this->assertStringContainsString('hero-slider-controls', $html);
         $this->assertStringContainsString('data-hero-controls', $html);
         $this->assertStringContainsString('hero-slider-nav', $html);
+        $this->assertStringContainsString('hero-slider--draggable', $html);
+        $this->assertStringContainsString('data-hero-drag', $html);
+        $this->assertStringContainsString('draggable="false"', $html);
+        $this->assertStringContainsString('hero-slides-track', $html);
+        $this->assertStringContainsString('DRAG_THRESHOLD_PX', $html);
+        $this->assertStringContainsString('function goPrev', $html);
+        $this->assertStringContainsString('function goNext', $html);
+        $this->assertStringContainsString('onWindowPointerMove', $html);
+        $this->assertStringContainsString('offsetForPosition', $html);
+        $this->assertStringContainsString('hero-slide-image', $html);
+        $this->assertStringNotContainsString('transition-opacity duration-700', $html);
     }
 
     public function test_home_page_falls_back_to_gradient_when_no_published_images(): void
