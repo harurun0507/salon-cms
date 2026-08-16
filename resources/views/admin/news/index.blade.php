@@ -425,6 +425,9 @@
             const closedDateCategories = (@json($closedDateCategoryKeys)).slice();
             const closedWeekdayCategories = (@json($closedWeekdayCategoryKeys)).slice();
             const weekdayShortLabels = @json($weekdayLabels);
+            const holidayPeriodTypes = @json(\App\Models\News::HOLIDAY_PERIOD_TYPES);
+            const holidayPeriodMonths = @json(\App\Models\News::HOLIDAY_PERIOD_MONTHS);
+            const salonClosedLabel = @json(\App\Models\SalonSetting::current()->closedDaysDisplayText());
             const calendarColorDefaults = @json($calendarColorDefaults);
             const regularBusinessHours = @json($regularBusinessHours);
             const holidayDateSet = new Set((regularBusinessHours.holidayDates || []).map(String));
@@ -724,12 +727,120 @@
                 markHoursTimesAuto(card, true);
             }
 
+            function formatDateYmd(date) {
+                return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
+            }
+
+            function formatDateSlash(ymd) {
+                if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+                    return '';
+                }
+                return ymd.replace(/-/g, '/');
+            }
+
+            function defaultHolidayPeriodFrom() {
+                const now = new Date();
+                return now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-01';
+            }
+
+            function computeHolidayPeriodTo(fromYmd, periodType) {
+                const months = holidayPeriodMonths[periodType];
+                if (!months || !fromYmd) {
+                    return '';
+                }
+                const parts = fromYmd.split('-').map(Number);
+                if (parts.length !== 3) {
+                    return '';
+                }
+                const from = new Date(parts[0], parts[1] - 1, parts[2]);
+                const to = new Date(from.getFullYear(), from.getMonth() + months, from.getDate());
+                to.setDate(to.getDate() - 1);
+                return formatDateYmd(to);
+            }
+
+            function holidayPeriodTypeChoicesHtml(fieldName, selected) {
+                const selectedValue = selected || '1_year';
+                let html = '';
+                Object.keys(holidayPeriodTypes).forEach(function (value) {
+                    const checked = value === selectedValue ? ' checked' : '';
+                    html += '<label class="admin-segmented-option">' +
+                        '<input type="radio" name="' + fieldName + '" value="' + value + '" class="admin-segmented-input" data-news-holiday-period-type' + checked + '>' +
+                        '<span class="admin-segmented-face"><span class="admin-segmented-text">' + holidayPeriodTypes[value] + '</span></span>' +
+                        '</label>';
+                });
+                return '<div class="admin-segmented mt-1" role="radiogroup" aria-label="対象期間" data-news-holiday-period-type-group">' + html + '</div>';
+            }
+
+            function holidayPeriodFieldsHtml(fieldPrefix) {
+                const from = defaultHolidayPeriodFrom();
+                const to = computeHolidayPeriodTo(from, '1_year');
+                const closedHint = salonClosedLabel ? salonClosedLabel : '未設定';
+                return '<div class="space-y-3" data-news-holiday-period-wrap hidden>' +
+                    '<div>' +
+                        '<span class="admin-label">対象期間 <span class="admin-required-badge">必須</span></span>' +
+                        holidayPeriodTypeChoicesHtml(fieldPrefix + '[holiday_period_type]', '1_year') +
+                    '</div>' +
+                    '<div class="space-y-2" data-news-holiday-period-range>' +
+                        '<span class="admin-label">From ～ To</span>' +
+                        '<div class="flex flex-wrap items-center gap-2">' +
+                            '<input type="date" name="' + fieldPrefix + '[holiday_period_from]" value="' + from + '" class="admin-input max-w-[11rem]" data-news-holiday-period-from aria-label="開始日">' +
+                            '<span class="text-sm text-admin-muted" aria-hidden="true">～</span>' +
+                            '<input type="date" name="' + fieldPrefix + '[holiday_period_to]" value="' + to + '" class="admin-input max-w-[11rem]" data-news-holiday-period-to data-period-auto="1" aria-label="終了日">' +
+                        '</div>' +
+                        '<p class="text-sm text-admin-text" data-news-holiday-period-preview></p>' +
+                        '<p class="text-xs text-admin-muted">定休日は店舗情報の設定（' + closedHint + '）を期間内の各月に反映します。</p>' +
+                    '</div>' +
+                '</div>';
+            }
+
+            function syncHolidayPeriodPreview(card) {
+                const fromInput = card.querySelector('[data-news-holiday-period-from]');
+                const toInput = card.querySelector('[data-news-holiday-period-to]');
+                const preview = card.querySelector('[data-news-holiday-period-preview]');
+                if (!preview) {
+                    return;
+                }
+                const fromLabel = formatDateSlash(fromInput ? fromInput.value : '');
+                const toLabel = formatDateSlash(toInput ? toInput.value : '');
+                preview.textContent = (fromLabel && toLabel) ? (fromLabel + ' ～ ' + toLabel) : '';
+            }
+
+            function applyHolidayPeriodAutoTo(card, force) {
+                const wrap = card.querySelector('[data-news-holiday-period-wrap]');
+                if (!wrap || wrap.hidden) {
+                    return;
+                }
+                const typeInput = card.querySelector('[data-news-holiday-period-type]:checked');
+                const fromInput = card.querySelector('[data-news-holiday-period-from]');
+                const toInput = card.querySelector('[data-news-holiday-period-to]');
+                if (!typeInput || !fromInput || !toInput || !fromInput.value) {
+                    syncHolidayPeriodPreview(card);
+                    return;
+                }
+                if (typeInput.value === 'custom') {
+                    syncHolidayPeriodPreview(card);
+                    return;
+                }
+                const autoTo = computeHolidayPeriodTo(fromInput.value, typeInput.value);
+                if (!autoTo) {
+                    syncHolidayPeriodPreview(card);
+                    return;
+                }
+                const wasAuto = toInput.getAttribute('data-period-auto') === '1';
+                if (force || !toInput.value || wasAuto) {
+                    toInput.value = autoTo;
+                    toInput.setAttribute('data-period-auto', '1');
+                }
+                syncHolidayPeriodPreview(card);
+            }
+
             function syncClosureVisibility(card) {
                 const checked = card.querySelector('[data-news-category]:checked');
                 const weekdayWrap = card.querySelector('[data-news-weekday-wrap]');
                 const dateWrap = card.querySelector('[data-news-closed-wrap]');
                 const hoursWrap = card.querySelector('[data-news-hours-wrap]');
                 const holidayHint = card.querySelector('[data-news-holiday-hint]');
+                const holidayPeriodWrap = card.querySelector('[data-news-holiday-period-wrap]');
                 const bodyLabel = card.querySelector('[data-news-body-label]');
                 const bodyHint = card.querySelector('[data-news-body-hint]');
                 const value = checked ? checked.value : '';
@@ -746,6 +857,12 @@
                 }
                 if (holidayHint) {
                     holidayHint.hidden = !isHoliday;
+                }
+                if (holidayPeriodWrap) {
+                    holidayPeriodWrap.hidden = !isHoliday;
+                    if (isHoliday) {
+                        applyHolidayPeriodAutoTo(card, false);
+                    }
                 }
                 if (bodyLabel) {
                     bodyLabel.textContent = isHours ? '補足説明（任意）' : '本文';
@@ -973,6 +1090,32 @@
                     });
                 });
 
+                card.querySelectorAll('[data-news-holiday-period-type]').forEach(function (input) {
+                    input.addEventListener('change', function () {
+                        const toInput = card.querySelector('[data-news-holiday-period-to]');
+                        if (toInput) {
+                            toInput.setAttribute('data-period-auto', '1');
+                        }
+                        applyHolidayPeriodAutoTo(card, true);
+                    });
+                });
+                card.querySelector('[data-news-holiday-period-from]')?.addEventListener('change', function () {
+                    const toInput = card.querySelector('[data-news-holiday-period-to]');
+                    if (toInput) {
+                        toInput.setAttribute('data-period-auto', '1');
+                    }
+                    applyHolidayPeriodAutoTo(card, true);
+                });
+                card.querySelector('[data-news-holiday-period-to]')?.addEventListener('input', function () {
+                    this.setAttribute('data-period-auto', '0');
+                    syncHolidayPeriodPreview(card);
+                });
+                card.querySelector('[data-news-holiday-period-to]')?.addEventListener('change', function () {
+                    this.setAttribute('data-period-auto', '0');
+                    syncHolidayPeriodPreview(card);
+                });
+                applyHolidayPeriodAutoTo(card, false);
+
                 publishInputs.forEach(function (input) {
                     input.addEventListener('change', function () {
                         if (input.value === '1' && input.checked) {
@@ -1056,6 +1199,7 @@
                             weekdayChoicesHtml('new_news[' + key + ']', []) +
                         '</div>' +
                         '<p class="text-xs text-admin-muted" data-news-holiday-hint hidden>通常の定休日は「店舗情報」の基本情報で設定します。こちらは告知用のお知らせです。</p>' +
+                        holidayPeriodFieldsHtml('new_news[' + key + ']') +
                         '<div data-news-closed-wrap hidden>' +
                             '<span class="admin-label">休業日 <span class="admin-required-badge">必須</span></span>' +
                             '<div class="news-closed-calendar mt-1" data-news-closed-calendar data-field-prefix="new_news[' + key + ']" data-selected-dates=""></div>' +

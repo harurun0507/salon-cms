@@ -13,9 +13,7 @@
         ->map(fn (\App\Models\News $news) => $news->toPublicModalData())
         ->all();
 
-    $businessCalendars = $usesVerticalScrollIndicator
-        ? \App\Models\News::businessCalendarsForPublicModal($newsSource)
-        : [];
+    $businessCalendars = \App\Models\News::businessCalendarsForPublicModal($newsSource);
 
     $weekdayShortLabels = array_values(\App\Models\News::WEEKDAY_SHORT_LABELS);
 @endphp
@@ -47,6 +45,7 @@
 
                 <section class="content-modal__section" data-news-modal-holiday hidden>
                     <p data-news-modal-holiday-text></p>
+                    <p class="content-modal__muted mt-2" data-news-modal-holiday-period hidden></p>
                 </section>
 
                 <section class="content-modal__section" data-news-modal-temporary hidden>
@@ -57,6 +56,11 @@
                 <div class="content-modal__body-text" data-news-modal-body hidden></div>
 
                 <section class="content-modal__calendar site-business-calendar" data-news-modal-calendar hidden>
+                    <div class="content-modal__calendar-nav" data-news-modal-calendar-nav hidden>
+                        <button type="button" class="content-modal__calendar-nav-btn" data-news-modal-calendar-prev aria-label="前月">‹</button>
+                        <p class="content-modal__calendar-nav-title" data-news-modal-calendar-nav-title></p>
+                        <button type="button" class="content-modal__calendar-nav-btn" data-news-modal-calendar-next aria-label="翌月">›</button>
+                    </div>
                     <p class="content-modal__calendar-title" data-news-modal-calendar-title></p>
                     <div class="content-modal__calendar-legend" data-news-modal-calendar-legend hidden>
                         <span class="content-modal__calendar-legend-item content-modal__calendar-legend-item--holiday">
@@ -132,10 +136,15 @@
             const titleEl = modal.querySelector('[data-news-modal-title]');
             const holidayRoot = modal.querySelector('[data-news-modal-holiday]');
             const holidayText = modal.querySelector('[data-news-modal-holiday-text]');
+            const holidayPeriodEl = modal.querySelector('[data-news-modal-holiday-period]');
             const temporaryRoot = modal.querySelector('[data-news-modal-temporary]');
             const temporaryList = modal.querySelector('[data-news-modal-temporary-list]');
             const bodyEl = modal.querySelector('[data-news-modal-body]');
             const calendarRoot = modal.querySelector('[data-news-modal-calendar]');
+            const calendarNav = modal.querySelector('[data-news-modal-calendar-nav]');
+            const calendarNavTitle = modal.querySelector('[data-news-modal-calendar-nav-title]');
+            const calendarPrevBtn = modal.querySelector('[data-news-modal-calendar-prev]');
+            const calendarNextBtn = modal.querySelector('[data-news-modal-calendar-next]');
             const calendarTitle = modal.querySelector('[data-news-modal-calendar-title]');
             const calendarLegend = modal.querySelector('[data-news-modal-calendar-legend]');
             const calendarGrid = modal.querySelector('[data-news-modal-calendar-grid]');
@@ -145,6 +154,8 @@
             const modalScroll = window.SalonPublicModalScroll;
             let isOpen = false;
             let lastFocus = null;
+            let activeItem = null;
+            let activeMonthIndex = 0;
 
             function isVerticalIndicator() {
                 return document.documentElement.getAttribute('data-scroll-display') === 'vertical_indicator';
@@ -454,25 +465,78 @@
                 return true;
             }
 
-            function renderItem(item) {
-                const calendarKey = item.businessCalendarKey || '';
-                const businessCalendar = calendarKey && businessCalendars[calendarKey]
-                    ? businessCalendars[calendarKey]
-                    : null;
+            function holidayMonthKeys(item) {
+                return Array.isArray(item.holidayPeriodKeys) ? item.holidayPeriodKeys.filter(Boolean) : [];
+            }
 
-                if (aggregateBusinessCalendar && isVerticalIndicator() && businessCalendar) {
-                    renderBusinessCalendar(businessCalendar, item);
+            function syncCalendarNav(item, monthKey) {
+                const keys = holidayMonthKeys(item);
+                const showNav = item.categoryKey === 'holiday' && keys.length > 1;
+                if (!calendarNav) {
                     return;
                 }
+                calendarNav.hidden = !showNav;
+                if (!showNav) {
+                    return;
+                }
+                const index = Math.max(0, keys.indexOf(monthKey));
+                activeMonthIndex = index;
+                if (calendarNavTitle) {
+                    const calendar = businessCalendars[monthKey];
+                    calendarNavTitle.textContent = calendar && calendar.footDate
+                        ? calendar.footDate
+                        : monthKey.replace('-', '年') + '月';
+                }
+                if (calendarPrevBtn) {
+                    calendarPrevBtn.disabled = index <= 0;
+                }
+                if (calendarNextBtn) {
+                    calendarNextBtn.disabled = index >= keys.length - 1;
+                }
+            }
+
+            function renderHolidayMonth(item, monthKey) {
+                const calendar = businessCalendars[monthKey];
+                if (calendar) {
+                    if (aggregateBusinessCalendar && isVerticalIndicator()) {
+                        if (dateEl) dateEl.textContent = calendar.footDate || item.date || '';
+                        if (categoryEl) categoryEl.textContent = '営業カレンダー';
+                        if (titleEl) titleEl.textContent = calendar.title || item.title || '';
+                    }
+                    renderBusinessCalendar(calendar, item);
+                    if (calendarTitle) {
+                        calendarTitle.hidden = true;
+                    }
+                    syncCalendarNav(item, monthKey);
+                    return true;
+                }
+
+                // Fallback: single-month paint from weekdays when payload missing.
+                const parts = String(monthKey).split('-');
+                if (parts.length === 2) {
+                    item = Object.assign({}, item, {
+                        calendarYear: Number(parts[0]),
+                        calendarMonth: Number(parts[1]),
+                        showCalendar: true,
+                    });
+                }
+                const shown = renderSingleCalendar(item);
+                syncCalendarNav(item, monthKey);
+                return shown;
+            }
+
+            function renderItem(item) {
+                activeItem = item;
+                const keys = holidayMonthKeys(item);
+                const initialKey = keys[0] || item.businessCalendarKey || '';
+                activeMonthIndex = 0;
 
                 if (dateEl) dateEl.textContent = item.date || '';
                 if (categoryEl) categoryEl.textContent = item.category || '';
                 if (titleEl) titleEl.textContent = item.title || '';
 
-                const calendarShown = renderSingleCalendar(item);
-
                 if (holidayRoot && holidayText) {
-                    if (!calendarShown && item.holidaySentence) {
+                    if (item.holidaySentence) {
                         holidayRoot.hidden = false;
                         holidayText.textContent = item.holidaySentence;
                     } else {
@@ -480,11 +544,20 @@
                         holidayText.textContent = '';
                     }
                 }
+                if (holidayPeriodEl) {
+                    if (item.holidayPeriodLabel) {
+                        holidayPeriodEl.hidden = false;
+                        holidayPeriodEl.textContent = '対象期間：' + item.holidayPeriodLabel;
+                    } else {
+                        holidayPeriodEl.hidden = true;
+                        holidayPeriodEl.textContent = '';
+                    }
+                }
 
                 if (temporaryRoot && temporaryList) {
                     temporaryList.innerHTML = '';
                     const dates = Array.isArray(item.temporaryDates) ? item.temporaryDates : [];
-                    if (!calendarShown && dates.length) {
+                    if (item.categoryKey === 'temporary_closure' && dates.length && !initialKey) {
                         temporaryRoot.hidden = false;
                         dates.forEach(function (label) {
                             const li = document.createElement('li');
@@ -506,10 +579,38 @@
                     }
                 }
 
+                let calendarShown = false;
+                if (item.categoryKey === 'holiday' && keys.length) {
+                    calendarShown = renderHolidayMonth(item, keys[0]);
+                } else if (aggregateBusinessCalendar && isVerticalIndicator() && initialKey && businessCalendars[initialKey]) {
+                    calendarShown = renderBusinessCalendar(businessCalendars[initialKey], item);
+                    if (calendarNav) calendarNav.hidden = true;
+                } else {
+                    calendarShown = renderSingleCalendar(item);
+                    if (calendarNav) calendarNav.hidden = true;
+                }
+
                 if (!calendarShown) {
                     hideCalendarExtras();
                     if (calendarRoot) calendarRoot.hidden = true;
+                    if (calendarNav) calendarNav.hidden = true;
                 }
+            }
+
+            function shiftHolidayMonth(delta) {
+                if (!activeItem || activeItem.categoryKey !== 'holiday') {
+                    return;
+                }
+                const keys = holidayMonthKeys(activeItem);
+                if (!keys.length) {
+                    return;
+                }
+                const next = activeMonthIndex + delta;
+                if (next < 0 || next >= keys.length) {
+                    return;
+                }
+                activeMonthIndex = next;
+                renderHolidayMonth(activeItem, keys[next]);
             }
 
             function openModal(id) {
@@ -559,6 +660,12 @@
 
             closeBtn?.addEventListener('click', closeModal);
             backdrop?.addEventListener('click', closeModal);
+            calendarPrevBtn?.addEventListener('click', function () {
+                shiftHolidayMonth(-1);
+            });
+            calendarNextBtn?.addEventListener('click', function () {
+                shiftHolidayMonth(1);
+            });
             document.addEventListener('keydown', function (event) {
                 if (isOpen && event.key === 'Escape') {
                     event.preventDefault();

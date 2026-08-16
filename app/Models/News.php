@@ -35,6 +35,35 @@ class News extends Model
 
     public const CATEGORY_OTHER = 'other';
 
+    public const HOLIDAY_PERIOD_3_MONTHS = '3_months';
+
+    public const HOLIDAY_PERIOD_6_MONTHS = '6_months';
+
+    public const HOLIDAY_PERIOD_1_YEAR = '1_year';
+
+    public const HOLIDAY_PERIOD_CUSTOM = 'custom';
+
+    /**
+     * @var array<string, string>
+     */
+    public const HOLIDAY_PERIOD_TYPES = [
+        self::HOLIDAY_PERIOD_3_MONTHS => '3ヶ月',
+        self::HOLIDAY_PERIOD_6_MONTHS => '6ヶ月',
+        self::HOLIDAY_PERIOD_1_YEAR => '1年',
+        self::HOLIDAY_PERIOD_CUSTOM => '任意期間',
+    ];
+
+    /**
+     * Months added for preset period types (custom is manual).
+     *
+     * @var array<string, int>
+     */
+    public const HOLIDAY_PERIOD_MONTHS = [
+        self::HOLIDAY_PERIOD_3_MONTHS => 3,
+        self::HOLIDAY_PERIOD_6_MONTHS => 6,
+        self::HOLIDAY_PERIOD_1_YEAR => 12,
+    ];
+
     /**
      * @var array<string, string>
      */
@@ -87,6 +116,9 @@ class News extends Model
         'hours_change_date',
         'hours_start_time',
         'hours_end_time',
+        'holiday_period_type',
+        'holiday_period_from',
+        'holiday_period_to',
         'published_at',
         'is_published',
         'display_order',
@@ -94,6 +126,8 @@ class News extends Model
 
     protected $casts = [
         'hours_change_date' => 'date',
+        'holiday_period_from' => 'date',
+        'holiday_period_to' => 'date',
         'published_at' => 'datetime',
         'is_published' => 'boolean',
         'display_order' => 'integer',
@@ -182,6 +216,111 @@ class News extends Model
         return (string) $category === self::CATEGORY_HOURS;
     }
 
+    public static function usesHolidayPeriodFields(?string $category): bool
+    {
+        return in_array((string) $category, [
+            self::CATEGORY_HOLIDAY,
+            self::CATEGORY_CLOSED,
+        ], true);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function holidayPeriodTypeKeys(): array
+    {
+        return array_keys(self::HOLIDAY_PERIOD_TYPES);
+    }
+
+    /**
+     * Compute To date from From + preset (inclusive end = From + N months − 1 day).
+     */
+    public static function computeHolidayPeriodTo(CarbonInterface|string $from, string $periodType): ?CarbonInterface
+    {
+        $months = self::HOLIDAY_PERIOD_MONTHS[$periodType] ?? null;
+        if ($months === null) {
+            return null;
+        }
+
+        $start = $from instanceof CarbonInterface
+            ? $from->copy()->startOfDay()
+            : Carbon::parse((string) $from)->startOfDay();
+
+        return $start->copy()->addMonths($months)->subDay()->startOfDay();
+    }
+
+    public function hasHolidayPeriod(): bool
+    {
+        return $this->isHolidayAnnouncement()
+            && $this->holiday_period_from
+            && $this->holiday_period_to
+            && $this->holiday_period_to->gte($this->holiday_period_from);
+    }
+
+    public function holidayPeriodLabel(): ?string
+    {
+        if (! $this->hasHolidayPeriod()) {
+            return null;
+        }
+
+        return $this->holiday_period_from->format('Y/m/d')
+            .' ～ '
+            .$this->holiday_period_to->format('Y/m/d');
+    }
+
+    /**
+     * Whether this holiday announcement covers any day in the given calendar month.
+     */
+    public function coversBusinessCalendarMonth(int $year, int $month): bool
+    {
+        if (! $this->isHolidayAnnouncement()) {
+            return false;
+        }
+
+        if ($this->hasHolidayPeriod()) {
+            $monthStart = Carbon::create($year, $month, 1)->startOfDay();
+            $monthEnd = $monthStart->copy()->endOfMonth();
+
+            return $this->holiday_period_from->lte($monthEnd)
+                && $this->holiday_period_to->gte($monthStart);
+        }
+
+        // Legacy holiday news without period: match published month.
+        $published = $this->published_at ?? null;
+
+        return $published
+            && (int) $published->format('Y') === $year
+            && (int) $published->format('n') === $month;
+    }
+
+    /**
+     * Month keys (Y-m) covered by the holiday period (or published month for legacy).
+     *
+     * @return list<string>
+     */
+    public function holidayPeriodMonthKeys(): array
+    {
+        if (! $this->isHolidayAnnouncement()) {
+            return [];
+        }
+
+        if ($this->hasHolidayPeriod()) {
+            $cursor = $this->holiday_period_from->copy()->startOfMonth();
+            $end = $this->holiday_period_to->copy()->startOfMonth();
+            $keys = [];
+            while ($cursor->lte($end)) {
+                $keys[] = $cursor->format('Y-m');
+                $cursor->addMonth();
+            }
+
+            return $keys;
+        }
+
+        $published = $this->published_at ?? now();
+
+        return [$published->copy()->startOfMonth()->format('Y-m')];
+    }
+
     /**
      * Categories shown together in the public monthly business calendar modal (VI).
      *
@@ -234,6 +373,14 @@ class News extends Model
 
         if ($this->isHoursAnnouncement() && $this->hours_change_date) {
             return $this->hours_change_date->copy()->startOfMonth();
+        }
+
+        if ($this->isHolidayAnnouncement()) {
+            if ($this->hasHolidayPeriod()) {
+                return $this->holiday_period_from->copy()->startOfMonth();
+            }
+
+            return ($this->published_at ?? now())->copy()->startOfMonth();
         }
 
         return ($this->published_at ?? now())->copy()->startOfMonth();
@@ -410,12 +557,19 @@ class News extends Model
         $calendarYear = null;
         $calendarMonth = null;
         $showCalendar = false;
+        $holidayPeriodKeys = [];
 
         if ($this->isHolidayAnnouncement() && $salon->hasClosedDays()) {
             $showCalendar = true;
-            $base = $this->published_at ?? now();
-            $calendarYear = (int) $base->format('Y');
-            $calendarMonth = (int) $base->format('n');
+            $holidayPeriodKeys = $this->holidayPeriodMonthKeys();
+            $initialKey = $holidayPeriodKeys[0] ?? null;
+            if ($initialKey) {
+                [$calendarYear, $calendarMonth] = array_map('intval', explode('-', $initialKey));
+            } else {
+                $base = $this->published_at ?? now();
+                $calendarYear = (int) $base->format('Y');
+                $calendarMonth = (int) $base->format('n');
+            }
         } elseif ($this->isTemporaryClosureAnnouncement() && $closedDateStrings !== []) {
             $showCalendar = true;
             $base = Carbon::parse($closedDateStrings[0])->startOfDay();
@@ -438,6 +592,14 @@ class News extends Model
             'holidaySentence' => $this->isHolidayAnnouncement()
                 ? $salon->closedDaysAnnouncementSentence()
                 : null,
+            'holidayPeriodLabel' => $this->holidayPeriodLabel(),
+            'holidayPeriodFrom' => $this->hasHolidayPeriod()
+                ? $this->holiday_period_from->format('Y-m-d')
+                : null,
+            'holidayPeriodTo' => $this->hasHolidayPeriod()
+                ? $this->holiday_period_to->format('Y-m-d')
+                : null,
+            'holidayPeriodKeys' => $holidayPeriodKeys,
             'temporaryDates' => $temporaryDates,
             'closedWeekdays' => $closedWeekdays,
             'closedDates' => $closedDateStrings,
@@ -460,15 +622,28 @@ class News extends Model
      */
     public static function businessCalendarsForPublicModal(Collection $newsItems): array
     {
-        $keys = $newsItems
-            ->filter(fn ($news) => $news instanceof self && $news->isBusinessCalendarAnnouncement())
-            ->map(fn (self $news) => $news->businessCalendarPeriod()?->format('Y-m'))
-            ->filter()
-            ->unique()
-            ->values();
+        $keys = collect();
+
+        foreach ($newsItems as $news) {
+            if (! ($news instanceof self) || ! $news->isBusinessCalendarAnnouncement()) {
+                continue;
+            }
+
+            if ($news->isHolidayAnnouncement()) {
+                foreach ($news->holidayPeriodMonthKeys() as $key) {
+                    $keys->push($key);
+                }
+                continue;
+            }
+
+            $periodKey = $news->businessCalendarPeriod()?->format('Y-m');
+            if ($periodKey) {
+                $keys->push($periodKey);
+            }
+        }
 
         $payloads = [];
-        foreach ($keys as $key) {
+        foreach ($keys->unique()->sort()->values() as $key) {
             [$year, $month] = array_map('intval', explode('-', (string) $key));
             $payloads[$key] = static::buildBusinessCalendarPayload($year, $month);
         }
@@ -500,11 +675,7 @@ class News extends Model
             ->get()
             ->filter(function (self $news) use ($start, $end, $year, $month) {
                 if ($news->isHolidayAnnouncement()) {
-                    $published = $news->published_at ?? null;
-
-                    return $published
-                        && (int) $published->format('Y') === $year
-                        && (int) $published->format('n') === $month;
+                    return $news->coversBusinessCalendarMonth($year, $month);
                 }
 
                 if ($news->isTemporaryClosureAnnouncement()) {

@@ -15,6 +15,18 @@
                     $hoursStartTime = old($prefix.'.hours_start_time', $formatTime($newItem['hours_start_time'] ?? null));
                     $hoursEndTime = old($prefix.'.hours_end_time', $formatTime($newItem['hours_end_time'] ?? null));
                     $isHoursCategory = \App\Models\News::usesHoursChangeFields($category);
+                    $holidayPeriodType = old(
+                        $prefix.'.holiday_period_type',
+                        $newItem['holiday_period_type'] ?? \App\Models\News::HOLIDAY_PERIOD_1_YEAR
+                    );
+                    $holidayPeriodFrom = old(
+                        $prefix.'.holiday_period_from',
+                        $newItem['holiday_period_from'] ?? now()->startOfMonth()->toDateString()
+                    );
+                    $holidayPeriodTo = old(
+                        $prefix.'.holiday_period_to',
+                        $newItem['holiday_period_to'] ?? ''
+                    );
                     // New card only: seed from salon regular hours when date is known and times are still blank.
                     if (
                         $isHoursCategory
@@ -141,6 +153,14 @@
                         >
                             通常の定休日は「店舗情報」の基本情報で設定します。こちらは告知用のお知らせです。
                         </p>
+                        @include('admin.news.partials.holiday-period-fields', [
+                            'prefix' => $prefix,
+                            'fieldPrefix' => 'new_news['.$key.']',
+                            'category' => $category,
+                            'holidayPeriodType' => $holidayPeriodType,
+                            'holidayPeriodFrom' => $holidayPeriodFrom,
+                            'holidayPeriodTo' => $holidayPeriodTo,
+                        ])
                         <div
                             data-news-closed-wrap
                             @if(! $usesClosedDates($category)) hidden @endif

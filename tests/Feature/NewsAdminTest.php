@@ -70,6 +70,7 @@ class NewsAdminTest extends TestCase
         $this->assertStringContainsString('定休日', $html);
         $this->assertStringContainsString('臨時休業', $html);
         $this->assertStringContainsString('営業カレンダー設定', $html);
+        $this->assertStringContainsString('対象期間', $html);
         $this->assertStringContainsString('name="calendar_holiday_color"', $html);
         $this->assertStringContainsString('name="calendar_temporary_color"', $html);
         $this->assertStringContainsString('name="calendar_hours_color"', $html);
@@ -203,6 +204,9 @@ class NewsAdminTest extends TestCase
                         'title' => '8月定休日',
                         'body' => 'ご理解のほどよろしくお願いします。',
                         'category' => 'holiday',
+                        'holiday_period_type' => '3_months',
+                        'holiday_period_from' => '2026-08-01',
+                        'holiday_period_to' => '2026-10-31',
                         'closed_weekdays' => ['1', '2'],
                         'closed_dates' => ['2026-08-04'],
                         'published_at' => now()->subHour()->format('Y-m-d\TH:i'),
@@ -215,6 +219,9 @@ class NewsAdminTest extends TestCase
 
         $news->refresh();
         $this->assertSame('holiday', $news->category);
+        $this->assertSame('3_months', $news->holiday_period_type);
+        $this->assertSame('2026-08-01', $news->holiday_period_from?->toDateString());
+        $this->assertSame('2026-10-31', $news->holiday_period_to?->toDateString());
         $this->assertSame(0, $news->closedWeekdays()->count());
         $this->assertSame(0, $news->closedDates()->count());
 
@@ -222,6 +229,7 @@ class NewsAdminTest extends TestCase
             ->assertOk()
             ->getContent();
         $this->assertStringContainsString('定休日は毎週火曜日・第3水曜日です。', $showHtml);
+        $this->assertStringContainsString('対象期間：2026/08/01 ～ 2026/10/31', $showHtml);
         $this->assertStringNotContainsString('以下の日程は定休日となります。', $showHtml);
         $this->assertLessThan(
             strpos($showHtml, 'ご理解のほどよろしくお願いします。'),
@@ -576,6 +584,9 @@ class NewsAdminTest extends TestCase
                         'title' => '定休日',
                         'body' => '店舗情報の定休日をご確認ください。',
                         'category' => 'holiday',
+                        'holiday_period_type' => '1_year',
+                        'holiday_period_from' => '2026-09-01',
+                        'holiday_period_to' => '2027-08-31',
                         'closed_weekdays' => [],
                         'published_at' => '2026-08-01T10:00',
                         'is_published' => '1',
@@ -589,7 +600,77 @@ class NewsAdminTest extends TestCase
         $news = News::query()->where('title', '定休日')->first();
         $this->assertNotNull($news);
         $this->assertSame('holiday', $news->category);
+        $this->assertSame('1_year', $news->holiday_period_type);
+        $this->assertSame('2026-09-01', $news->holiday_period_from?->toDateString());
+        $this->assertSame('2027-08-31', $news->holiday_period_to?->toDateString());
+        $this->assertSame([
+            '2026-09', '2026-10', '2026-11', '2026-12',
+            '2027-01', '2027-02', '2027-03', '2027-04',
+            '2027-05', '2027-06', '2027-07', '2027-08',
+        ], $news->holidayPeriodMonthKeys());
         $this->assertSame(0, $news->closedWeekdays()->count());
+    }
+
+    public function test_holiday_period_is_required_for_holiday_category(): void
+    {
+        $this->actingAs($this->admin())
+            ->from(route('admin.news.index'))
+            ->put(route('admin.news.update'), [
+                'new_news' => [
+                    'new_1' => [
+                        'title' => '定休日',
+                        'body' => '',
+                        'category' => 'holiday',
+                        'published_at' => '2026-08-01T10:00',
+                        'is_published' => '1',
+                        'display_order' => 1,
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.news.index'))
+            ->assertSessionHasErrors([
+                'new_news.new_1.holiday_period_type',
+                'new_news.new_1.holiday_period_from',
+                'new_news.new_1.holiday_period_to',
+            ]);
+    }
+
+    public function test_holiday_period_calendars_cover_from_to_months(): void
+    {
+        $salon = SalonSetting::current();
+        $salon->closedWeekdays()->delete();
+        $salon->closedNthWeekdays()->delete();
+        $salon->closedWeekdays()->create(['weekday' => 2]);
+
+        $news = $this->createNews([
+            'title' => '期間定休日',
+            'slug' => 'period-holiday',
+            'category' => 'holiday',
+            'holiday_period_type' => '3_months',
+            'holiday_period_from' => '2026-09-01',
+            'holiday_period_to' => '2026-11-30',
+            'is_published' => true,
+            'published_at' => '2026-08-15 10:00:00',
+        ]);
+
+        $this->assertTrue($news->coversBusinessCalendarMonth(2026, 9));
+        $this->assertTrue($news->coversBusinessCalendarMonth(2026, 11));
+        $this->assertFalse($news->coversBusinessCalendarMonth(2026, 8));
+        $this->assertFalse($news->coversBusinessCalendarMonth(2026, 12));
+
+        $payloads = News::businessCalendarsForPublicModal(collect([$news]));
+        $this->assertArrayHasKey('2026-09', $payloads);
+        $this->assertArrayHasKey('2026-10', $payloads);
+        $this->assertArrayHasKey('2026-11', $payloads);
+        $this->assertArrayNotHasKey('2026-08', $payloads);
+
+        $september = $payloads['2026-09'];
+        $this->assertArrayHasKey('2026-09-01', $september['days']); // Tuesday
+        $this->assertContains('holiday', $september['days']['2026-09-01']);
+
+        $modal = $news->toPublicModalData();
+        $this->assertSame('2026/09/01 ～ 2026/11/30', $modal['holidayPeriodLabel']);
+        $this->assertSame(['2026-09', '2026-10', '2026-11'], $modal['holidayPeriodKeys']);
     }
 
     public function test_temporary_closure_requires_at_least_one_closed_date(): void

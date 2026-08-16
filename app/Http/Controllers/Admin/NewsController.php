@@ -68,6 +68,9 @@ class NewsController extends AdminController
             'news.*.hours_change_date' => ['nullable', 'date_format:Y-m-d'],
             'news.*.hours_start_time' => ['nullable', 'date_format:H:i'],
             'news.*.hours_end_time' => ['nullable', 'date_format:H:i'],
+            'news.*.holiday_period_type' => ['nullable', 'string', Rule::in(News::holidayPeriodTypeKeys())],
+            'news.*.holiday_period_from' => ['nullable', 'date_format:Y-m-d'],
+            'news.*.holiday_period_to' => ['nullable', 'date_format:Y-m-d'],
             'news.*.published_at' => ['required', 'date'],
             'news.*.is_published' => ['required', 'in:0,1'],
             'news.*.display_order' => ['nullable', 'integer', 'min:0'],
@@ -82,6 +85,9 @@ class NewsController extends AdminController
             'new_news.*.hours_change_date' => ['nullable', 'date_format:Y-m-d'],
             'new_news.*.hours_start_time' => ['nullable', 'date_format:H:i'],
             'new_news.*.hours_end_time' => ['nullable', 'date_format:H:i'],
+            'new_news.*.holiday_period_type' => ['nullable', 'string', Rule::in(News::holidayPeriodTypeKeys())],
+            'new_news.*.holiday_period_from' => ['nullable', 'date_format:Y-m-d'],
+            'new_news.*.holiday_period_to' => ['nullable', 'date_format:Y-m-d'],
             'new_news.*.published_at' => ['required', 'date'],
             'new_news.*.is_published' => ['required', 'in:0,1'],
             'new_news.*.display_order' => ['nullable', 'integer', 'min:0'],
@@ -159,6 +165,37 @@ class NewsController extends AdminController
                             $validator->errors()->add(
                                 "{$group}.{$key}.hours_end_time",
                                 '終了時間は開始時間より後にしてください。'
+                            );
+                        }
+                    }
+
+                    if (News::usesHolidayPeriodFields($category)) {
+                        $periodType = (string) ($data['holiday_period_type'] ?? '');
+                        if (! in_array($periodType, News::holidayPeriodTypeKeys(), true)) {
+                            $validator->errors()->add(
+                                "{$group}.{$key}.holiday_period_type",
+                                '対象期間を選択してください。'
+                            );
+                        }
+
+                        $from = (string) ($data['holiday_period_from'] ?? '');
+                        $to = (string) ($data['holiday_period_to'] ?? '');
+                        if ($from === '') {
+                            $validator->errors()->add(
+                                "{$group}.{$key}.holiday_period_from",
+                                '開始日（From）を入力してください。'
+                            );
+                        }
+                        if ($to === '') {
+                            $validator->errors()->add(
+                                "{$group}.{$key}.holiday_period_to",
+                                '終了日（To）を入力してください。'
+                            );
+                        }
+                        if ($from !== '' && $to !== '' && $from > $to) {
+                            $validator->errors()->add(
+                                "{$group}.{$key}.holiday_period_to",
+                                '終了日は開始日以降にしてください。'
                             );
                         }
                     }
@@ -279,6 +316,24 @@ class NewsController extends AdminController
     {
         $category = $data['category'] ?? News::CATEGORY_OTHER;
         $isHours = News::usesHoursChangeFields($category);
+        $isHolidayPeriod = News::usesHolidayPeriodFields($category);
+
+        $holidayType = null;
+        $holidayFrom = null;
+        $holidayTo = null;
+        if ($isHolidayPeriod) {
+            $holidayType = (string) ($data['holiday_period_type'] ?? News::HOLIDAY_PERIOD_1_YEAR);
+            $holidayFrom = $this->nullableDateOnly($data['holiday_period_from'] ?? null);
+            $holidayTo = $this->nullableDateOnly($data['holiday_period_to'] ?? null);
+
+            if (
+                $holidayFrom
+                && ! $holidayTo
+                && isset(News::HOLIDAY_PERIOD_MONTHS[$holidayType])
+            ) {
+                $holidayTo = News::computeHolidayPeriodTo($holidayFrom, $holidayType)?->toDateString();
+            }
+        }
 
         return [
             'title' => $data['title'],
@@ -293,6 +348,9 @@ class NewsController extends AdminController
             'hours_end_time' => $isHours
                 ? $this->nullableTime($data['hours_end_time'] ?? null)
                 : null,
+            'holiday_period_type' => $holidayType,
+            'holiday_period_from' => $holidayFrom,
+            'holiday_period_to' => $holidayTo,
             'published_at' => $this->nullableDate($data['published_at'] ?? null),
             'is_published' => ($data['is_published'] ?? '0') === '1',
             'display_order' => $displayOrder,

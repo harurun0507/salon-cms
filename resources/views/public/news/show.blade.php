@@ -35,6 +35,9 @@
             @if ($holidaySentence)
                 <section class="news-closed-dates border-b border-salon-line py-8 md:py-9">
                     <p class="text-[0.95rem] leading-relaxed text-salon-text md:text-base">{{ $holidaySentence }}</p>
+                    @if ($news->holidayPeriodLabel())
+                        <p class="mt-3 text-sm text-salon-muted">対象期間：{{ $news->holidayPeriodLabel() }}</p>
+                    @endif
                 </section>
             @elseif ($showTemporaryDates)
                 <section class="news-closed-dates border-b border-salon-line py-8 md:py-9">

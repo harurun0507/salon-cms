@@ -5267,6 +5267,70 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         display: none;
     }
 
+    [data-news-modal] .content-modal__calendar:not([hidden]) {
+        display: block;
+        box-sizing: border-box;
+        width: min(100%, 22rem);
+        margin: 0.85rem auto 0;
+        padding: 0.45rem 0 0;
+        --cal-holiday-bg: var(--site-calendar-holiday-bg, #d1d4c8);
+        --cal-holiday-border: var(--site-calendar-holiday-border, #9aa194);
+        --cal-holiday-text: var(--site-calendar-holiday-text, #6a6f5f);
+        --cal-temporary-bg: var(--site-calendar-temporary-bg, #ded6cd);
+        --cal-temporary-border: var(--site-calendar-temporary-border, #a89f94);
+        --cal-temporary-text: var(--site-calendar-temporary-text, #6f645a);
+        --cal-hours-bg: var(--site-calendar-hours-bg, #d1c4b4);
+        --cal-hours-border: var(--site-calendar-hours-border, #9c8b76);
+        --cal-hours-accent: var(--site-calendar-hours-accent, #6a5843);
+        --cal-hours-text: var(--site-calendar-hours-text, #5a4a38);
+    }
+
+    .content-modal__calendar-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin: 0 0 0.75rem;
+    }
+
+    .content-modal__calendar-nav[hidden] {
+        display: none !important;
+    }
+
+    .content-modal__calendar-nav-title {
+        margin: 0;
+        flex: 1 1 auto;
+        text-align: center;
+        font-size: 0.95rem;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        color: var(--site-text, #3A332E);
+    }
+
+    .content-modal__calendar-nav-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border: 1px solid color-mix(in srgb, var(--color-salon-line, #E3DDD2) 80%, transparent);
+        border-radius: 9999px;
+        background: color-mix(in srgb, var(--site-background, #FAF7F1) 92%, white);
+        color: var(--site-text, #3A332E);
+        font-size: 1.15rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .content-modal__calendar-nav-btn:hover:not(:disabled) {
+        background: color-mix(in srgb, var(--site-secondary-soft, #e8ede3) 70%, white);
+    }
+
+    .content-modal__calendar-nav-btn:disabled {
+        opacity: 0.35;
+        cursor: default;
+    }
+
     html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar:not([hidden]),
     html[data-scroll-display='vertical_indicator'] .site-business-calendar.content-modal__calendar {
         display: block;

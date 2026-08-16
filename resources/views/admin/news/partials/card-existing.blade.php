@@ -27,6 +27,15 @@
                         $formatTime($news->hours_end_time)
                     );
                     $isHoursCategory = \App\Models\News::usesHoursChangeFields($category);
+                    $holidayPeriodType = old($prefix.'.holiday_period_type', $news->holiday_period_type);
+                    $holidayPeriodFrom = old(
+                        $prefix.'.holiday_period_from',
+                        $news->holiday_period_from?->toDateString()
+                    );
+                    $holidayPeriodTo = old(
+                        $prefix.'.holiday_period_to',
+                        $news->holiday_period_to?->toDateString()
+                    );
                 @endphp
                 <div
                     class="admin-card news-card"
@@ -133,6 +142,14 @@
                         >
                             通常の定休日は「店舗情報」の基本情報で設定します。こちらは告知用のお知らせです。
                         </p>
+                        @include('admin.news.partials.holiday-period-fields', [
+                            'prefix' => $prefix,
+                            'fieldPrefix' => 'news['.$news->id.']',
+                            'category' => $category,
+                            'holidayPeriodType' => $holidayPeriodType,
+                            'holidayPeriodFrom' => $holidayPeriodFrom,
+                            'holidayPeriodTo' => $holidayPeriodTo,
+                        ])
                         <div
                             data-news-closed-wrap
                             @if(! $usesClosedDates($category)) hidden @endif
