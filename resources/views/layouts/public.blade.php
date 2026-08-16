@@ -634,12 +634,39 @@
                             atEnd: scrollY <= EDGE_EPSILON_PX,
                         };
                     }
-                    const rect = section.el.getBoundingClientRect();
                     const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-                    const isTall = rect.height > viewportHeight + EDGE_EPSILON_PX;
+                    const rect = section.el.getBoundingClientRect();
+                    // Last section (Access): include site footer so Access+footer is the true page end.
+                    let endBottom = rect.bottom;
+                    if (index === sections.length - 1) {
+                        const footer = document.querySelector('.site-footer');
+                        if (footer) {
+                            endBottom = Math.max(endBottom, footer.getBoundingClientRect().bottom);
+                        }
+                    }
+                    const combinedHeight = endBottom - rect.top;
+                    const isTall = combinedHeight > viewportHeight + EDGE_EPSILON_PX;
                     const atStart = rect.top >= -EDGE_EPSILON_PX;
-                    const atEnd = rect.bottom <= viewportHeight + EDGE_EPSILON_PX;
+                    const atEnd = endBottom <= viewportHeight + EDGE_EPSILON_PX;
                     return { isTall: isTall, atStart: atStart, atEnd: atEnd };
+                }
+
+                function maxScrollY() {
+                    const footer = document.querySelector('.site-footer');
+                    const doc = document.documentElement;
+                    const viewportHeight = window.innerHeight || doc.clientHeight || 0;
+                    if (footer) {
+                        const footerBottom = footer.getBoundingClientRect().bottom + currentScrollY();
+                        return Math.max(0, Math.ceil(footerBottom - viewportHeight));
+                    }
+                    return Math.max(0, (doc.scrollHeight || 0) - viewportHeight);
+                }
+
+                function clampScrollToFooterEnd() {
+                    const max = maxScrollY();
+                    if (currentScrollY() > max + 1) {
+                        window.scrollTo({ top: max, left: 0, behavior: 'auto' });
+                    }
                 }
 
                 function updateHash(section) {
@@ -814,6 +841,11 @@
                         ) {
                             event.preventDefault();
                         }
+                        // Past Access+footer: do not allow empty scroll below the footer.
+                        if (direction > 0 && currentScrollY() >= maxScrollY() - EDGE_EPSILON_PX) {
+                            event.preventDefault();
+                            clampScrollToFooterEnd();
+                        }
                         return;
                     }
 
@@ -975,8 +1007,14 @@
                     link.addEventListener('click', onHomeLogoClick);
                 });
 
-                window.addEventListener('scroll', requestUpdate, { passive: true });
-                window.addEventListener('resize', requestUpdate);
+                window.addEventListener('scroll', function () {
+                    clampScrollToFooterEnd();
+                    requestUpdate();
+                }, { passive: true });
+                window.addEventListener('resize', function () {
+                    clampScrollToFooterEnd();
+                    requestUpdate();
+                });
                 window.addEventListener('hashchange', function () {
                     if (!applyHashTarget({ instant: false })) {
                         requestUpdate();

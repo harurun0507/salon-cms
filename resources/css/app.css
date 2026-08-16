@@ -456,6 +456,84 @@ body.has-mobile-bottom-bar {
     padding-bottom: calc(2.75rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* VI: do not add empty scroll room below the footer (bar is fixed). */
+html[data-scroll-display='vertical_indicator'] body.has-mobile-bottom-bar {
+    padding-bottom: 0;
+}
+
+html[data-scroll-display='vertical_indicator'] .site-footer--vi {
+    margin-bottom: 0;
+    padding-bottom: calc(0.25rem + env(safe-area-inset-bottom, 0px));
+    border-top: none;
+    background: var(--site-footer-bg, #322824);
+    color: var(--site-footer-text, #f3eee6);
+}
+
+html[data-scroll-display='vertical_indicator'] .site-footer--vi .site-footer__muted {
+    color: color-mix(in srgb, var(--site-footer-text, #f3eee6) 78%, transparent);
+}
+
+html[data-scroll-display='vertical_indicator'] .site-footer--vi .site-footer__link {
+    color: var(--site-footer-link, #e8e0d4);
+    transition: color 0.15s ease;
+}
+
+html[data-scroll-display='vertical_indicator'] .site-footer--vi .site-footer__link:hover {
+    color: var(--site-footer-link-hover, #ffffff);
+}
+
+html[data-scroll-display='vertical_indicator'] .site-footer--vi .site-footer__vi-bar {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 1.5rem;
+    text-align: center;
+}
+
+html[data-scroll-display='vertical_indicator'] .site-footer--vi .site-footer__vi-copy {
+    margin: 0;
+}
+
+html[data-scroll-display='vertical_indicator'] .site-footer--vi .site-footer__vi-privacy {
+    flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+    html[data-scroll-display='vertical_indicator'] .site-footer--vi .site-footer__vi-bar {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0;
+        text-align: left;
+    }
+
+    html[data-scroll-display='vertical_indicator'] .site-footer--vi .site-footer__vi-copy {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    html[data-scroll-display='vertical_indicator'] .site-footer--vi .site-footer__vi-privacy {
+        position: relative;
+        z-index: 1;
+    }
+}
+
+@media (max-width: 767px) {
+    html[data-scroll-display='vertical_indicator'] .site-footer--vi {
+        /* Keep copyright clear of the fixed mobile shop-name bar. */
+        padding-bottom: calc(2.75rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
+    }
+}
+
 @media (min-width: 768px) {
     .site-mobile-bottom-bar {
         display: none;
@@ -463,6 +541,10 @@ body.has-mobile-bottom-bar {
 
     body.has-mobile-bottom-bar {
         padding-bottom: 0;
+    }
+
+    html[data-scroll-display='vertical_indicator'] .site-footer--vi {
+        padding-bottom: 0.5rem;
     }
 }
 
@@ -745,6 +827,10 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
     background: #faf7f1;
     box-shadow: 0 8px 18px rgba(30, 26, 22, 0.2);
     transform: translate(-50%, -50%);
+}
+
+[data-design-footer-preview-link]:hover {
+    color: var(--site-footer-link-hover, #ffffff) !important;
 }
 
 @layer components {
@@ -6512,6 +6598,55 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
 
 .admin-sidebar-scroll::-webkit-scrollbar-thumb:hover {
     background: #AFA692;
+}
+
+/* Admin brand mascot: replaces logo mark (5-frame tail wag, fixed box). */
+.admin-mascot-wag {
+    display: block;
+    flex-shrink: 0;
+    width: 2.625rem;
+    height: 3rem;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    background-size: 500% 100%;
+    background-position: 0% 0;
+    pointer-events: none;
+    animation: admin-mascot-wag 1s steps(1, end) infinite;
+}
+
+@keyframes admin-mascot-wag {
+    0%,
+    100% {
+        background-position: 0% 0;
+    }
+    12.5% {
+        background-position: 25% 0;
+    }
+    25% {
+        background-position: 50% 0;
+    }
+    37.5% {
+        background-position: 75% 0;
+    }
+    50% {
+        background-position: 100% 0;
+    }
+    62.5% {
+        background-position: 75% 0;
+    }
+    75% {
+        background-position: 50% 0;
+    }
+    87.5% {
+        background-position: 25% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-mascot-wag {
+        animation: none;
+        background-position: 50% 0;
+    }
 }
 
 /* Admin page viewport scrollbar (not public site).

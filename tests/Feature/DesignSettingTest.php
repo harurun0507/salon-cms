@@ -44,6 +44,11 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('name="scrollbar_thumb_color"', $html);
         $this->assertStringContainsString('name="scrollbar_track_color"', $html);
         $this->assertStringContainsString('name="scrollbar_thumb_hover_color"', $html);
+        $this->assertStringContainsString('name="footer_background_color"', $html);
+        $this->assertStringContainsString('name="footer_text_color"', $html);
+        $this->assertStringContainsString('name="footer_link_color"', $html);
+        $this->assertStringContainsString('name="footer_link_hover_color"', $html);
+        $this->assertStringContainsString('フッター', $html);
         $this->assertStringContainsString('name="scroll_display_type"', $html);
         $this->assertStringContainsString('スクロール表示', $html);
         $this->assertStringContainsString('カラースクロールバー', $html);
@@ -102,6 +107,10 @@ class DesignSettingTest extends TestCase
                 'scrollbar_track_color' => '#C4C5C6',
                 'scrollbar_thumb_hover_color' => '#D7D8D9',
                 'scroll_display_type' => DesignSetting::SCROLL_VERTICAL_INDICATOR,
+                'footer_background_color' => '#2A221E',
+                'footer_text_color' => '#F5F0E8',
+                'footer_link_color' => '#E0D8CC',
+                'footer_link_hover_color' => '#FFFFFF',
                 'news_detail_display' => DesignSetting::DETAIL_DISPLAY_MODAL,
                 'blog_detail_display' => DesignSetting::DETAIL_DISPLAY_MODAL,
                 'gallery_detail_display' => DesignSetting::DETAIL_DISPLAY_PAGE,
@@ -123,6 +132,10 @@ class DesignSettingTest extends TestCase
         $this->assertSame('#b1b2b3', $design->scrollbar_thumb_color);
         $this->assertSame('#c4c5c6', $design->scrollbar_track_color);
         $this->assertSame('#d7d8d9', $design->scrollbar_thumb_hover_color);
+        $this->assertSame('#2a221e', $design->footer_background_color);
+        $this->assertSame('#f5f0e8', $design->footer_text_color);
+        $this->assertSame('#e0d8cc', $design->footer_link_color);
+        $this->assertSame('#ffffff', $design->footer_link_hover_color);
         $this->assertSame(DesignSetting::SCROLL_VERTICAL_INDICATOR, $design->scroll_display_type);
         $this->assertTrue($design->usesVerticalScrollIndicator());
         $this->assertSame(DesignSetting::DETAIL_DISPLAY_MODAL, $design->news_detail_display);
@@ -238,6 +251,10 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('"scrollbar_thumb_color":"#c8c0b2"', $html);
         $this->assertStringContainsString('"scrollbar_track_color":"#f1ece3"', $html);
         $this->assertStringContainsString('"scrollbar_thumb_hover_color":"#afa692"', $html);
+        $this->assertStringContainsString('"footer_background_color":"#322824"', $html);
+        $this->assertStringContainsString('"footer_text_color":"#f3eee6"', $html);
+        $this->assertStringContainsString('"footer_link_color":"#e8e0d4"', $html);
+        $this->assertStringContainsString('"footer_link_hover_color":"#ffffff"', $html);
         $this->assertStringContainsString('"scroll_display_type":"colored_scrollbar"', $html);
         $this->assertStringContainsString('"news_detail_display":"page"', $html);
         $this->assertStringContainsString('"blog_detail_display":"page"', $html);
@@ -283,6 +300,10 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('--site-scrollbar-thumb: #111213;', $html);
         $this->assertStringContainsString('--site-scrollbar-track: #141516;', $html);
         $this->assertStringContainsString('--site-scrollbar-thumb-hover: #171819;', $html);
+        $this->assertStringContainsString('--site-footer-bg: #322824;', $html);
+        $this->assertStringContainsString('--site-footer-text: #f3eee6;', $html);
+        $this->assertStringContainsString('--site-footer-link: #e8e0d4;', $html);
+        $this->assertStringContainsString('--site-footer-link-hover: #ffffff;', $html);
         $this->assertStringContainsString('--site-modal-overlay-color: #1e1a16;', $html);
         $this->assertStringContainsString('--site-modal-overlay-rgb: 30, 26, 22;', $html);
         $this->assertStringContainsString('--site-modal-overlay-opacity: 0.62;', $html);
@@ -313,6 +334,10 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('--site-scrollbar-thumb: #c8c0b2;', $html);
         $this->assertStringContainsString('--site-scrollbar-track: #f1ece3;', $html);
         $this->assertStringContainsString('--site-scrollbar-thumb-hover: #afa692;', $html);
+        $this->assertStringContainsString('--site-footer-bg: #322824;', $html);
+        $this->assertStringContainsString('--site-footer-text: #f3eee6;', $html);
+        $this->assertStringContainsString('--site-footer-link: #e8e0d4;', $html);
+        $this->assertStringContainsString('--site-footer-link-hover: #ffffff;', $html);
         $this->assertStringContainsString('--site-modal-overlay-color: #1e1a16;', $html);
         $this->assertStringContainsString('--site-modal-overlay-opacity: 0.62;', $html);
         $this->assertStringContainsString('--site-modal-overlay-filter: blur(2px);', $html);
@@ -387,6 +412,9 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('site-mobile-nav-meta', $html);
         $this->assertStringContainsString('Privacy Policy', $html);
         $this->assertStringContainsString('site-footer', $html);
+        $this->assertStringContainsString('site-footer--vi', $html);
+        $this->assertStringContainsString('--site-footer-bg:', $html);
+        $this->assertStringContainsString('site-footer__link', $html);
         $this->assertStringNotContainsString('rounded-full bg-salon-line', $html);
         // VI hash landing: no Tailwind scroll-smooth; instant jump helpers present
         $this->assertStringNotContainsString('class="scroll-smooth"', $html);

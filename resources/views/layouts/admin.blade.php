@@ -420,15 +420,7 @@
                     href="{{ route('admin.dashboard') }}"
                     class="flex min-w-0 flex-1 items-center gap-3.5 hover:opacity-80"
                 >
-                    <img
-                        src="{{ asset('images/admin-brand-logo.png') }}"
-                        alt=""
-                        width="40"
-                        height="40"
-                        class="h-12 w-12 shrink-0 object-contain"
-                        decoding="async"
-                        aria-hidden="true"
-                    >
+                    <x-admin.mascot-wag />
                     <div class="min-w-0 pt-0.5">
                         <div class="whitespace-nowrap font-serif text-xl leading-tight tracking-wide text-[#3D3833]">
                             Sun ＆ Me
@@ -918,16 +910,8 @@
         >
             <div class="flex min-h-0 flex-1 flex-col">
                 <div class="relative z-10 flex shrink-0 items-center gap-3 px-5 py-5">
-                    <a href="{{ route('admin.dashboard') }}" class="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80">
-                        <img
-                            src="{{ asset('images/admin-brand-logo.png') }}"
-                            alt=""
-                            width="40"
-                            height="40"
-                            class="h-12 w-12 shrink-0 object-contain"
-                            decoding="async"
-                            aria-hidden="true"
-                        >
+                    <a href="{{ route('admin.dashboard') }}" class="flex min-w-0 flex-1 items-center gap-3.5 hover:opacity-80">
+                        <x-admin.mascot-wag />
                         <div class="min-w-0 pt-0.5">
                             <div class="font-serif text-xl leading-tight tracking-wide text-[#3D3833]">Sun ＆ Me</div>
                             <div class="mt-1 text-xs tracking-wide text-[#736D65]">管理画面</div>
@@ -1133,6 +1117,37 @@
     </script>
 
     <style>
+        .admin-mascot-wag {
+            display: block;
+            flex-shrink: 0;
+            width: 2.625rem;
+            height: 3rem;
+            overflow: hidden;
+            background-repeat: no-repeat;
+            background-size: 500% 100%;
+            background-position: 0% 0;
+            pointer-events: none;
+            animation: admin-mascot-wag 1s steps(1, end) infinite;
+        }
+
+        @keyframes admin-mascot-wag {
+            0%, 100% { background-position: 0% 0; }
+            12.5% { background-position: 25% 0; }
+            25% { background-position: 50% 0; }
+            37.5% { background-position: 75% 0; }
+            50% { background-position: 100% 0; }
+            62.5% { background-position: 75% 0; }
+            75% { background-position: 50% 0; }
+            87.5% { background-position: 25% 0; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .admin-mascot-wag {
+                animation: none;
+                background-position: 50% 0;
+            }
+        }
+
         #admin-toast-stack {
             position: fixed;
             right: 1rem;

@@ -52,6 +52,10 @@
         $galleryDetailDisplay = old('gallery_detail_display', $design->resolvedGalleryDetailDisplay());
         $modalOverlayStyle = old('modal_overlay_style', $design->resolvedModalOverlayStyle());
         $modalOverlayColor = old('modal_overlay_color', $design->resolvedModalOverlayColor());
+        $footerBackground = old('footer_background_color', $design->footer_background_color);
+        $footerText = old('footer_text_color', $design->footer_text_color);
+        $footerLink = old('footer_link_color', $design->footer_link_color);
+        $footerLinkHover = old('footer_link_hover_color', $design->footer_link_hover_color);
         $headingFont = old('heading_font', $design->heading_font);
         $bodyFont = old('body_font', $design->body_font);
         $buttonRadius = old('button_radius', $design->button_radius);
@@ -405,6 +409,77 @@
                     </div>
                 </div>
 
+                <div class="admin-card space-y-4" data-design-footer-section>
+                    <div>
+                        <h2 class="text-base font-medium text-admin-text">フッター</h2>
+                        <p class="mt-1 text-sm text-admin-muted">縦インジケーターモードの公開サイトフッターに反映されます。カラースクロールバーモードのフッターには影響しません。</p>
+                    </div>
+
+                    @foreach ([
+                        'footer_background_color' => ['label' => 'フッター背景色', 'value' => $footerBackground, 'hint' => 'フッター全体の背景'],
+                        'footer_text_color' => ['label' => 'フッター文字色', 'value' => $footerText, 'hint' => '店名・住所・コピーライトなど'],
+                        'footer_link_color' => ['label' => 'フッターリンク色', 'value' => $footerLink, 'hint' => 'Privacy Policy などのリンク'],
+                        'footer_link_hover_color' => ['label' => 'フッターリンクホバー色', 'value' => $footerLinkHover, 'hint' => 'リンクにマウスを乗せたとき'],
+                    ] as $name => $meta)
+                        <div data-design-color-field>
+                            <label for="{{ $name }}" class="admin-label">{{ $meta['label'] }}</label>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <input
+                                    type="color"
+                                    value="{{ $meta['value'] }}"
+                                    class="h-10 w-14 cursor-pointer rounded-lg border border-admin-border bg-admin-card p-1"
+                                    data-design-color-swatch
+                                    aria-label="{{ $meta['label'] }}のカラーピッカー"
+                                >
+                                <input
+                                    type="text"
+                                    name="{{ $name }}"
+                                    id="{{ $name }}"
+                                    value="{{ $meta['value'] }}"
+                                    class="admin-input max-w-[10rem] font-mono uppercase"
+                                    maxlength="7"
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                    pattern="#?[0-9A-Fa-f]{6}"
+                                    data-design-color-hex
+                                    data-design-field="{{ $name }}"
+                                >
+                            </div>
+                            <p class="mt-1 text-xs text-admin-muted">{{ $meta['hint'] }}（#RRGGBB）</p>
+                            @error($name)
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    @endforeach
+
+                    <div>
+                        <p class="mb-2 text-xs font-medium text-admin-text">プレビュー</p>
+                        <div
+                            class="overflow-hidden rounded-lg border border-admin-border"
+                            aria-hidden="true"
+                            data-design-footer-preview
+                            style="
+                                background: {{ $footerBackground }};
+                                color: {{ $footerText }};
+                                --site-footer-link-hover: {{ $footerLinkHover }};
+                            "
+                        >
+                            <div class="px-4 py-5 text-center text-sm">
+                                <p class="font-serif text-base" data-design-footer-preview-text>{{ $shopName }}</p>
+                                <p class="mt-1 text-xs opacity-80" data-design-footer-preview-muted>〠…</p>
+                                <a
+                                    href="#"
+                                    class="mt-3 inline-block text-xs underline-offset-2 hover:underline"
+                                    data-design-footer-preview-link
+                                    style="color: {{ $footerLink }};"
+                                    tabindex="-1"
+                                >Privacy Policy</a>
+                                <p class="mt-3 text-[11px] opacity-75" data-design-footer-preview-muted>&copy; {{ date('Y') }} {{ $shopName }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="admin-card space-y-4">
                     <div>
                         <h2 class="text-base font-medium text-admin-text">フォント</h2>
@@ -670,6 +745,7 @@
             const previewScrollIndicator = document.querySelector('[data-design-preview-scroll-indicator]');
             const modalOverlayOptions = document.querySelector('[data-design-modal-overlay-options]');
             const modalOverlayLivePreview = document.querySelector('[data-design-modal-overlay-preview]');
+            const footerPreview = document.querySelector('[data-design-footer-preview]');
 
             const normalizeHex = (value) => {
                 let v = String(value || '').trim();
@@ -737,6 +813,10 @@
                 const scrollbarTrack = normalizeHex(form.querySelector('[name="scrollbar_track_color"]').value);
                 const scrollbarThumbHover = normalizeHex(form.querySelector('[name="scrollbar_thumb_hover_color"]').value);
                 const modalOverlayColor = normalizeHex(form.querySelector('[name="modal_overlay_color"]').value);
+                const footerBackground = normalizeHex(form.querySelector('[name="footer_background_color"]').value);
+                const footerText = normalizeHex(form.querySelector('[name="footer_text_color"]').value);
+                const footerLink = normalizeHex(form.querySelector('[name="footer_link_color"]').value);
+                const footerLinkHover = normalizeHex(form.querySelector('[name="footer_link_hover_color"]').value);
                 const scrollDisplayType = getRadioValue('scroll_display_type') || scrollColored;
                 const modalOverlayStyle = getRadioValue('modal_overlay_style') || defaults.modal_overlay_style || 'blur';
                 const headingFont = getRadioValue('heading_font');
@@ -805,6 +885,26 @@
                         });
                     }
                 }
+                if (footerPreview) {
+                    if (isValidHex(footerBackground)) {
+                        footerPreview.style.background = footerBackground;
+                        preview.style.setProperty('--site-footer-bg', footerBackground);
+                    }
+                    if (isValidHex(footerText)) {
+                        footerPreview.style.color = footerText;
+                        preview.style.setProperty('--site-footer-text', footerText);
+                    }
+                    if (isValidHex(footerLink)) {
+                        preview.style.setProperty('--site-footer-link', footerLink);
+                        footerPreview.querySelectorAll('[data-design-footer-preview-link]').forEach((el) => {
+                            el.style.color = footerLink;
+                        });
+                    }
+                    if (isValidHex(footerLinkHover)) {
+                        preview.style.setProperty('--site-footer-link-hover', footerLinkHover);
+                        footerPreview.style.setProperty('--site-footer-link-hover', footerLinkHover);
+                    }
+                }
 
                 preview.style.setProperty('--site-heading-font', fontStacks[headingFont] || fontStacks.serif);
                 preview.style.setProperty('--site-body-font', fontStacks[bodyFont] || fontStacks.sans);
@@ -858,6 +958,10 @@
                 form.querySelector('[name="scrollbar_track_color"]').value = defaults.scrollbar_track_color;
                 form.querySelector('[name="scrollbar_thumb_hover_color"]').value = defaults.scrollbar_thumb_hover_color;
                 form.querySelector('[name="modal_overlay_color"]').value = defaults.modal_overlay_color;
+                form.querySelector('[name="footer_background_color"]').value = defaults.footer_background_color;
+                form.querySelector('[name="footer_text_color"]').value = defaults.footer_text_color;
+                form.querySelector('[name="footer_link_color"]').value = defaults.footer_link_color;
+                form.querySelector('[name="footer_link_hover_color"]').value = defaults.footer_link_hover_color;
                 form.querySelectorAll('[data-design-color-field]').forEach((field) => {
                     const swatch = field.querySelector('[data-design-color-swatch]');
                     const hex = field.querySelector('[data-design-color-hex]');

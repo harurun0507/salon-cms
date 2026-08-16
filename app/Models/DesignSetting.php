@@ -117,6 +117,11 @@ class DesignSetting extends Model
         'calendar_holiday_color' => '#d1d4c8',
         'calendar_temporary_color' => '#ded6cd',
         'calendar_hours_color' => '#d1c4b4',
+        /** VI footer: warm dark brown + ivory text (LIFE LIKE–adjacent, not pure black). */
+        'footer_background_color' => '#322824',
+        'footer_text_color' => '#f3eee6',
+        'footer_link_color' => '#e8e0d4',
+        'footer_link_hover_color' => '#ffffff',
         'heading_font' => self::FONT_SERIF,
         'body_font' => self::FONT_SANS,
         'button_radius' => self::RADIUS_LARGE,
@@ -177,6 +182,10 @@ class DesignSetting extends Model
         'calendar_holiday_color',
         'calendar_temporary_color',
         'calendar_hours_color',
+        'footer_background_color',
+        'footer_text_color',
+        'footer_link_color',
+        'footer_link_hover_color',
         'heading_font',
         'body_font',
         'button_radius',
@@ -465,6 +474,10 @@ class DesignSetting extends Model
         $scrollbarThumb = $this->safeHex($this->scrollbar_thumb_color, self::DEFAULTS['scrollbar_thumb_color']);
         $scrollbarTrack = $this->safeHex($this->scrollbar_track_color, self::DEFAULTS['scrollbar_track_color']);
         $scrollbarThumbHover = $this->safeHex($this->scrollbar_thumb_hover_color, self::DEFAULTS['scrollbar_thumb_hover_color']);
+        $footerBackground = $this->safeHex($this->footer_background_color, self::DEFAULTS['footer_background_color']);
+        $footerText = $this->safeHex($this->footer_text_color, self::DEFAULTS['footer_text_color']);
+        $footerLink = $this->safeHex($this->footer_link_color, self::DEFAULTS['footer_link_color']);
+        $footerLinkHover = $this->safeHex($this->footer_link_hover_color, self::DEFAULTS['footer_link_hover_color']);
         $modalOverlayColor = $this->resolvedModalOverlayColor();
         $modalOverlayBlur = $this->resolvedModalOverlayBlur();
         $calendarColors = $this->resolvedBusinessCalendarColors();
@@ -481,6 +494,10 @@ class DesignSetting extends Model
             '--site-scrollbar-thumb' => $scrollbarThumb,
             '--site-scrollbar-track' => $scrollbarTrack,
             '--site-scrollbar-thumb-hover' => $scrollbarThumbHover,
+            '--site-footer-bg' => $footerBackground,
+            '--site-footer-text' => $footerText,
+            '--site-footer-link' => $footerLink,
+            '--site-footer-link-hover' => $footerLinkHover,
             '--site-modal-overlay-color' => $modalOverlayColor,
             '--site-modal-overlay-rgb' => self::hexToRgbChannels($modalOverlayColor),
             '--site-modal-overlay-opacity' => $this->resolvedModalOverlayOpacity(),

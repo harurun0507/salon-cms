@@ -34,6 +34,10 @@ class DesignSettingController extends AdminController
             'scrollbar_track_color',
             'scrollbar_thumb_hover_color',
             'modal_overlay_color',
+            'footer_background_color',
+            'footer_text_color',
+            'footer_link_color',
+            'footer_link_hover_color',
         ];
 
         foreach ($colorFields as $field) {
@@ -56,6 +60,10 @@ class DesignSettingController extends AdminController
             'gallery_detail_display' => ['required', Rule::in(DesignSetting::DETAIL_DISPLAY_TYPES)],
             'modal_overlay_style' => ['required', Rule::in(DesignSetting::MODAL_OVERLAY_STYLES)],
             'modal_overlay_color' => ['required', 'string', 'regex:/^#[0-9a-f]{6}$/'],
+            'footer_background_color' => ['required', 'string', 'regex:/^#[0-9a-f]{6}$/'],
+            'footer_text_color' => ['required', 'string', 'regex:/^#[0-9a-f]{6}$/'],
+            'footer_link_color' => ['required', 'string', 'regex:/^#[0-9a-f]{6}$/'],
+            'footer_link_hover_color' => ['required', 'string', 'regex:/^#[0-9a-f]{6}$/'],
             'heading_font' => ['required', Rule::in(DesignSetting::FONTS)],
             'body_font' => ['required', Rule::in(DesignSetting::FONTS)],
             'button_radius' => ['required', Rule::in(DesignSetting::RADII)],
@@ -70,6 +78,10 @@ class DesignSettingController extends AdminController
             'scrollbar_track_color.regex' => 'カラーは #RRGGBB 形式で入力してください。',
             'scrollbar_thumb_hover_color.regex' => 'カラーは #RRGGBB 形式で入力してください。',
             'modal_overlay_color.regex' => 'カラーは #RRGGBB 形式で入力してください。',
+            'footer_background_color.regex' => 'カラーは #RRGGBB 形式で入力してください。',
+            'footer_text_color.regex' => 'カラーは #RRGGBB 形式で入力してください。',
+            'footer_link_color.regex' => 'カラーは #RRGGBB 形式で入力してください。',
+            'footer_link_hover_color.regex' => 'カラーは #RRGGBB 形式で入力してください。',
             'scroll_display_type.in' => 'スクロール表示の値が不正です。',
             'news_detail_display.in' => 'お知らせの詳細表示方式が不正です。',
             'blog_detail_display.in' => 'ブログの詳細表示方式が不正です。',
