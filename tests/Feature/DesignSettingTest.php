@@ -377,10 +377,16 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('data-site-header', $html);
         $this->assertStringContainsString('home-vi-concept', $html);
         $this->assertStringContainsString('home-vi-access', $html);
+        $this->assertStringContainsString('home-vi-access__cards', $html);
+        $this->assertStringContainsString('site-business-calendar', $html);
+        $this->assertStringContainsString('site-business-calendar--access', $html);
+        $this->assertStringContainsString('site-business-calendar__access-foot', $html);
+        $this->assertStringContainsString('content-modal__calendar-legend', $html);
+        $this->assertStringNotContainsString('content-modal__calendar-notes', $html);
         $this->assertStringContainsString('site-header-tools', $html);
         $this->assertStringContainsString('site-mobile-nav-meta', $html);
         $this->assertStringContainsString('Privacy Policy', $html);
-        $this->assertStringNotContainsString('site-footer', $html);
+        $this->assertStringContainsString('site-footer', $html);
         $this->assertStringNotContainsString('rounded-full bg-salon-line', $html);
         // VI hash landing: no Tailwind scroll-smooth; instant jump helpers present
         $this->assertStringNotContainsString('class="scroll-smooth"', $html);

@@ -56,7 +56,7 @@
 
                 <div class="content-modal__body-text" data-news-modal-body hidden></div>
 
-                <section class="content-modal__calendar" data-news-modal-calendar hidden>
+                <section class="content-modal__calendar site-business-calendar" data-news-modal-calendar hidden>
                     <p class="content-modal__calendar-title" data-news-modal-calendar-title></p>
                     <div class="content-modal__calendar-legend" data-news-modal-calendar-legend hidden>
                         <span class="content-modal__calendar-legend-item content-modal__calendar-legend-item--holiday">

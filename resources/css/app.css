@@ -3172,90 +3172,203 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
     .home-vi-access {
         position: relative;
         display: block;
-        min-height: min(92dvh, 54rem);
-        overflow: hidden;
-        /* Fallback only while map loads — keep light so no dark “sidebar” shows. */
-        background: color-mix(in srgb, var(--site-background, #FAF7F1) 55%, #d7ddd8);
+        box-sizing: border-box;
+        padding: clamp(2.25rem, 5vw, 3.75rem) 0 clamp(2rem, 4vw, 3rem);
+        overflow: visible;
+        background: color-mix(in srgb, var(--site-background, #FAF7F1) 88%, white);
     }
 
-    .home-vi-access__map {
-        position: relative;
-        min-height: 18rem;
-        overflow: hidden;
+    .home-vi-access__inner {
+        box-sizing: border-box;
+        width: min(100% - 2rem, 72rem);
+        margin-inline: auto;
     }
 
-    .home-vi-access__iframe,
-    .home-vi-access__map-fallback {
-        display: block;
-        width: 100%;
-        height: 100%;
-        min-height: 18rem;
-        border: 0;
+    .home-vi-access__intro {
+        margin: 0 0 1.35rem;
     }
 
-    .home-vi-access__map-fallback {
+    .home-vi-access__title {
+        font-size: clamp(1.55rem, 3vw, 2.1rem);
+    }
+
+    .home-vi-access__cards {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.85rem;
+        align-items: stretch;
+    }
+
+    .home-vi-access__card {
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
-        justify-content: flex-end;
-        padding: 1.5rem;
-        background:
-            linear-gradient(
-                140deg,
-                color-mix(in srgb, var(--site-secondary, #7C8A6A) 28%, #ece7df),
-                color-mix(in srgb, var(--site-background, #FAF7F1) 70%, #cfd6d1)
-            );
-        color: var(--site-text, #3A332E);
-    }
-
-    .home-vi-access__map-fallback-text {
-        margin: 0.5rem 0 0;
-        font-family: var(--site-heading-font, var(--font-serif));
-        font-size: 1.25rem;
-    }
-
-    .home-vi-access__map-veil {
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(
-            to top,
-            rgb(30 26 22 / 0.16) 0%,
-            transparent 40%
-        );
-        pointer-events: none;
-    }
-
-    .home-vi-access__panel {
-        position: relative;
-        z-index: 1;
         box-sizing: border-box;
-        margin: -3.5rem 1rem 1.5rem;
-        padding: 1.55rem 1.25rem 1.65rem;
-        border: 1px solid color-mix(in srgb, var(--color-salon-line, #E3DDD2) 55%, transparent);
-        border-radius: 0.35rem;
-        background: color-mix(in srgb, var(--site-background, #FAF7F1) 97%, white);
-        box-shadow: none;
+        min-width: 0;
+        min-height: 0;
+        padding: 1.15rem 1.1rem 1.2rem;
+        border: 1px solid color-mix(in srgb, var(--color-salon-line, #E3DDD2) 60%, transparent);
+        border-radius: var(--site-card-radius, 0.35rem);
+        background: color-mix(in srgb, var(--site-background, #FAF7F1) 96%, white);
     }
 
-    .home-vi-access__head {
+    .home-vi-access__card--map {
+        padding: 0.7rem;
+    }
+
+    .home-vi-access__card--calendar {
+        position: relative;
+        padding: 1rem 0.95rem 1.1rem;
+        overflow: hidden;
+    }
+
+    /*
+     * Beat shared site-business-calendar centering (margin:auto / max-width)
+     * so the calendar fills the card; legend anchors to the card, not a centered box.
+     */
+    html[data-scroll-display='vertical_indicator'] .home-vi-access .site-business-calendar.content-modal__calendar,
+    html[data-scroll-display='vertical_indicator'] .home-vi-access .site-business-calendar.content-modal__calendar:not([hidden]) {
+        position: static;
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        max-width: none;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    .home-vi-access .content-modal__calendar-title {
+        margin: 0 0 0.85rem;
+        text-align: left;
+        font-size: 0.95rem;
+    }
+
+    .home-vi-access .content-modal__calendar-grid {
+        align-content: start;
+        gap: 0.28rem;
+        width: 100%;
         margin: 0;
     }
 
+    .home-vi-access .content-modal__calendar-weekday {
+        min-height: 1.35rem;
+        font-size: 0.74rem;
+    }
+
+    .home-vi-access .content-modal__calendar-day {
+        height: 1.85rem;
+        min-height: 1.85rem;
+        font-size: 0.88rem;
+    }
+
+    /* Legend block: card bottom-right; contents left-aligned.
+       Color tokens match calendar day cells (--site-calendar-*). */
+    html[data-scroll-display='vertical_indicator'] .home-vi-access__card--calendar .site-business-calendar__access-foot {
+        position: absolute;
+        right: 24px;
+        bottom: 20px;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        margin: 0;
+        padding: 0;
+        width: max-content;
+        max-width: calc(100% - 48px);
+        text-align: left;
+        pointer-events: none;
+        --cal-holiday-bg: var(--site-calendar-holiday-bg, #d1d4c8);
+        --cal-holiday-border: var(--site-calendar-holiday-border, #9aa194);
+        --cal-temporary-bg: var(--site-calendar-temporary-bg, #ded6cd);
+        --cal-temporary-border: var(--site-calendar-temporary-border, #a89f94);
+        --cal-hours-bg: var(--site-calendar-hours-bg, #d1c4b4);
+        --cal-hours-border: var(--site-calendar-hours-border, #9c8b76);
+        --cal-hours-accent: var(--site-calendar-hours-accent, #6a5843);
+    }
+
+    html[data-scroll-display='vertical_indicator'] .home-vi-access__card--calendar .site-business-calendar__access-foot .content-modal__calendar-legend {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        gap: 5px;
+        margin: 0;
+        width: max-content;
+        max-width: 100%;
+        text-align: left;
+    }
+
+    html[data-scroll-display='vertical_indicator'] .home-vi-access__card--calendar .site-business-calendar__access-foot .content-modal__calendar-legend-item {
+        display: grid;
+        grid-template-columns: auto auto;
+        column-gap: 6px;
+        row-gap: 0;
+        justify-content: start;
+        justify-items: start;
+        align-items: center;
+        width: max-content;
+        margin: 0;
+        font-size: 0.62rem;
+        letter-spacing: 0.03em;
+        line-height: 1.25;
+        white-space: nowrap;
+        text-align: left;
+        color: var(--color-salon-muted, #6B635C);
+    }
+
+    html[data-scroll-display='vertical_indicator'] .home-vi-access__card--calendar .site-business-calendar__access-foot .content-modal__calendar-legend-swatch {
+        display: block;
+        box-sizing: border-box;
+        flex: 0 0 auto;
+        width: 0.85rem;
+        height: 0.55rem;
+        border-radius: 0.12rem;
+    }
+
+    html[data-scroll-display='vertical_indicator'] .home-vi-access__card--calendar .site-business-calendar__access-foot .content-modal__calendar-legend-item--holiday .content-modal__calendar-legend-swatch {
+        background: var(--cal-holiday-bg);
+        box-shadow: inset 0 0 0 1px var(--cal-holiday-border);
+    }
+
+    html[data-scroll-display='vertical_indicator'] .home-vi-access__card--calendar .site-business-calendar__access-foot .content-modal__calendar-legend-item--temporary .content-modal__calendar-legend-swatch {
+        background: var(--cal-temporary-bg);
+        box-shadow: inset 0 0 0 1px var(--cal-temporary-border);
+    }
+
+    html[data-scroll-display='vertical_indicator'] .home-vi-access__card--calendar .site-business-calendar__access-foot .content-modal__calendar-legend-item--hours .content-modal__calendar-legend-swatch {
+        background: var(--cal-hours-bg);
+        box-shadow:
+            inset 2.5px 0 0 0 var(--cal-hours-accent),
+            inset 0 0 0 1px var(--cal-hours-border);
+    }
+
+    html[data-scroll-display='vertical_indicator'] .home-vi-access__card--calendar .site-business-calendar__holiday-note {
+        margin: 0;
+        color: color-mix(in srgb, var(--color-salon-muted, #6B635C) 88%, transparent);
+        font-size: 0.64rem;
+        letter-spacing: 0.02em;
+        line-height: 1.45;
+        text-align: left;
+        white-space: nowrap;
+    }
+
     .home-vi-access__shop {
-        margin: 0.65rem 0 0;
+        margin: 0;
         color: var(--site-text, #3A332E);
         font-family: var(--site-heading-font, var(--font-serif));
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         letter-spacing: 0.04em;
+        line-height: 1.4;
     }
 
     .home-vi-access__list {
-        margin: 1.15rem 0 0;
+        margin: 0.85rem 0 0;
     }
 
     .home-vi-access__row {
-        padding: 0.8rem 0;
-        border-bottom: 1px solid color-mix(in srgb, var(--color-salon-line, #E3DDD2) 50%, transparent);
+        padding: 0.58rem 0;
+        border-bottom: 1px solid color-mix(in srgb, var(--color-salon-line, #E3DDD2) 48%, transparent);
     }
 
     .home-vi-access__row:last-child {
@@ -3263,17 +3376,17 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
     }
 
     .home-vi-access__row dt {
-        margin: 0 0 0.3rem;
+        margin: 0 0 0.2rem;
         color: var(--color-salon-muted, #6B635C);
-        font-size: 0.7rem;
+        font-size: 0.66rem;
         letter-spacing: 0.14em;
     }
 
     .home-vi-access__row dd {
         margin: 0;
         color: var(--site-text, #3A332E);
-        font-size: 0.9375rem;
-        line-height: 1.7;
+        font-size: 0.875rem;
+        line-height: 1.6;
     }
 
     .home-vi-access__row dd a {
@@ -3286,14 +3399,14 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
     }
 
     .home-vi-access__actions {
-        margin-top: 1.2rem;
-        padding-top: 0.15rem;
+        margin-top: auto;
+        padding-top: 0.95rem;
     }
 
     .home-vi-access__maps-link {
         display: inline-block;
         color: var(--site-secondary, var(--color-salon-accent, #7C8A6A));
-        font-size: 0.875rem;
+        font-size: 0.82rem;
         letter-spacing: 0.08em;
         text-decoration: none;
         transition: color 0.2s ease;
@@ -3304,83 +3417,120 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         color: var(--site-text, #3A332E);
     }
 
-    /*
-     * PC: full-bleed map as the stage; compact ivory card floats on top.
-     * Map is oversized + offset so the pin sits in the open right area
-     * without leaving a dark strip beside the card.
-     */
+    .home-vi-access__map-frame {
+        position: relative;
+        flex: 1 1 auto;
+        width: 100%;
+        min-height: 16rem;
+        overflow: hidden;
+        border-radius: calc(var(--site-card-radius, 0.35rem) - 0.1rem);
+        background: color-mix(in srgb, var(--color-salon-line, #E3DDD2) 35%, white);
+    }
+
+    .home-vi-access__iframe,
+    .home-vi-access__map-fallback {
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-height: 16rem;
+        border: 0;
+    }
+
+    .home-vi-access__map-fallback {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-end;
+        padding: 1.25rem;
+        background:
+            linear-gradient(
+                140deg,
+                color-mix(in srgb, var(--site-secondary, #7C8A6A) 22%, #ece7df),
+                color-mix(in srgb, var(--site-background, #FAF7F1) 72%, #cfd6d1)
+            );
+        color: var(--site-text, #3A332E);
+    }
+
+    .home-vi-access__map-fallback-text {
+        margin: 0.45rem 0 0;
+        font-family: var(--site-heading-font, var(--font-serif));
+        font-size: 1.1rem;
+    }
+
     @media (min-width: 900px) {
         .home-vi-access {
-            min-height: calc(100vh - var(--site-header-offset, 5.5rem));
-            min-height: calc(100dvh - var(--site-header-offset, 5.5rem));
-            height: calc(100vh - var(--site-header-offset, 5.5rem));
-            height: calc(100dvh - var(--site-header-offset, 5.5rem));
-            max-height: calc(100vh - var(--site-header-offset, 5.5rem));
-            max-height: calc(100dvh - var(--site-header-offset, 5.5rem));
+            padding: clamp(2.5rem, 4.5vw, 3.5rem) 0 clamp(2.25rem, 3.5vw, 3rem);
         }
 
-        .home-vi-access__map {
-            position: absolute;
-            inset: 0;
-            min-height: 100%;
+        .home-vi-access__inner {
+            width: min(100% - 3rem, 74rem);
+        }
+
+        .home-vi-access__intro {
+            margin-bottom: 1.5rem;
+        }
+
+        .home-vi-access__cards {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+        }
+
+        .home-vi-access__card {
+            min-height: 28rem;
+            padding: 1.25rem 1.2rem 1.3rem;
+        }
+
+        .home-vi-access__card--map {
+            padding: 0.75rem;
+        }
+
+        .home-vi-access__card--calendar {
+            padding: 1.15rem 1.05rem 1.2rem;
+        }
+
+        .home-vi-access__shop {
+            font-size: 1.12rem;
+        }
+
+        .home-vi-access__list {
+            margin-top: 0.95rem;
+        }
+
+        .home-vi-access__row {
+            padding: 0.55rem 0;
+        }
+
+        .home-vi-access__row dd {
+            font-size: 0.86rem;
+            line-height: 1.55;
+        }
+
+        .home-vi-access__map-frame {
+            min-height: 0;
             height: 100%;
         }
 
         .home-vi-access__iframe,
         .home-vi-access__map-fallback {
             position: absolute;
-            min-height: 100%;
-            height: 120%;
-            width: 155%;
-            top: -10%;
-            left: -18%;
-            max-width: none;
-            transform: none;
+            inset: 0;
+            min-height: 0;
+            height: 100%;
         }
 
-        .home-vi-access__map-veil {
-            background: linear-gradient(
-                90deg,
-                rgb(250 247 241 / 0.14) 0%,
-                rgb(250 247 241 / 0.04) 26%,
-                transparent 42%
-            );
+        .home-vi-access .content-modal__calendar-day {
+            height: 2.05rem;
+            min-height: 2.05rem;
+            font-size: 0.94rem;
         }
 
-        .home-vi-access__panel {
-            position: absolute;
-            top: 50%;
-            left: clamp(2.25rem, 4.5vw, 3.75rem);
-            z-index: 2;
-            width: min(25rem, calc(100% - 6.5rem));
-            max-height: none;
-            margin: 0;
-            padding: 1.55rem 1.55rem 1.45rem;
-            transform: translateY(-50%);
-            border-radius: 0.25rem;
-            background: color-mix(in srgb, var(--site-background, #FAF7F1) 97%, white);
-            box-shadow: none;
+        .home-vi-access .content-modal__calendar-weekday {
+            min-height: 1.4rem;
+            font-size: 0.78rem;
         }
 
-        .home-vi-access__title {
-            font-size: clamp(1.4rem, 2vw, 1.75rem);
-        }
-
-        .home-vi-access__list {
-            margin-top: 1rem;
-        }
-
-        .home-vi-access__row {
-            padding: 0.72rem 0;
-        }
-
-        .home-vi-access__row dd {
-            font-size: 0.9rem;
-            line-height: 1.65;
-        }
-
-        .home-vi-access__actions {
-            margin-top: 1.15rem;
+        .home-vi-access .content-modal__calendar-grid {
+            gap: 0.32rem;
         }
     }
 
@@ -4886,7 +5036,7 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         font-size: 1.3rem;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__title {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__title {
         font-size: 1.15rem;
     }
 
@@ -4930,7 +5080,7 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         text-transform: uppercase;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__section {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__section {
         border-bottom: none;
     }
 
@@ -4939,7 +5089,8 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         display: none;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar:not([hidden]) {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar:not([hidden]),
+    html[data-scroll-display='vertical_indicator'] .site-business-calendar.content-modal__calendar {
         display: block;
         box-sizing: border-box;
         width: min(100%, 22rem);
@@ -4958,7 +5109,7 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         --cal-hours-text: var(--site-calendar-hours-text, #5a4a38);
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-title {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-title {
         margin: 0 0 0.5rem;
         color: var(--site-text, var(--color-salon-text, #3A332E));
         font-family: var(--site-heading-font, var(--font-serif));
@@ -4968,7 +5119,7 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         text-align: center;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-grid {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-grid {
         display: grid;
         grid-template-columns: repeat(7, minmax(0, 1fr));
         gap: 0.16rem;
@@ -4976,7 +5127,7 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         margin: 0 auto;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-weekday {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-weekday {
         display: flex;
         align-items: center;
         justify-content: center;
@@ -4987,7 +5138,7 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         line-height: 1;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-day {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-day {
         display: flex;
         align-items: center;
         justify-content: center;
@@ -5000,27 +5151,27 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         line-height: 1;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-day--empty {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-day--empty {
         visibility: hidden;
         pointer-events: none;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-day--closed,
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-day--holiday {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-day--closed,
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-day--holiday {
         background: var(--cal-holiday-bg);
         color: var(--cal-holiday-text);
         font-weight: 600;
         box-shadow: inset 0 0 0 1px var(--cal-holiday-border);
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-day--temporary {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-day--temporary {
         background: var(--cal-temporary-bg);
         color: var(--cal-temporary-text);
         font-weight: 600;
         box-shadow: inset 0 0 0 1px var(--cal-temporary-border);
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-day--hours {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-day--hours {
         background: var(--cal-hours-bg);
         color: var(--cal-hours-text);
         font-weight: 600;
@@ -5031,32 +5182,32 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
     }
 
     /* Source-news focus: thicker border + soft outer ring (no loud fill change). */
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-day.is-selected {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-day.is-selected {
         position: relative;
         z-index: 1;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-day--holiday.is-selected,
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-day--closed.is-selected {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-day--holiday.is-selected,
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-day--closed.is-selected {
         box-shadow:
             inset 0 0 0 2px var(--cal-holiday-border),
             0 0 0 2px color-mix(in srgb, var(--cal-holiday-border) 45%, transparent);
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-day--temporary.is-selected {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-day--temporary.is-selected {
         box-shadow:
             inset 0 0 0 2px var(--cal-temporary-border),
             0 0 0 2px color-mix(in srgb, var(--cal-temporary-border) 45%, transparent);
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-day--hours.is-selected {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-day--hours.is-selected {
         box-shadow:
             inset 2.5px 0 0 0 var(--cal-hours-accent),
             inset 0 0 0 2px var(--cal-hours-border),
             0 0 0 2px color-mix(in srgb, var(--cal-hours-border) 50%, transparent);
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-legend {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-legend {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -5065,11 +5216,11 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         margin: 0 0 0.55rem;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-legend[hidden] {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-legend[hidden] {
         display: none;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-legend-item {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-legend-item {
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
@@ -5079,7 +5230,7 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         line-height: 1.2;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-legend-swatch {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-legend-swatch {
         display: block;
         flex: 0 0 auto;
         width: 1.35rem;
@@ -5088,24 +5239,24 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         box-sizing: border-box;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-legend-item--holiday .content-modal__calendar-legend-swatch {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-legend-item--holiday .content-modal__calendar-legend-swatch {
         background: var(--cal-holiday-bg);
         box-shadow: inset 0 0 0 1px var(--cal-holiday-border);
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-legend-item--temporary .content-modal__calendar-legend-swatch {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-legend-item--temporary .content-modal__calendar-legend-swatch {
         background: var(--cal-temporary-bg);
         box-shadow: inset 0 0 0 1px var(--cal-temporary-border);
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-legend-item--hours .content-modal__calendar-legend-swatch {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-legend-item--hours .content-modal__calendar-legend-swatch {
         background: var(--cal-hours-bg);
         box-shadow:
             inset 2.5px 0 0 0 var(--cal-hours-accent),
             inset 0 0 0 1px var(--cal-hours-border);
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-note {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-note {
         margin: 0.7rem auto 0;
         max-width: 100%;
         color: var(--color-salon-muted, #6B635C);
@@ -5114,7 +5265,7 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         text-align: center;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes {
         display: flex;
         flex-direction: column;
         gap: 0.2rem;
@@ -5134,11 +5285,11 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         font-variant-numeric: tabular-nums;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes[hidden] {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes[hidden] {
         display: none;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes-item {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes-item {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr);
         column-gap: 0.75em;
@@ -5150,7 +5301,7 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         box-sizing: border-box;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes-date {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes-date {
         display: inline-grid;
         grid-template-columns: max-content 1.35em auto;
         align-items: baseline;
@@ -5158,45 +5309,45 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
         white-space: nowrap;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes-month {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes-month {
         white-space: nowrap;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes-day {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes-day {
         text-align: right;
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes-suffix {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes-suffix {
         white-space: nowrap;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes-detail {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes-detail {
         min-width: 0;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes-item--plain .content-modal__calendar-notes-detail {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes-item--plain .content-modal__calendar-notes-detail {
         grid-column: 1 / -1;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes-item.is-selected {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes-item.is-selected {
         background: color-mix(in srgb, var(--site-text, #3A332E) 5.5%, transparent);
         color: color-mix(in srgb, var(--site-text, #3A332E) 96%, transparent);
         font-weight: 500;
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes-item--holiday.is-selected {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes-item--holiday.is-selected {
         border-left-color: var(--cal-holiday-border);
         background: color-mix(in srgb, var(--cal-holiday-bg) 42%, transparent);
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes-item--temporary_closure.is-selected {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes-item--temporary_closure.is-selected {
         border-left-color: var(--cal-temporary-border);
         background: color-mix(in srgb, var(--cal-temporary-bg) 42%, transparent);
     }
 
-    html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes-item--hours.is-selected {
+    html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes-item--hours.is-selected {
         border-left-color: var(--cal-hours-border);
         background: color-mix(in srgb, var(--cal-hours-bg) 42%, transparent);
     }
@@ -5206,42 +5357,43 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
             font-size: 1.35rem;
         }
 
-        html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar:not([hidden]) {
+        html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar:not([hidden]),
+        html[data-scroll-display='vertical_indicator'] .site-business-calendar.content-modal__calendar {
             width: min(70%, 26.5rem); /* ~424px */
             margin: 0.8rem auto 0;
             padding: 0.4rem 0 0;
         }
 
-        html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-title {
+        html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-title {
             margin-bottom: 0.45rem;
             font-size: 1rem;
         }
 
-        html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-grid {
+        html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-grid {
             gap: 0.18rem;
         }
 
-        html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-weekday {
+        html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-weekday {
             min-height: 1.2rem;
             font-size: 0.72rem;
         }
 
-        html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-day {
+        html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-day {
             height: 1.65rem;
             min-height: 1.65rem;
             font-size: 0.84rem;
         }
 
-        html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-note {
+        html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-note {
             margin-top: 0.65rem;
             font-size: 0.84rem;
         }
 
-        html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-legend-item {
+        html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-legend-item {
             font-size: 0.72rem;
         }
 
-        html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__calendar-notes-item {
+        html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__calendar-notes-item {
             font-size: 0.84rem;
         }
     }
@@ -5540,17 +5692,17 @@ html.is-mobile-menu-open .site-mobile-bottom-bar {
             letter-spacing: 0.16em;
         }
 
-        html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__header--news {
+        html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__header--news {
             padding-bottom: 1rem;
         }
 
-        html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__news-foot {
+        html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__news-foot {
             margin-top: 1.5rem;
             padding-top: 1.25rem;
             gap: 0.6rem 1rem;
         }
 
-        html[data-scroll-display='vertical_indicator'] [data-news-modal] .content-modal__news-meta {
+        html[data-scroll-display='vertical_indicator'] :is([data-news-modal], .site-business-calendar) .content-modal__news-meta {
             font-size: 0.65rem;
             letter-spacing: 0.16em;
         }
