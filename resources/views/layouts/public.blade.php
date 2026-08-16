@@ -452,14 +452,26 @@
                 const EDGE_EPSILON_PX = 12;
                 const ANIMATION_MS = 900;
                 const ANIMATION_MS_REDUCED = 80;
+                /** Pixel delta (normalized) needed to commit one section snap. */
+                const WHEEL_THRESHOLD_PX = 56;
+                /** Ignore further wheel snaps after a section change (trackpad inertia). */
+                const WHEEL_COOLDOWN_MS = 480;
+                /** Reset unused wheel accumulation when the gesture pauses. */
+                const WHEEL_IDLE_RESET_MS = 160;
 
                 let sections = [];
                 let buttons = [];
                 let activeIndex = -1;
                 let ticking = false;
                 let isAnimating = false;
+                let isWheelLocked = false;
                 let animTimer = null;
+                let animStartedAt = 0;
                 let scrollEndHandler = null;
+                let wheelDeltaAccum = 0;
+                let wheelLastDir = 0;
+                let wheelIdleTimer = null;
+                let wheelCooldownTimer = null;
                 let touchStartX = null;
                 let touchStartY = null;
                 let touchIntent = 0;
@@ -546,6 +558,13 @@
                     }
 
                     unlockAnimation();
+                    isWheelLocked = false;
+                    resetWheelAccum();
+                    if (wheelCooldownTimer) {
+                        window.clearTimeout(wheelCooldownTimer);
+                        wheelCooldownTimer = null;
+                    }
+
                     const section = sections[index];
                     setActive(index);
                     updateHash(section);
@@ -680,7 +699,42 @@
                     history.replaceState(null, '', window.location.pathname + window.location.search);
                 }
 
+                function clearWheelIdleTimer() {
+                    if (wheelIdleTimer) {
+                        window.clearTimeout(wheelIdleTimer);
+                        wheelIdleTimer = null;
+                    }
+                }
+
+                function resetWheelAccum() {
+                    wheelDeltaAccum = 0;
+                    wheelLastDir = 0;
+                    clearWheelIdleTimer();
+                }
+
+                function scheduleWheelUnlock() {
+                    if (wheelCooldownTimer) {
+                        window.clearTimeout(wheelCooldownTimer);
+                    }
+                    wheelCooldownTimer = window.setTimeout(function () {
+                        isWheelLocked = false;
+                        resetWheelAccum();
+                        wheelCooldownTimer = null;
+                    }, WHEEL_COOLDOWN_MS);
+                }
+
+                function normalizeWheelDelta(event) {
+                    let dy = event.deltaY;
+                    if (event.deltaMode === 1) {
+                        dy *= 16;
+                    } else if (event.deltaMode === 2) {
+                        dy *= window.innerHeight || 800;
+                    }
+                    return dy;
+                }
+
                 function unlockAnimation() {
+                    const wasAnimating = isAnimating;
                     isAnimating = false;
                     if (animTimer) {
                         window.clearTimeout(animTimer);
@@ -689,6 +743,9 @@
                     if (scrollEndHandler) {
                         window.removeEventListener('scrollend', scrollEndHandler);
                         scrollEndHandler = null;
+                    }
+                    if (wasAnimating) {
+                        scheduleWheelUnlock();
                     }
                 }
 
@@ -702,6 +759,9 @@
 
                     const section = sections[index];
                     isAnimating = true;
+                    isWheelLocked = true;
+                    resetWheelAccum();
+                    animStartedAt = Date.now();
                     setActive(index);
                     updateHash(section);
 
@@ -729,6 +789,14 @@
                             window.removeEventListener('scrollend', scrollEndHandler);
                         }
                         scrollEndHandler = function () {
+                            // Ignore early scrollend from inertia / tiny scrolls; wait for min duration.
+                            const minMs = prefersReducedMotion() ? ANIMATION_MS_REDUCED : Math.min(450, ANIMATION_MS);
+                            const elapsed = Date.now() - animStartedAt;
+                            if (elapsed < minMs) {
+                                // once:true consumed this listener — re-arm until min duration elapses.
+                                window.addEventListener('scrollend', scrollEndHandler, { once: true });
+                                return;
+                            }
                             unlockAnimation();
                             updateActiveFromScroll();
                         };
@@ -819,19 +887,22 @@
                     if (event.ctrlKey || !sections.length || sections.length < 2 || isPublicModalOpen()) {
                         return;
                     }
-                    if (Math.abs(event.deltaY) < 1) {
+
+                    const dy = normalizeWheelDelta(event);
+                    if (Math.abs(dy) < 1) {
                         return;
                     }
 
-                    const direction = event.deltaY > 0 ? 1 : -1;
+                    const direction = dy > 0 ? 1 : -1;
 
-                    if (isAnimating) {
+                    if (isAnimating || isWheelLocked) {
                         event.preventDefault();
                         return;
                     }
 
                     const targetIndex = canNavigate(direction);
                     if (targetIndex === null) {
+                        resetWheelAccum();
                         // Already at true page top: further upward wheel must not move the page.
                         if (
                             direction < 0
@@ -846,10 +917,29 @@
                             event.preventDefault();
                             clampScrollToFooterEnd();
                         }
+                        // Tall sections (free scroll mid-section): leave native wheel alone.
                         return;
                     }
 
+                    // Snap candidate: consume wheel as a gesture (do not native-scroll past the edge).
                     event.preventDefault();
+
+                    if (wheelLastDir && direction !== wheelLastDir) {
+                        wheelDeltaAccum = 0;
+                    }
+                    wheelLastDir = direction;
+                    wheelDeltaAccum += dy;
+
+                    clearWheelIdleTimer();
+                    wheelIdleTimer = window.setTimeout(function () {
+                        resetWheelAccum();
+                    }, WHEEL_IDLE_RESET_MS);
+
+                    if (Math.abs(wheelDeltaAccum) < WHEEL_THRESHOLD_PX) {
+                        return;
+                    }
+
+                    resetWheelAccum();
                     goToSection(targetIndex);
                 }
 
