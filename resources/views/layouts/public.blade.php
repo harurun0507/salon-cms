@@ -343,12 +343,34 @@
                 }
                 const headerHeight = Math.round(siteHeader.getBoundingClientRect().height);
                 document.documentElement.style.setProperty('--site-header-offset', headerHeight + 'px');
+
+                // PC VI: Access height reserves footer so Access+footer = one viewport under header.
+                if (
+                    document.documentElement.getAttribute('data-scroll-display') === 'vertical_indicator'
+                    && mqDesktop.matches
+                ) {
+                    const footer = document.querySelector('.site-footer--vi');
+                    if (footer) {
+                        const footerHeight = Math.max(1, Math.round(footer.getBoundingClientRect().height));
+                        document.documentElement.style.setProperty('--site-footer-vi-height', footerHeight + 'px');
+                    }
+                }
             }
 
             syncSiteHeaderOffset();
             window.addEventListener('resize', syncSiteHeaderOffset);
+            window.addEventListener('load', syncSiteHeaderOffset);
             if (typeof ResizeObserver !== 'undefined' && siteHeader) {
                 new ResizeObserver(syncSiteHeaderOffset).observe(siteHeader);
+            }
+            const viFooter = document.querySelector('.site-footer--vi');
+            if (typeof ResizeObserver !== 'undefined' && viFooter) {
+                new ResizeObserver(syncSiteHeaderOffset).observe(viFooter);
+            }
+            if (typeof mqDesktop.addEventListener === 'function') {
+                mqDesktop.addEventListener('change', syncSiteHeaderOffset);
+            } else if (typeof mqDesktop.addListener === 'function') {
+                mqDesktop.addListener(syncSiteHeaderOffset);
             }
 
             function lockScroll() {
@@ -552,6 +574,42 @@
                     return -1;
                 }
 
+                function headerOffsetPx() {
+                    const raw = getComputedStyle(document.documentElement)
+                        .getPropertyValue('--site-header-offset')
+                        .trim();
+                    const parsed = parseFloat(raw);
+                    return Number.isFinite(parsed) ? parsed : 0;
+                }
+
+                function scrollTopForSection(section) {
+                    if (!section) {
+                        return 0;
+                    }
+                    if (isTopSection(section)) {
+                        return 0;
+                    }
+                    const absoluteTop = section.el.getBoundingClientRect().top + currentScrollY();
+                    const target = absoluteTop - headerOffsetPx();
+                    return Math.max(0, Math.min(Math.round(target), maxScrollY()));
+                }
+
+                function scrollToSection(section, behavior) {
+                    if (isTopSection(section)) {
+                        window.scrollTo({
+                            top: 0,
+                            left: 0,
+                            behavior: behavior,
+                        });
+                        return;
+                    }
+                    window.scrollTo({
+                        top: scrollTopForSection(section),
+                        left: 0,
+                        behavior: behavior,
+                    });
+                }
+
                 function jumpToSectionInstant(index) {
                     if (!sections.length || index < 0 || index >= sections.length) {
                         return false;
@@ -568,12 +626,7 @@
                     const section = sections[index];
                     setActive(index);
                     updateHash(section);
-
-                    if (isTopSection(section)) {
-                        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-                    } else {
-                        section.el.scrollIntoView({ behavior: 'auto', block: 'start' });
-                    }
+                    scrollToSection(section, 'auto');
 
                     return true;
                 }
@@ -764,16 +817,7 @@
                     animStartedAt = Date.now();
                     setActive(index);
                     updateHash(section);
-
-                    // Top section: always scrollY = 0 (ignore section offset / sticky header).
-                    if (isTopSection(section)) {
-                        scrollToPageTop();
-                    } else {
-                        section.el.scrollIntoView({
-                            behavior: scrollBehavior(),
-                            block: 'start',
-                        });
-                    }
+                    scrollToSection(section, scrollBehavior());
 
                     const duration = prefersReducedMotion() ? ANIMATION_MS_REDUCED : ANIMATION_MS;
                     if (animTimer) {
