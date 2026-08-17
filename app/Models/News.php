@@ -155,6 +155,143 @@ class News extends Model
         return $this->hasMany(NewsClosedWeekday::class)->orderBy('weekday');
     }
 
+    public function closedNthWeekdays(): HasMany
+    {
+        return $this->hasMany(NewsClosedNthWeekday::class)
+            ->orderBy('weekday')
+            ->orderBy('week_of_month');
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function closedWeekdayValues(): array
+    {
+        $this->loadMissing('closedWeekdays');
+
+        return $this->closedWeekdays
+            ->pluck('weekday')
+            ->map(fn ($day) => (int) $day)
+            ->filter(fn (int $day) => array_key_exists($day, self::WEEKDAY_LABELS))
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array{week: int, weekday: int}>
+     */
+    public function closedNthWeekdayRules(): array
+    {
+        $this->loadMissing('closedNthWeekdays');
+
+        return $this->closedNthWeekdays
+            ->map(fn (NewsClosedNthWeekday $rule) => [
+                'week' => (int) $rule->week_of_month,
+                'weekday' => (int) $rule->weekday,
+            ])
+            ->filter(fn (array $rule) => $rule['week'] >= 1
+                && $rule['week'] <= 5
+                && array_key_exists($rule['weekday'], self::WEEKDAY_LABELS))
+            ->unique(fn (array $rule) => $rule['week'].'-'.$rule['weekday'])
+            ->values()
+            ->all();
+    }
+
+    public function hasClosedDayRules(): bool
+    {
+        return $this->closedWeekdayValues() !== [] || $this->closedNthWeekdayRules() !== [];
+    }
+
+    /**
+     * e.g. "毎週火曜日・第3水曜日"
+     */
+    public function closedDaysDisplayText(): ?string
+    {
+        $parts = [];
+
+        $weekdays = $this->closedWeekdayValues();
+        if ($weekdays !== []) {
+            $labels = array_map(
+                fn (int $day) => self::WEEKDAY_LABELS[$day],
+                $weekdays
+            );
+            $parts[] = '毎週'.implode('・', $labels);
+        }
+
+        $grouped = [];
+        foreach ($this->closedNthWeekdayRules() as $rule) {
+            $grouped[$rule['weekday']][] = $rule['week'];
+        }
+        ksort($grouped);
+        foreach ($grouped as $weekday => $weeks) {
+            $weeks = array_values(array_unique($weeks));
+            sort($weeks);
+            $weekLabels = array_map(fn (int $week) => '第'.$week, $weeks);
+            $parts[] = implode('・', $weekLabels).self::WEEKDAY_LABELS[$weekday];
+        }
+
+        return $parts === [] ? null : implode('・', $parts);
+    }
+
+    public function closedDaysAnnouncementSentence(): ?string
+    {
+        $text = $this->closedDaysDisplayText();
+        if ($text === null) {
+            return null;
+        }
+
+        return '定休日は'.$text.'です。';
+    }
+
+    public function isRegularClosedDate(CarbonInterface $date): bool
+    {
+        $weekday = (int) $date->dayOfWeek;
+        if (in_array($weekday, $this->closedWeekdayValues(), true)) {
+            return true;
+        }
+
+        $occurrence = (int) ceil($date->day / 7);
+        foreach ($this->closedNthWeekdayRules() as $rule) {
+            if ($rule['weekday'] === $weekday && $rule['week'] === $occurrence) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * ISO dates (Y-m-d) in the month that match this news' closed-day rules and From–To.
+     *
+     * @return list<string>
+     */
+    public function regularClosedDatesForMonthWithinPeriod(int $year, int $month): array
+    {
+        $start = Carbon::create($year, $month, 1)->startOfDay();
+        $daysInMonth = (int) $start->daysInMonth;
+        $dates = [];
+
+        $periodFrom = $this->hasHolidayPeriod() ? $this->holiday_period_from->copy()->startOfDay() : null;
+        $periodTo = $this->hasHolidayPeriod() ? $this->holiday_period_to->copy()->startOfDay() : null;
+
+        for ($day = 1; $day <= $daysInMonth; $day++) {
+            $date = Carbon::create($year, $month, $day)->startOfDay();
+            if ($periodFrom && $date->lt($periodFrom)) {
+                continue;
+            }
+            if ($periodTo && $date->gt($periodTo)) {
+                continue;
+            }
+            if ($this->isRegularClosedDate($date)) {
+                $dates[] = $date->format('Y-m-d');
+            }
+        }
+
+        return $dates;
+    }
+
     /**
      * Categories that use the date calendar / news_closed_dates.
      *
@@ -447,23 +584,7 @@ class News extends Model
 
     public function closedWeekdaysSentence(): ?string
     {
-        $weekdays = $this->closedWeekdays
-            ->pluck('weekday')
-            ->map(fn ($day) => (int) $day)
-            ->filter(fn (int $day) => array_key_exists($day, self::WEEKDAY_LABELS))
-            ->unique()
-            ->sort()
-            ->values();
-
-        if ($weekdays->isEmpty()) {
-            return null;
-        }
-
-        $labels = $weekdays
-            ->map(fn (int $day) => self::WEEKDAY_LABELS[$day])
-            ->implode('・');
-
-        return '定休日は毎週'.$labels.'です。';
+        return $this->closedDaysAnnouncementSentence();
     }
 
     public function categoryLabel(): string
@@ -524,7 +645,7 @@ class News extends Model
      */
     public function toPublicModalData(): array
     {
-        $this->loadMissing(['closedDates', 'closedWeekdays']);
+        $this->loadMissing(['closedDates', 'closedWeekdays', 'closedNthWeekdays']);
 
         $temporaryDates = [];
         $closedDateStrings = [];
@@ -551,24 +672,29 @@ class News extends Model
 
         $salon = SalonSetting::current();
         $closedWeekdays = $this->isHolidayAnnouncement()
-            ? $salon->closedWeekdayValues()
+            ? ($this->hasClosedDayRules() ? $this->closedWeekdayValues() : $salon->closedWeekdayValues())
             : [];
 
         $calendarYear = null;
         $calendarMonth = null;
         $showCalendar = false;
         $holidayPeriodKeys = [];
+        $holidaySentence = null;
 
-        if ($this->isHolidayAnnouncement() && $salon->hasClosedDays()) {
-            $showCalendar = true;
-            $holidayPeriodKeys = $this->holidayPeriodMonthKeys();
-            $initialKey = $holidayPeriodKeys[0] ?? null;
-            if ($initialKey) {
-                [$calendarYear, $calendarMonth] = array_map('intval', explode('-', $initialKey));
-            } else {
-                $base = $this->published_at ?? now();
-                $calendarYear = (int) $base->format('Y');
-                $calendarMonth = (int) $base->format('n');
+        if ($this->isHolidayAnnouncement()) {
+            $holidaySentence = $this->closedDaysAnnouncementSentence()
+                ?? $salon->closedDaysAnnouncementSentence();
+            if ($this->hasClosedDayRules() || $salon->hasClosedDays()) {
+                $showCalendar = true;
+                $holidayPeriodKeys = $this->holidayPeriodMonthKeys();
+                $initialKey = $holidayPeriodKeys[0] ?? null;
+                if ($initialKey) {
+                    [$calendarYear, $calendarMonth] = array_map('intval', explode('-', $initialKey));
+                } else {
+                    $base = $this->published_at ?? now();
+                    $calendarYear = (int) $base->format('Y');
+                    $calendarMonth = (int) $base->format('n');
+                }
             }
         } elseif ($this->isTemporaryClosureAnnouncement() && $closedDateStrings !== []) {
             $showCalendar = true;
@@ -589,9 +715,7 @@ class News extends Model
             'categoryKey' => (string) ($this->category === self::CATEGORY_CLOSED
                 ? self::CATEGORY_HOLIDAY
                 : ($this->category ?: self::CATEGORY_OTHER)),
-            'holidaySentence' => $this->isHolidayAnnouncement()
-                ? $salon->closedDaysAnnouncementSentence()
-                : null,
+            'holidaySentence' => $holidaySentence,
             'holidayPeriodLabel' => $this->holidayPeriodLabel(),
             'holidayPeriodFrom' => $this->hasHolidayPeriod()
                 ? $this->holiday_period_from->format('Y-m-d')
@@ -671,7 +795,7 @@ class News extends Model
 
         $items = static::published()
             ->whereIn('category', static::businessCalendarCategoryKeys())
-            ->with(['closedDates'])
+            ->with(['closedDates', 'closedWeekdays', 'closedNthWeekdays'])
             ->get()
             ->filter(function (self $news) use ($start, $end, $year, $month) {
                 if ($news->isHolidayAnnouncement()) {
@@ -702,13 +826,46 @@ class News extends Model
         $days = [];
         $notes = [];
         $salon = SalonSetting::current();
-        $holidaySentence = $salon->closedDaysAnnouncementSentence();
 
-        foreach ($salon->regularClosedDatesForMonth($year, $month) as $iso) {
-            $days[$iso] = array_values(array_unique([
-                ...($days[$iso] ?? []),
-                'holiday',
-            ]));
+        $holidayNewsItems = $items->filter(fn (self $news) => $news->isHolidayAnnouncement())->values();
+        $holidaySentence = null;
+
+        if ($holidayNewsItems->isNotEmpty()) {
+            foreach ($holidayNewsItems as $news) {
+                $rulesNews = $news->hasClosedDayRules() ? $news : null;
+                if ($rulesNews) {
+                    foreach ($rulesNews->regularClosedDatesForMonthWithinPeriod($year, $month) as $iso) {
+                        $days[$iso] = array_values(array_unique([
+                            ...($days[$iso] ?? []),
+                            'holiday',
+                        ]));
+                    }
+                    $holidaySentence = $holidaySentence ?? $rulesNews->closedDaysAnnouncementSentence();
+                } else {
+                    foreach ($salon->regularClosedDatesForMonth($year, $month) as $iso) {
+                        if ($news->hasHolidayPeriod()) {
+                            $date = Carbon::parse($iso)->startOfDay();
+                            if ($date->lt($news->holiday_period_from->copy()->startOfDay())
+                                || $date->gt($news->holiday_period_to->copy()->startOfDay())) {
+                                continue;
+                            }
+                        }
+                        $days[$iso] = array_values(array_unique([
+                            ...($days[$iso] ?? []),
+                            'holiday',
+                        ]));
+                    }
+                    $holidaySentence = $holidaySentence ?? $salon->closedDaysAnnouncementSentence();
+                }
+            }
+        } else {
+            foreach ($salon->regularClosedDatesForMonth($year, $month) as $iso) {
+                $days[$iso] = array_values(array_unique([
+                    ...($days[$iso] ?? []),
+                    'holiday',
+                ]));
+            }
+            $holidaySentence = $salon->closedDaysAnnouncementSentence();
         }
 
         foreach ($items as $news) {

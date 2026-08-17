@@ -27,6 +27,15 @@
                         $prefix.'.holiday_period_to',
                         $newItem['holiday_period_to'] ?? ''
                     );
+                    $salonDefaults = \App\Models\SalonSetting::current();
+                    $holidayClosedWeekdays = old(
+                        $prefix.'.closed_weekdays',
+                        $newItem['closed_weekdays'] ?? $salonDefaults->closedWeekdayValues()
+                    );
+                    $holidayClosedNth = old($prefix.'.closed_nth', $newItem['closed_nth'] ?? null);
+                    if (! is_array($holidayClosedNth)) {
+                        $holidayClosedNth = $salonDefaults->closedNthWeekdayRules();
+                    }
                     // New card only: seed from salon regular hours when date is known and times are still blank.
                     if (
                         $isHoursCategory
@@ -146,13 +155,6 @@
                                 @endforeach
                             </div>
                         </div>
-                        <p
-                            class="text-xs text-admin-muted"
-                            data-news-holiday-hint
-                            @if((string) $category !== \App\Models\News::CATEGORY_HOLIDAY) hidden @endif
-                        >
-                            通常の定休日は「店舗情報」の基本情報で設定します。こちらは告知用のお知らせです。
-                        </p>
                         @include('admin.news.partials.holiday-period-fields', [
                             'prefix' => $prefix,
                             'fieldPrefix' => 'new_news['.$key.']',
@@ -160,6 +162,9 @@
                             'holidayPeriodType' => $holidayPeriodType,
                             'holidayPeriodFrom' => $holidayPeriodFrom,
                             'holidayPeriodTo' => $holidayPeriodTo,
+                            'closedWeekdays' => $holidayClosedWeekdays,
+                            'closedNth' => $holidayClosedNth,
+                            'weekdayLabels' => $weekdayLabels,
                         ])
                         <div
                             data-news-closed-wrap

@@ -62,7 +62,7 @@
                         name="{{ $name }}"
                         id="{{ $name }}"
                         value="{{ $hex }}"
-                        class="admin-input max-w-[10rem] font-mono uppercase"
+                        class="admin-input max-w-40 font-mono uppercase"
                         maxlength="7"
                         autocomplete="off"
                         spellcheck="false"

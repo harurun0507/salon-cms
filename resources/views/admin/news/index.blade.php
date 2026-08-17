@@ -427,7 +427,8 @@
             const weekdayShortLabels = @json($weekdayLabels);
             const holidayPeriodTypes = @json(\App\Models\News::HOLIDAY_PERIOD_TYPES);
             const holidayPeriodMonths = @json(\App\Models\News::HOLIDAY_PERIOD_MONTHS);
-            const salonClosedLabel = @json(\App\Models\SalonSetting::current()->closedDaysDisplayText());
+            const salonClosedWeekdays = @json(\App\Models\SalonSetting::current()->closedWeekdayValues());
+            const salonClosedNth = @json(\App\Models\SalonSetting::current()->closedNthWeekdayRules());
             const calendarColorDefaults = @json($calendarColorDefaults);
             const regularBusinessHours = @json($regularBusinessHours);
             const holidayDateSet = new Set((regularBusinessHours.holidayDates || []).map(String));
@@ -771,10 +772,65 @@
                 return '<div class="admin-segmented mt-1" role="radiogroup" aria-label="対象期間" data-news-holiday-period-type-group">' + html + '</div>';
             }
 
+            function holidayClosedDaysFieldsHtml(fieldPrefix) {
+                const weekdays = Array.isArray(salonClosedWeekdays) ? salonClosedWeekdays : [];
+                const nthRules = Array.isArray(salonClosedNth) ? salonClosedNth : [];
+                let weekdayHtml = '<div class="news-weekday-choices mt-1 notranslate" role="group" aria-label="毎週の定休日" translate="no" lang="ja">';
+                Object.keys(weekdayShortLabels).forEach(function (key) {
+                    const value = Number(key);
+                    const checked = weekdays.indexOf(value) !== -1 ? ' checked' : '';
+                    weekdayHtml += '<label class="news-weekday-option">' +
+                        '<input type="checkbox" name="' + fieldPrefix + '[closed_weekdays][]" value="' + value + '" class="news-weekday-input" data-news-holiday-weekday' + checked + '>' +
+                        '<span class="news-weekday-face">' + weekdayShortLabels[key] + '</span>' +
+                        '</label>';
+                });
+                weekdayHtml += '</div>';
+
+                let nthHtml = '';
+                nthRules.forEach(function (rule, index) {
+                    nthHtml += holidayClosedNthRowHtml(fieldPrefix, index, rule.week, rule.weekday);
+                });
+
+                return '<div class="space-y-3" data-news-holiday-closed-days>' +
+                    '<span class="admin-label">定休日 <span class="admin-required-badge">必須</span></span>' +
+                    '<div class="mt-1 space-y-4">' +
+                        '<div><p class="text-sm text-admin-text">毎週</p>' + weekdayHtml + '</div>' +
+                        '<div>' +
+                            '<p class="text-sm text-admin-text">追加定休日（第○週の○曜日）</p>' +
+                            '<div class="mt-2 space-y-2 notranslate" data-news-closed-nth-list translate="no" lang="ja">' + nthHtml + '</div>' +
+                            '<select class="sr-only notranslate" aria-hidden="true" tabindex="-1" translate="no" lang="ja" data-news-closed-nth-week-labels>' +
+                                '<option value="1">第1週</option><option value="2">第2週</option><option value="3">第3週</option>' +
+                                '<option value="4">第4週</option><option value="5">第5週</option>' +
+                            '</select>' +
+                            '<button type="button" class="admin-btn-secondary mt-2 text-sm" data-news-closed-nth-add>＋ 追加定休日を追加</button>' +
+                            '<p class="mt-1 text-xs text-admin-muted">例：第3水曜日、第1・第3水曜日。初期値は店舗情報の基本情報です。</p>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }
+
+            function holidayClosedNthRowHtml(fieldPrefix, index, week, weekday) {
+                const selectedWeek = Number(week) || 1;
+                const selectedWeekday = Number(weekday);
+                let weekOptions = '';
+                for (let w = 1; w <= 5; w += 1) {
+                    weekOptions += '<option value="' + w + '"' + (w === selectedWeek ? ' selected' : '') + '>第' + w + '週</option>';
+                }
+                let weekdayOptions = '';
+                Object.keys(weekdayShortLabels).forEach(function (key) {
+                    const value = Number(key);
+                    weekdayOptions += '<option value="' + value + '"' + (value === selectedWeekday ? ' selected' : '') + '>' + weekdayShortLabels[key] + '</option>';
+                });
+                return '<div class="flex flex-wrap items-center gap-2" data-news-closed-nth-row>' +
+                    '<select name="' + fieldPrefix + '[closed_nth][' + index + '][week]" class="admin-input max-w-[7.5rem] notranslate" aria-label="週" translate="no" lang="ja">' + weekOptions + '</select>' +
+                    '<select name="' + fieldPrefix + '[closed_nth][' + index + '][weekday]" class="admin-input max-w-[7rem] notranslate" aria-label="曜日" translate="no" lang="ja">' + weekdayOptions + '</select>' +
+                    '<button type="button" class="admin-icon-btn admin-icon-btn-delete" data-news-closed-nth-remove aria-label="削除" title="削除"><span aria-hidden="true">&times;</span></button>' +
+                '</div>';
+            }
+
             function holidayPeriodFieldsHtml(fieldPrefix) {
                 const from = defaultHolidayPeriodFrom();
                 const to = computeHolidayPeriodTo(from, '1_year');
-                const closedHint = salonClosedLabel ? salonClosedLabel : '未設定';
                 return '<div class="space-y-3" data-news-holiday-period-wrap hidden>' +
                     '<div>' +
                         '<span class="admin-label">対象期間 <span class="admin-required-badge">必須</span></span>' +
@@ -788,9 +844,25 @@
                             '<input type="date" name="' + fieldPrefix + '[holiday_period_to]" value="' + to + '" class="admin-input max-w-[11rem]" data-news-holiday-period-to data-period-auto="1" aria-label="終了日">' +
                         '</div>' +
                         '<p class="text-sm text-admin-text" data-news-holiday-period-preview></p>' +
-                        '<p class="text-xs text-admin-muted">定休日は店舗情報の設定（' + closedHint + '）を期間内の各月に反映します。</p>' +
                     '</div>' +
+                    holidayClosedDaysFieldsHtml(fieldPrefix) +
                 '</div>';
+            }
+
+            function setWrapInputsDisabled(wrap, disabled) {
+                if (!wrap) {
+                    return;
+                }
+                wrap.querySelectorAll('input, select, textarea, button').forEach(function (el) {
+                    if (el.matches('[data-news-closed-nth-add], [data-news-closed-nth-remove]')) {
+                        el.disabled = disabled;
+                        return;
+                    }
+                    if (el.tagName === 'BUTTON') {
+                        return;
+                    }
+                    el.disabled = disabled;
+                });
             }
 
             function syncHolidayPeriodPreview(card) {
@@ -839,7 +911,6 @@
                 const weekdayWrap = card.querySelector('[data-news-weekday-wrap]');
                 const dateWrap = card.querySelector('[data-news-closed-wrap]');
                 const hoursWrap = card.querySelector('[data-news-hours-wrap]');
-                const holidayHint = card.querySelector('[data-news-holiday-hint]');
                 const holidayPeriodWrap = card.querySelector('[data-news-holiday-period-wrap]');
                 const bodyLabel = card.querySelector('[data-news-body-label]');
                 const bodyHint = card.querySelector('[data-news-body-hint]');
@@ -848,18 +919,19 @@
                 const isHoliday = value === 'holiday';
                 if (weekdayWrap) {
                     weekdayWrap.hidden = closedWeekdayCategories.indexOf(value) === -1;
+                    setWrapInputsDisabled(weekdayWrap, weekdayWrap.hidden);
                 }
                 if (dateWrap) {
                     dateWrap.hidden = closedDateCategories.indexOf(value) === -1;
+                    setWrapInputsDisabled(dateWrap, dateWrap.hidden);
                 }
                 if (hoursWrap) {
                     hoursWrap.hidden = !isHours;
-                }
-                if (holidayHint) {
-                    holidayHint.hidden = !isHoliday;
+                    setWrapInputsDisabled(hoursWrap, hoursWrap.hidden);
                 }
                 if (holidayPeriodWrap) {
                     holidayPeriodWrap.hidden = !isHoliday;
+                    setWrapInputsDisabled(holidayPeriodWrap, holidayPeriodWrap.hidden);
                     if (isHoliday) {
                         applyHolidayPeriodAutoTo(card, false);
                     }
@@ -1198,7 +1270,6 @@
                             '<span class="admin-label">定休日 <span class="admin-required-badge">必須</span></span>' +
                             weekdayChoicesHtml('new_news[' + key + ']', []) +
                         '</div>' +
-                        '<p class="text-xs text-admin-muted" data-news-holiday-hint hidden>通常の定休日は「店舗情報」の基本情報で設定します。こちらは告知用のお知らせです。</p>' +
                         holidayPeriodFieldsHtml('new_news[' + key + ']') +
                         '<div data-news-closed-wrap hidden>' +
                             '<span class="admin-label">休業日 <span class="admin-required-badge">必須</span></span>' +
@@ -1282,6 +1353,36 @@
                 bindCard(card);
                 syncDisplayOrders();
             }
+
+            form.addEventListener('click', function (event) {
+                const addBtn = event.target.closest('[data-news-closed-nth-add]');
+                if (addBtn && form.contains(addBtn)) {
+                    const card = addBtn.closest('[data-news-card]');
+                    const list = card ? card.querySelector('[data-news-closed-nth-list]') : null;
+                    const periodWrap = card ? card.querySelector('[data-news-holiday-period-wrap]') : null;
+                    if (!list || !periodWrap || periodWrap.hidden) {
+                        return;
+                    }
+                    const orderInput = card.querySelector('[data-news-order]');
+                    const fieldPrefix = orderInput && orderInput.name
+                        ? orderInput.name.replace(/\[display_order\]$/, '')
+                        : null;
+                    if (!fieldPrefix) {
+                        return;
+                    }
+                    const index = list.querySelectorAll('[data-news-closed-nth-row]').length;
+                    list.insertAdjacentHTML('beforeend', holidayClosedNthRowHtml(fieldPrefix, index, 1, 1));
+                    return;
+                }
+
+                const removeBtn = event.target.closest('[data-news-closed-nth-remove]');
+                if (removeBtn && form.contains(removeBtn)) {
+                    const row = removeBtn.closest('[data-news-closed-nth-row]');
+                    if (row) {
+                        row.remove();
+                    }
+                }
+            });
 
             grid.addEventListener('dragstart', function (e) {
                 const handle = e.target.closest('[data-news-drag-handle]');

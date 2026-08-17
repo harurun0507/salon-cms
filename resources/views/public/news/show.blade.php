@@ -6,7 +6,8 @@
     @php
         $weekdayLabels = ['日', '月', '火', '水', '木', '金', '土'];
         $holidaySentence = $news->isHolidayAnnouncement()
-            ? \App\Models\SalonSetting::current()->closedDaysAnnouncementSentence()
+            ? ($news->closedDaysAnnouncementSentence()
+                ?? \App\Models\SalonSetting::current()->closedDaysAnnouncementSentence())
             : null;
         $showTemporaryDates = $news->isTemporaryClosureAnnouncement() && $news->closedDates->isNotEmpty();
     @endphp

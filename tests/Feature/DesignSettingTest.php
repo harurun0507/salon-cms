@@ -405,6 +405,12 @@ class DesignSettingTest extends TestCase
         $this->assertStringContainsString('home-vi-access__cards', $html);
         $this->assertStringContainsString('site-business-calendar', $html);
         $this->assertStringContainsString('site-business-calendar--access', $html);
+        $this->assertStringContainsString('data-access-calendar-switcher', $html);
+        $this->assertStringContainsString('site-business-calendar__nav', $html);
+        $this->assertStringContainsString('data-access-cal-prev', $html);
+        $this->assertStringContainsString('data-access-cal-next', $html);
+        $this->assertStringContainsString('data-access-cal-viewport', $html);
+        $this->assertStringContainsString('data-access-cal-months', $html);
         $this->assertStringContainsString('site-business-calendar__access-foot', $html);
         $this->assertStringContainsString('content-modal__calendar-legend', $html);
         $this->assertStringNotContainsString('content-modal__calendar-notes', $html);

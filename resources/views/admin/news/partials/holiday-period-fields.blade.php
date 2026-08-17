@@ -3,7 +3,14 @@
     $periodType = old($prefix.'.holiday_period_type', $holidayPeriodType ?? \App\Models\News::HOLIDAY_PERIOD_1_YEAR);
     $periodFrom = old($prefix.'.holiday_period_from', $holidayPeriodFrom ?? now()->startOfMonth()->toDateString());
     $periodTo = old($prefix.'.holiday_period_to', $holidayPeriodTo ?? '');
-    $salonClosedLabel = \App\Models\SalonSetting::current()->closedDaysDisplayText();
+    $salon = \App\Models\SalonSetting::current();
+    $defaultWeekdays = $salon->closedWeekdayValues();
+    $defaultNth = $salon->closedNthWeekdayRules();
+    $closedWeekdays = old($prefix.'.closed_weekdays', $closedWeekdays ?? $defaultWeekdays);
+    $closedNth = old($prefix.'.closed_nth', $closedNth ?? $defaultNth);
+    if (! is_array($closedNth)) {
+        $closedNth = $defaultNth;
+    }
 @endphp
 
 <div
@@ -60,8 +67,12 @@
             >
         </div>
         <p class="text-sm text-admin-text" data-news-holiday-period-preview></p>
-        <p class="text-xs text-admin-muted">
-            定休日は店舗情報の設定（{{ $salonClosedLabel !== '' ? $salonClosedLabel : '未設定' }}）を期間内の各月に反映します。
-        </p>
     </div>
+
+    @include('admin.news.partials.holiday-closed-days-fields', [
+        'fieldPrefix' => $fieldPrefix,
+        'closedWeekdays' => $closedWeekdays,
+        'closedNth' => $closedNth,
+        'weekdayLabels' => $weekdayLabels ?? \App\Models\News::WEEKDAY_SHORT_LABELS,
+    ])
 </div>

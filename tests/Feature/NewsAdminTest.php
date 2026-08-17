@@ -207,7 +207,10 @@ class NewsAdminTest extends TestCase
                         'holiday_period_type' => '3_months',
                         'holiday_period_from' => '2026-08-01',
                         'holiday_period_to' => '2026-10-31',
-                        'closed_weekdays' => ['1', '2'],
+                        'closed_weekdays' => ['2'],
+                        'closed_nth' => [
+                            ['week' => 3, 'weekday' => 3],
+                        ],
                         'closed_dates' => ['2026-08-04'],
                         'published_at' => now()->subHour()->format('Y-m-d\TH:i'),
                         'is_published' => '1',
@@ -222,7 +225,8 @@ class NewsAdminTest extends TestCase
         $this->assertSame('3_months', $news->holiday_period_type);
         $this->assertSame('2026-08-01', $news->holiday_period_from?->toDateString());
         $this->assertSame('2026-10-31', $news->holiday_period_to?->toDateString());
-        $this->assertSame(0, $news->closedWeekdays()->count());
+        $this->assertSame([2], $news->closedWeekdayValues());
+        $this->assertSame([['week' => 3, 'weekday' => 3]], $news->closedNthWeekdayRules());
         $this->assertSame(0, $news->closedDates()->count());
 
         $showHtml = $this->get(route('news.show', $news->slug))
@@ -575,8 +579,17 @@ class NewsAdminTest extends TestCase
             ->assertDontSee('prose prose-neutral', false);
     }
 
-    public function test_holiday_category_can_be_saved_without_news_weekdays(): void
+    public function test_holiday_category_saves_closed_day_rules_from_salon_defaults(): void
     {
+        $salon = SalonSetting::current();
+        $salon->closedWeekdays()->delete();
+        $salon->closedNthWeekdays()->delete();
+        $salon->closedWeekdays()->create(['weekday' => 2]);
+        $salon->closedNthWeekdays()->create([
+            'week_of_month' => 3,
+            'weekday' => 3,
+        ]);
+
         $this->actingAs($this->admin())
             ->put(route('admin.news.update'), [
                 'new_news' => [
@@ -587,7 +600,10 @@ class NewsAdminTest extends TestCase
                         'holiday_period_type' => '1_year',
                         'holiday_period_from' => '2026-09-01',
                         'holiday_period_to' => '2027-08-31',
-                        'closed_weekdays' => [],
+                        'closed_weekdays' => ['2'],
+                        'closed_nth' => [
+                            ['week' => 3, 'weekday' => 3],
+                        ],
                         'published_at' => '2026-08-01T10:00',
                         'is_published' => '1',
                         'display_order' => 1,
@@ -608,7 +624,34 @@ class NewsAdminTest extends TestCase
             '2027-01', '2027-02', '2027-03', '2027-04',
             '2027-05', '2027-06', '2027-07', '2027-08',
         ], $news->holidayPeriodMonthKeys());
-        $this->assertSame(0, $news->closedWeekdays()->count());
+        $this->assertSame([2], $news->closedWeekdayValues());
+        $this->assertSame([['week' => 3, 'weekday' => 3]], $news->closedNthWeekdayRules());
+        $this->assertSame('定休日は毎週火曜日・第3水曜日です。', $news->closedDaysAnnouncementSentence());
+    }
+
+    public function test_holiday_category_requires_closed_day_rules(): void
+    {
+        $this->actingAs($this->admin())
+            ->from(route('admin.news.index'))
+            ->put(route('admin.news.update'), [
+                'new_news' => [
+                    'new_1' => [
+                        'title' => '定休日',
+                        'body' => '',
+                        'category' => 'holiday',
+                        'holiday_period_type' => '1_year',
+                        'holiday_period_from' => '2026-09-01',
+                        'holiday_period_to' => '2027-08-31',
+                        'closed_weekdays' => [],
+                        'closed_nth' => [],
+                        'published_at' => '2026-08-01T10:00',
+                        'is_published' => '1',
+                        'display_order' => 1,
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.news.index'))
+            ->assertSessionHasErrors(['new_news.new_1.closed_weekdays']);
     }
 
     public function test_holiday_period_is_required_for_holiday_category(): void
@@ -652,6 +695,7 @@ class NewsAdminTest extends TestCase
             'is_published' => true,
             'published_at' => '2026-08-15 10:00:00',
         ]);
+        $news->closedWeekdays()->create(['weekday' => 2]);
 
         $this->assertTrue($news->coversBusinessCalendarMonth(2026, 9));
         $this->assertTrue($news->coversBusinessCalendarMonth(2026, 11));
@@ -671,6 +715,7 @@ class NewsAdminTest extends TestCase
         $modal = $news->toPublicModalData();
         $this->assertSame('2026/09/01 ～ 2026/11/30', $modal['holidayPeriodLabel']);
         $this->assertSame(['2026-09', '2026-10', '2026-11'], $modal['holidayPeriodKeys']);
+        $this->assertSame('定休日は毎週火曜日です。', $modal['holidaySentence']);
     }
 
     public function test_temporary_closure_requires_at_least_one_closed_date(): void

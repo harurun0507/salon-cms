@@ -36,6 +36,19 @@
                         $prefix.'.holiday_period_to',
                         $news->holiday_period_to?->toDateString()
                     );
+                    $salonDefaults = \App\Models\SalonSetting::current();
+                    $holidayClosedWeekdays = old(
+                        $prefix.'.closed_weekdays',
+                        $news->hasClosedDayRules()
+                            ? $news->closedWeekdayValues()
+                            : $salonDefaults->closedWeekdayValues()
+                    );
+                    $holidayClosedNth = old($prefix.'.closed_nth');
+                    if (! is_array($holidayClosedNth)) {
+                        $holidayClosedNth = $news->hasClosedDayRules()
+                            ? $news->closedNthWeekdayRules()
+                            : $salonDefaults->closedNthWeekdayRules();
+                    }
                 @endphp
                 <div
                     class="admin-card news-card"
@@ -135,13 +148,6 @@
                                 @endforeach
                             </div>
                         </div>
-                        <p
-                            class="text-xs text-admin-muted"
-                            data-news-holiday-hint
-                            @if((string) $category !== \App\Models\News::CATEGORY_HOLIDAY) hidden @endif
-                        >
-                            通常の定休日は「店舗情報」の基本情報で設定します。こちらは告知用のお知らせです。
-                        </p>
                         @include('admin.news.partials.holiday-period-fields', [
                             'prefix' => $prefix,
                             'fieldPrefix' => 'news['.$news->id.']',
@@ -149,6 +155,9 @@
                             'holidayPeriodType' => $holidayPeriodType,
                             'holidayPeriodFrom' => $holidayPeriodFrom,
                             'holidayPeriodTo' => $holidayPeriodTo,
+                            'closedWeekdays' => $holidayClosedWeekdays,
+                            'closedNth' => $holidayClosedNth,
+                            'weekdayLabels' => $weekdayLabels,
                         ])
                         <div
                             data-news-closed-wrap

@@ -17,7 +17,7 @@ class NewsController extends AdminController
 {
     public function index(): View
     {
-        $newsList = News::query()->with(['closedDates', 'closedWeekdays'])->ordered()->get();
+        $newsList = News::query()->with(['closedDates', 'closedWeekdays', 'closedNthWeekdays'])->ordered()->get();
         $categories = News::CATEGORIES;
         $weekdayLabels = News::WEEKDAY_SHORT_LABELS;
         $design = DesignSetting::current();
@@ -65,6 +65,9 @@ class NewsController extends AdminController
             'news.*.closed_dates.*' => ['nullable', 'date_format:Y-m-d'],
             'news.*.closed_weekdays' => ['nullable', 'array'],
             'news.*.closed_weekdays.*' => ['nullable', 'integer', 'between:0,6'],
+            'news.*.closed_nth' => ['nullable', 'array'],
+            'news.*.closed_nth.*.week' => ['nullable', 'integer', 'between:1,5'],
+            'news.*.closed_nth.*.weekday' => ['nullable', 'integer', 'between:0,6'],
             'news.*.hours_change_date' => ['nullable', 'date_format:Y-m-d'],
             'news.*.hours_start_time' => ['nullable', 'date_format:H:i'],
             'news.*.hours_end_time' => ['nullable', 'date_format:H:i'],
@@ -82,6 +85,9 @@ class NewsController extends AdminController
             'new_news.*.closed_dates.*' => ['nullable', 'date_format:Y-m-d'],
             'new_news.*.closed_weekdays' => ['nullable', 'array'],
             'new_news.*.closed_weekdays.*' => ['nullable', 'integer', 'between:0,6'],
+            'new_news.*.closed_nth' => ['nullable', 'array'],
+            'new_news.*.closed_nth.*.week' => ['nullable', 'integer', 'between:1,5'],
+            'new_news.*.closed_nth.*.weekday' => ['nullable', 'integer', 'between:0,6'],
             'new_news.*.hours_change_date' => ['nullable', 'date_format:Y-m-d'],
             'new_news.*.hours_start_time' => ['nullable', 'date_format:H:i'],
             'new_news.*.hours_end_time' => ['nullable', 'date_format:H:i'],
@@ -196,6 +202,33 @@ class NewsController extends AdminController
                             $validator->errors()->add(
                                 "{$group}.{$key}.holiday_period_to",
                                 '終了日は開始日以降にしてください。'
+                            );
+                        }
+
+                        $weekdays = collect($data['closed_weekdays'] ?? [])
+                            ->filter(fn ($value) => $value !== null && $value !== '')
+                            ->map(fn ($value) => (int) $value)
+                            ->filter(fn (int $value) => $value >= 0 && $value <= 6)
+                            ->unique()
+                            ->values();
+
+                        $nthRules = collect($data['closed_nth'] ?? [])
+                            ->filter(fn ($rule) => is_array($rule))
+                            ->map(fn (array $rule) => [
+                                'week' => (int) ($rule['week'] ?? 0),
+                                'weekday' => (int) ($rule['weekday'] ?? -1),
+                            ])
+                            ->filter(fn (array $rule) => $rule['week'] >= 1
+                                && $rule['week'] <= 5
+                                && $rule['weekday'] >= 0
+                                && $rule['weekday'] <= 6)
+                            ->unique(fn (array $rule) => $rule['week'].'-'.$rule['weekday'])
+                            ->values();
+
+                        if ($weekdays->isEmpty() && $nthRules->isEmpty()) {
+                            $validator->errors()->add(
+                                "{$group}.{$key}.closed_weekdays",
+                                '定休日を1つ以上設定してください。'
                             );
                         }
                     }
@@ -364,8 +397,17 @@ class NewsController extends AdminController
     {
         $category = $data['category'] ?? null;
 
+        if (News::usesHolidayPeriodFields($category)) {
+            $news->closedDates()->delete();
+            $this->syncClosedWeekdays($news, $data);
+            $this->syncClosedNthWeekdays($news, $data);
+
+            return;
+        }
+
         if (News::usesClosedWeekdays($category)) {
             $news->closedDates()->delete();
+            $news->closedNthWeekdays()->delete();
             $this->syncClosedWeekdays($news, $data);
 
             return;
@@ -373,6 +415,7 @@ class NewsController extends AdminController
 
         if (News::usesClosedDates($category)) {
             $news->closedWeekdays()->delete();
+            $news->closedNthWeekdays()->delete();
             $this->syncClosedDates($news, $data);
 
             return;
@@ -380,6 +423,7 @@ class NewsController extends AdminController
 
         $news->closedDates()->delete();
         $news->closedWeekdays()->delete();
+        $news->closedNthWeekdays()->delete();
     }
 
     /**
@@ -421,6 +465,35 @@ class NewsController extends AdminController
         foreach ($weekdays as $weekday) {
             $news->closedWeekdays()->create([
                 'weekday' => $weekday,
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function syncClosedNthWeekdays(News $news, array $data): void
+    {
+        $news->closedNthWeekdays()->delete();
+
+        $nthRules = collect($data['closed_nth'] ?? [])
+            ->filter(fn ($rule) => is_array($rule))
+            ->map(fn (array $rule) => [
+                'week' => (int) ($rule['week'] ?? 0),
+                'weekday' => (int) ($rule['weekday'] ?? -1),
+            ])
+            ->filter(fn (array $rule) => $rule['week'] >= 1
+                && $rule['week'] <= 5
+                && $rule['weekday'] >= 0
+                && $rule['weekday'] <= 6)
+            ->unique(fn (array $rule) => $rule['week'].'-'.$rule['weekday'])
+            ->sortBy(fn (array $rule) => sprintf('%d-%d', $rule['weekday'], $rule['week']))
+            ->values();
+
+        foreach ($nthRules as $rule) {
+            $news->closedNthWeekdays()->create([
+                'week_of_month' => $rule['week'],
+                'weekday' => $rule['weekday'],
             ]);
         }
     }
